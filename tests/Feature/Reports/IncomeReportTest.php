@@ -112,3 +112,15 @@ test('every page with income carries the same report', function (Closure $page) 
     'import' => [fn (array $records) => route('data-imports.show', $records['import'])],
     'period' => [fn (array $records) => route('periods.show', $records['period'])],
 ]);
+
+test('the release page holds the counted plays of its tracks against its income, and no other release\'s', function () {
+    $label = Label::factory()->create();
+    $release = Release::factory()->create(['label_id' => $label->id]);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id]);
+    $other = Track::factory()->create(['label_id' => $label->id, 'release_id' => Release::factory()->create(['label_id' => $label->id])->id]);
+    PlayCount::factory()->create(['label_id' => $label->id, 'track_id' => $track->id, 'platform' => 'spotify', 'plays' => 350]);
+    PlayCount::factory()->create(['label_id' => $label->id, 'track_id' => $other->id, 'platform' => 'spotify', 'plays' => 9000]);
+
+    $this->actingAs(labelAdmin($label))->get(route('releases.show', $release))
+        ->assertInertia(fn (Assert $page) => $page->where('report.platforms.0.key', 'spotify')->where('report.platforms.0.plays', 350));
+});

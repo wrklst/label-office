@@ -1,7 +1,17 @@
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { useEffect, useRef } from 'react';
 
 type FilterValue = string | number | boolean | null | undefined;
+
+/**
+ * The choice lists of the page (props named …Options). Filtering, sorting
+ * and paging do not change them, so those visits leave them out.
+ */
+export function useChoiceLists(): string[] {
+    return Object.keys(usePage().props).filter((name) =>
+        name.endsWith('Options'),
+    );
+}
 
 /**
  * Reload the current list with changed query filters. Text input is
@@ -12,6 +22,7 @@ export function useFilters<T extends Record<string, FilterValue>>(
     current: T,
 ) {
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const except = useChoiceLists();
 
     // A reload still waiting when the page is left would pull the user back to the list.
     useEffect(
@@ -44,6 +55,7 @@ export function useFilters<T extends Record<string, FilterValue>>(
                 preserveState: true,
                 preserveScroll: true,
                 replace: true,
+                except,
             });
 
         if (timer.current) {

@@ -147,6 +147,9 @@ test('the transaction filters narrow the list and the totals', function () {
         ->assertSee('Matching 1')
         ->assertSee('Mastering')
         ->assertDontSee('Example Store')
+        // The choice lists are not fetched again with a filter; the ones the page has stay.
+        ->select('select[aria-label="Release"]', (string) $scenario['release']->id)
+        ->assertSee('Matching 1')
         ->click('Clear filters')
         ->assertSee('Matching 2');
 });

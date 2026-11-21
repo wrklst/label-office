@@ -10,6 +10,7 @@ use App\Http\Requests\ReleaseRequest;
 use App\Models\Artist;
 use App\Models\Contract;
 use App\Models\Item;
+use App\Models\PlayCount;
 use App\Models\Release;
 use App\Models\ReleaseFile;
 use App\Models\Track;
@@ -188,7 +189,7 @@ class ReleaseController extends Controller
                 'transactions' => (int) $byType->sum('transactions'),
                 'release_level_income' => (string) ($incomeByTrack->get('')->total ?? '0'),
             ],
-            'report' => IncomeReport::of(Transaction::query()->where('release_id', $release->id)),
+            'report' => IncomeReport::of(Transaction::query()->where('release_id', $release->id), PlayCount::query()->whereIn('track_id', $release->tracks->modelKeys())),
             'movers' => IncomeReport::movers(Transaction::query()->where('release_id', $release->id), 'track_id', 30),
             'platformLinks' => PlatformLinkController::props($release),
             'genreOptions' => Options::genres(),

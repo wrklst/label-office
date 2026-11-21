@@ -1,6 +1,6 @@
 # Reports and play counts
 
-Every page that has income shows it in the same report: the dashboard for the whole label, and the pages of a release, a track, an artist, an import and a period for their part of it. Play counts are what the platforms themselves say was played; the report holds them against your statements, on the dashboard and on the track and artist pages once you imported some. The release, import and period pages show the income only.
+Every page that has income shows it in the same report: the dashboard for the whole label, and the pages of a release, a track, an artist, an import and a period for their part of it. Play counts are what the platforms themselves say was played; the report holds them against your statements, on the dashboard and on the release, track and artist pages once you imported some. The import and period pages show the income only.
 
 ## The dashboard
 

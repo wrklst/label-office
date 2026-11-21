@@ -82,13 +82,14 @@ class TransactionController extends Controller
                 ...DateRange::fromRequest($request)->toArray(),
                 ...$sorting->toArray(),
             ],
-            'releaseOptions' => Options::releases(),
-            'trackOptions' => Options::tracks(),
-            'platformOptions' => Transaction::query()->distinct()->pluck('retailer')
+            // The choice lists are closures: filtering, sorting and paging leave them out (useChoiceLists), and then they are not read.
+            'releaseOptions' => fn (): array => Options::releases(),
+            'trackOptions' => fn (): array => Options::tracks(),
+            'platformOptions' => fn () => Transaction::query()->distinct()->pluck('retailer')
                 ->map(fn (?string $retailer): array => Platforms::of($retailer))
                 ->unique('key')->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()
                 ->map(fn (array $platform): array => ['id' => $platform['key'], 'name' => $platform['name']]),
-            'importOptions' => DataImport::query()->latest('id')->get(['id', 'name'])->map->only(['id', 'name']),
+            'importOptions' => fn () => DataImport::query()->latest('id')->get(['id', 'name'])->map->only(['id', 'name']),
         ]);
     }
 

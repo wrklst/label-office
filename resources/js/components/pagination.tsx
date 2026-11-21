@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
+import { useChoiceLists } from '@/hooks/use-filters';
 import { count } from '@/lib/format';
 import type { Paginated } from '@/types';
 
@@ -10,6 +11,8 @@ export function Pagination({
     page: Paginated<unknown>;
     noun?: string;
 }) {
+    const except = useChoiceLists();
+
     if (page.total === 0) {
         return null;
     }
@@ -32,7 +35,11 @@ export function Pagination({
                         disabled={!page.prev_page_url}
                     >
                         {page.prev_page_url ? (
-                            <Link href={page.prev_page_url} preserveScroll>
+                            <Link
+                                href={page.prev_page_url}
+                                preserveScroll
+                                except={except}
+                            >
                                 Previous
                             </Link>
                         ) : (
@@ -46,7 +53,11 @@ export function Pagination({
                         disabled={!page.next_page_url}
                     >
                         {page.next_page_url ? (
-                            <Link href={page.next_page_url} preserveScroll>
+                            <Link
+                                href={page.next_page_url}
+                                preserveScroll
+                                except={except}
+                            >
                                 Next
                             </Link>
                         ) : (

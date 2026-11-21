@@ -361,3 +361,13 @@ test('the dashboard keeps its last twelve months, shows the dates it uses and sh
     $this->actingAs($admin)->get(route('dashboard', ['to' => '2024-12-31']))->assertInertia(fn (Assert $page) => $page
         ->where('filters', ['from' => '2024-01-01', 'to' => '2024-12-31', 'date' => null]));
 });
+
+test('filtering, sorting and paging the transactions leave the choice lists out', function () {
+    $label = Label::factory()->create();
+    Transaction::factory()->create(['label_id' => $label->id]);
+
+    $this->actingAs(labelAdmin($label))->get(route('transactions.index'))->assertInertia(fn (Assert $page) => $page
+        ->has('releaseOptions')->has('importOptions')
+        ->reloadExcept(['releaseOptions', 'trackOptions', 'platformOptions', 'importOptions'], fn (Assert $reload) => $reload
+            ->has('transactions.data', 1)->missing('releaseOptions')->missing('trackOptions')->missing('platformOptions')->missing('importOptions')));
+});

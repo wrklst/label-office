@@ -9,7 +9,7 @@ Label Office is royalty accounting and release management for independent record
 - **Closes accounting periods.** A period shows what every payee has earned, what is still unrecouped and what is payable. Statements are frozen snapshots a payee can read under **My statements**.
 - **Keeps the catalog together.** Every release holds its metadata, cover, audio masters and documents. Audio plays in the browser.
 - **Tracks airplay.** Radio plays from neighbouring rights statements are listed per track and can be researched on the web.
-- **Reads play counts.** Streams and plays per track and platform come in from a play counts file and show up on the dashboard and on track and artist pages.
+- **Reads play counts.** Streams and plays per track and platform come in from a play counts file and show up on the dashboard and on release, track and artist pages.
 - **Keeps the label's own costs.** Overheads are entered once or as recurring costs, in any currency, with receipts you can enter by hand or have read by an AI service.
 - **Works with the services you use.** Zebralution, Bandcamp, Subvert and Rightz Audio each have a switch under **Settings → Connections**; a service the label does not work with is hidden.
 
