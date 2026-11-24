@@ -585,6 +585,14 @@ function ResearchDialog({
                                             aria-label={`Track ${position + 1}`}
                                             name="track_ids[]"
                                             records="tracks"
+                                            params={{
+                                                exclude: pickedTracks
+                                                    .filter(
+                                                        (other) =>
+                                                            other !== picked,
+                                                    )
+                                                    .join(','),
+                                            }}
                                             value={picked}
                                             onChange={(id) =>
                                                 setPickedTracks(

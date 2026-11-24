@@ -119,3 +119,16 @@ test('a record can be left out of its own dropdown, as a contract is not its own
 
     expect($names)->toBe(['Other Deal']);
 });
+
+test('what is chosen already is not offered again, and when that uses up what a contract pays for the rest is offered', function () {
+    $label = Label::factory()->create();
+    $admin = labelAdmin($label);
+    $contract = Contract::factory()->create(['label_id' => $label->id]);
+    $paid = Release::factory()->create(['label_id' => $label->id, 'name' => 'Paid', 'contract_id' => $contract->id]);
+    $alsoPaid = Release::factory()->create(['label_id' => $label->id, 'name' => 'Also paid', 'contract_id' => $contract->id]);
+    Release::factory()->create(['label_id' => $label->id, 'name' => 'Unrelated']);
+    $names = fn (array $chosen) => $this->actingAs($admin)->getJson(route('options', ['records' => 'releases', 'contract_id' => $contract->id, 'exclude' => implode(',', $chosen)]))->json('data.*.name');
+
+    expect($names([$paid->id]))->toBe(['Also paid'])
+        ->and($names([$paid->id, $alsoPaid->id]))->toBe(['Unrelated']);
+});

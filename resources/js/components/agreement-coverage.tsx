@@ -156,7 +156,10 @@ export function CoverageFields({
                 records="releases"
                 value=""
                 onChange={add}
-                params={params}
+                params={{
+                    ...params,
+                    exclude: releases.map((release) => release.id).join(','),
+                }}
                 placeholder={
                     releases.length === 0
                         ? 'Add a release…'

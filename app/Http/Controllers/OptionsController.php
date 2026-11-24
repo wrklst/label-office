@@ -61,8 +61,8 @@ class OptionsController extends Controller
         $contractId = $filtered ? $request->integer('contract_id') : 0;
         $payeeId = $filtered ? $request->integer('payee_id') : 0;
         $releaseId = $filtered ? $request->integer('release_id') : 0;
-        // A record is not offered as its own parent or alias.
-        $excludedId = $filtered ? $request->integer('exclude') : 0;
+        // A record is not offered as its own parent or alias, nor again beside rows that already chose it: one id or several with commas.
+        $excluded = $filtered ? array_values(array_filter(array_map(intval(...), explode(',', $request->string('exclude')->toString())))) : [];
 
         // What a chosen contract pays for; with only a payee chosen, what any of their contracts pays for.
         $contracts = match (true) {
@@ -76,6 +76,7 @@ class OptionsController extends Controller
             'releases' => $this->narrowed(
                 Release::query()->with(['cover:id,release_id', 'artist:id,name'])->orderBy('name')->orderBy('id'),
                 $contracts ? fn (Builder $releases) => $releases->where(fn (Builder $paid) => $paid->whereIn('contract_id', $contracts)->orWhereHas('tracks', fn (Builder $tracks) => $tracks->whereIn('tracks.contract_id', $contracts))) : null,
+                $excluded,
             ),
             // A dropdown of tracks can be narrowed to the release chosen beside it, and to what a contract pays for.
             'tracks' => $this->narrowed(
@@ -83,6 +84,7 @@ class OptionsController extends Controller
                     ->when($releaseId, fn (Builder $tracks) => $tracks->onRelease($releaseId))
                     ->orderBy('name')->orderBy('id'),
                 $contracts ? fn (Builder $tracks) => $tracks->where(fn (Builder $paid) => $paid->whereIn('contract_id', $contracts)->orWhereHas('releases', fn (Builder $release) => $release->whereIn('releases.contract_id', $contracts))) : null,
+                $excluded,
             ),
             'artists' => Artist::query()->orderBy('name')->orderBy('id'),
             'payees' => Payee::query()->orderBy('name')->orderBy('id'),
@@ -90,6 +92,7 @@ class OptionsController extends Controller
             'contracts' => $this->narrowed(
                 Contract::query()->orderBy('name')->orderBy('id'),
                 $payeeId ? fn (Builder $contracts) => $contracts->whereHas('splits', fn (Builder $splits) => $splits->where('payee_id', $payeeId)) : null,
+                $excluded,
             ),
             'ledgers' => Ledger::query()->orderBy('name')->orderBy('id'),
             'territories' => Territory::query()->orderBy('name')->orderBy('id'),
@@ -97,7 +100,7 @@ class OptionsController extends Controller
             default => AgreementTemplate::query()->orderBy('name')->orderBy('id'),
         };
 
-        return $excludedId ? $query->whereKeyNot($excludedId) : $query;
+        return $excluded ? $query->whereKeyNot($excluded) : $query;
     }
 
     /**
@@ -109,10 +112,14 @@ class OptionsController extends Controller
      *
      * @param  Builder<TModel>  $query
      * @param  (\Closure(Builder<TModel>): mixed)|null  $narrow
+     * @param  list<int>  $excluded
      * @return Builder<TModel>
      */
-    private function narrowed(Builder $query, ?\Closure $narrow): Builder
+    private function narrowed(Builder $query, ?\Closure $narrow, array $excluded = []): Builder
     {
+        // What is chosen already does not count as something left to offer.
+        $query = $excluded ? $query->whereKeyNot($excluded) : $query;
+
         if ($narrow === null || ! $query->clone()->tap($narrow)->exists()) {
             return $query;
         }
