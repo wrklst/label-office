@@ -13,6 +13,7 @@ use App\Support\CurrentLabel;
 use App\Support\Options;
 use App\Support\PageSize;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
@@ -112,6 +113,16 @@ class AgreementController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Sent for signature. The text can no longer be changed.')]);
 
         return back();
+    }
+
+    /**
+     * The agreement as a PDF, once it was sent.
+     */
+    public function pdf(Agreement $agreement): HttpResponse
+    {
+        abort_if($agreement->status === Agreement::DRAFT, 404);
+
+        return $agreement->load('signatures')->pdfResponse();
     }
 
     /**

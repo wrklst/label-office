@@ -337,3 +337,30 @@ test('a signed agreement makes the contract that pays its share, once, and leave
     expect($taken->refresh()->contract_id)->toBe($existing->id)
         ->and($second->refresh()->contract_id)->not->toBeNull();
 });
+
+test('a sent agreement is downloaded as a PDF by its parties and admins, and mailed as one once all have signed', function () {
+    ['signatory' => $admin, 'payeeUser' => $payeeUser, 'agreement' => $agreement] = agreementBetweenLabelAndPayee();
+    ['payeeUser' => $stranger] = agreementBetweenLabelAndPayee();
+
+    $this->actingAs($admin)->get(route('agreements.pdf', $agreement->id))->assertNotFound();
+
+    $agreement->send();
+    signAgreement($agreement, $payeeUser, 'payee');
+    signAgreement($agreement, $admin, 'label');
+
+    foreach ([[$admin, 'agreements.pdf'], [$payeeUser, 'my-agreements.pdf']] as [$user, $route]) {
+        $response = $this->actingAs($user)->get(route($route, $agreement->id))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertHeader('Content-Disposition', "attachment; filename=\"example-remix-deal-{$agreement->id}.pdf\"");
+
+        expect($response->getContent())->toStartWith('%PDF-');
+    }
+
+    $this->actingAs($stranger)->get(route('my-agreements.pdf', $agreement->id))->assertNotFound();
+
+    $attachments = collect((new AgreementSigned($agreement->refresh()->load('signatures'), 'Example Records'))->toMail($admin)->rawAttachments);
+
+    expect($attachments->pluck('name')->all())->toBe(["agreement-{$agreement->id}.pdf", "agreement-{$agreement->id}.txt"])
+        ->and($attachments[0]['data'])->toStartWith('%PDF-');
+});

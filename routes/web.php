@@ -52,6 +52,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('my-agreements', [MyAgreementController::class, 'index'])->name('my-agreements.index');
         Route::get('my-agreements/{agreement}', [MyAgreementController::class, 'show'])->name('my-agreements.show')->whereNumber('agreement');
+        Route::get('my-agreements/{agreement}/pdf', [MyAgreementController::class, 'pdf'])->name('my-agreements.pdf')->whereNumber('agreement');
         Route::post('my-agreements/{agreement}/code', [MyAgreementController::class, 'code'])->middleware('throttle:5,1')->name('my-agreements.code')->whereNumber('agreement');
         Route::post('my-agreements/{agreement}/sign', [MyAgreementController::class, 'sign'])->middleware('throttle:10,1')->name('my-agreements.sign')->whereNumber('agreement');
 
@@ -85,6 +86,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::resource('payees', PayeeController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
             Route::resource('ledgers', LedgerController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::resource('agreements', AgreementController::class);
+            Route::get('agreements/{agreement}/pdf', [AgreementController::class, 'pdf'])->name('agreements.pdf');
             Route::post('agreements/{agreement}/send', [AgreementController::class, 'send'])->name('agreements.send');
             Route::post('agreements/{agreement}/void', [AgreementController::class, 'void'])->name('agreements.void');
             Route::post('agreements/{agreement}/contract', [AgreementController::class, 'contract'])->name('agreements.contract');

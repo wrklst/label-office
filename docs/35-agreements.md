@@ -65,9 +65,9 @@ The page shows the whole text, who has signed so far, and under **Sign**:
 3. The confirmation **I have read this agreement and want to be bound by it**.
 4. **Code from your email**: choose **Email me a code** and enter the six digits. The code works once and for 15 minutes.
 
-Choosing **Sign** records the signature. Once every party has signed, the agreement reads **Signed by everyone** and each of them is emailed a copy as a text file.
+Choosing **Sign** records the signature. Once every party has signed, the agreement reads **Signed by everyone** and each of them is emailed a copy as a PDF, with the same as a text file next to it.
 
-**Print or save as PDF** prints the text and the signatures through the browser.
+**PDF**, at the top of a sent agreement, downloads the text with the signatures given so far. Admins find the same button under **Deals → Agreements**.
 
 ## The royalty contract
 
@@ -81,7 +81,7 @@ The contract is made once. After that the panel shows **Open the contract**. It 
 
 For every signature: the typed name, the email address of the account, the role, the time, the internet address and browser, and the hash of the text that was signed. A signature is only accepted for the exact text the signer had open.
 
-The copy sent to every party holds the text, the list of signatures and the hash. Anyone can check the hash: it is the SHA-256 of the text above the line in that file.
+The copy sent to every party holds the text, the list of signatures and the hash. Anyone can check the hash: it is the SHA-256 of the text above the line in the text file. The PDF shows the same text and signatures for reading and filing; it is made from the stored record each time and carries no cryptographic signature of its own.
 
 This is a simple electronic signature. It is not a qualified electronic signature and does not replace the written form where a law demands it. Whether your agreements need more than this is a question for your lawyer.
 

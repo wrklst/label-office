@@ -1,5 +1,5 @@
 import { Form, Link } from '@inertiajs/react';
-import { Pencil, PenLine, Send } from 'lucide-react';
+import { Download, Pencil, PenLine, Send } from 'lucide-react';
 import AgreementController from '@/actions/App/Http/Controllers/AgreementController';
 import {
     AgreementDocument,
@@ -63,6 +63,14 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
                                 description="The draft is removed. Nothing was sent."
                             />
                         </>
+                    )}
+                    {!draft && (
+                        <Button variant="outline" asChild>
+                            <a href={AgreementController.pdf.url(agreement.id)}>
+                                <Download />
+                                PDF
+                            </a>
+                        </Button>
                     )}
                     {agreement.status === 'sent' && (
                         <>

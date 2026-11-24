@@ -1,5 +1,5 @@
 import { Form, router, usePage } from '@inertiajs/react';
-import { Printer } from 'lucide-react';
+import { Download } from 'lucide-react';
 import MyAgreementController from '@/actions/App/Http/Controllers/MyAgreementController';
 import {
     AgreementDocument,
@@ -38,9 +38,11 @@ export default function MyAgreement({ agreement }: { agreement: Agreement }) {
             actions={
                 <>
                     <AgreementStatus status={agreement.status} />
-                    <Button variant="outline" onClick={() => window.print()}>
-                        <Printer />
-                        Print or save as PDF
+                    <Button variant="outline" asChild>
+                        <a href={MyAgreementController.pdf.url(agreement.id)}>
+                            <Download />
+                            PDF
+                        </a>
                     </Button>
                 </>
             }

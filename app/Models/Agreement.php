@@ -6,6 +6,8 @@ use App\Enums\LabelRole;
 use App\Models\Concerns\BelongsToLabel;
 use Carbon\CarbonImmutable;
 use Database\Factories\AgreementFactory;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -13,7 +15,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * A written agreement between the label and a payee, made from a
@@ -387,6 +391,63 @@ class Agreement extends Model
             ."\n\n----------------------------------------\nSigned electronically\n\n"
             .$lines->implode("\n")
             ."\n\nSHA-256 of the text above the line: {$this->body_hash}\n";
+    }
+
+    /**
+     * The agreement as a PDF: the text, then who signed it and how, and
+     * the hash of the text. Made from the frozen record each time it is
+     * asked for, so there is no second copy that could differ from it.
+     */
+    public function pdf(): string
+    {
+        $signatures = collect($this->signatureLines())->map(fn (array $line): string => '<tr><td>'.e($line['signature']->name ?? $line['name']).'<br><small>'.e($line['capacity'] === 'label' ? 'for the label' : $line['capacity']).'</small></td><td>'
+            .($line['signature'] === null ? 'Not signed' : e($line['signature']->email).'<br>'.$line['signature']->signed_at->utc()->format('Y-m-d H:i:s').' UTC<br>from '.e((string) $line['signature']->ip))
+            .'</td></tr>')->implode('');
+
+        $html = '<html><head><meta charset="utf-8"><style>
+            @page { margin: 25mm 22mm; }
+            body { font-family: "DejaVu Serif", serif; font-size: 10pt; line-height: 1.45; }
+            .text { white-space: pre-wrap; }
+            h2 { font-size: 11pt; margin: 0 0 6pt; }
+            .record { page-break-inside: avoid; margin-top: 24pt; border-top: 1px solid #000; padding-top: 10pt; font-size: 9pt; }
+            table { width: 100%; border-collapse: collapse; }
+            td { vertical-align: top; padding: 5pt 8pt 5pt 0; border-bottom: 1px solid #ccc; }
+            small { color: #555; }
+            .hash { font-family: "DejaVu Sans Mono", monospace; font-size: 7.5pt; word-wrap: break-word; }
+        </style></head><body>'
+            .'<div class="text">'.e($this->text()).'</div>'
+            .'<div class="record"><h2>'.($this->status === self::SIGNED ? 'Signed electronically by every party' : 'Signatures').'</h2>'
+            .'<table>'.$signatures.'</table>'
+            .'<p>Each signature was given with a typed name, a confirmation and a one-time code sent to the email address shown.</p>'
+            .'<p class="hash">SHA-256 of the text of the agreement: '.e((string) $this->body_hash).'</p></div>'
+            .'</body></html>';
+
+        $options = new Options;
+        // Nothing is fetched and nothing outside the text is read; what the library caches goes where the application may write.
+        $options->setIsRemoteEnabled(false);
+        $options->setIsPhpEnabled(false);
+        $options->setFontCache(storage_path('framework/cache'));
+        $options->setTempDir(storage_path('framework/cache'));
+
+        $pdf = new Dompdf($options);
+        $pdf->setPaper('A4');
+        $pdf->loadHtml($html, 'UTF-8');
+        $pdf->render();
+        // Every page says which agreement it belongs to and where it stands in it.
+        $pdf->getCanvas()->page_text(62, 800, "Agreement {$this->id} · page {PAGE_NUM} of {PAGE_COUNT}", $pdf->getFontMetrics()->getFont('DejaVu Serif'), 7.5, [0.4, 0.4, 0.4]);
+
+        return (string) $pdf->output();
+    }
+
+    /**
+     * The PDF as a download named after the agreement.
+     */
+    public function pdfResponse(): Response
+    {
+        return response($this->pdf(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.(Str::slug($this->name) ?: 'agreement')."-{$this->id}.pdf\"",
+        ]);
     }
 
     /**

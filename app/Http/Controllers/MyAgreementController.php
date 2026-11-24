@@ -9,6 +9,7 @@ use App\Notifications\AgreementSigned;
 use App\Notifications\AgreementSigningCode;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\Rule;
@@ -62,6 +63,14 @@ class MyAgreementController extends Controller
                 'is_admin' => $agreement->isRunBy($request->user()),
             ],
         ]);
+    }
+
+    /**
+     * The agreement as a PDF, once it was sent.
+     */
+    public function pdf(Request $request, int $agreement): HttpResponse
+    {
+        return $this->find($request, $agreement)->pdfResponse();
     }
 
     /**
