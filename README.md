@@ -57,7 +57,13 @@ included; see [Command line](docs/50-command-line.md#migrating-from-infinite-cat
   My statements.
 - Contracts with percentage splits per payee, optional separate ledgers (to
   recoup an advance on its own), territory splits and prorated contracts for
-  compilations. A track can have its own contract, e.g. for a remix.
+  compilations. Contracts are set on tracks, so a remix or a feature has its
+  own deal; one step puts a contract on every track of a release. A sale of a
+  whole release is divided equally between its tracks and paid by each
+  track's contract.
+- A recording is one track on every release it is on, the single and the
+  album alike, with its own track number on each. Other spellings of its
+  title are kept, so a statement that writes it differently still matches.
 - Income, expenses and transfers (advances, paybacks) at full precision:
   streaming lines worth fractions of a cent are never rounded away.
 - Expenses can be recouped from payees or borne by the label alone.
@@ -87,7 +93,7 @@ included; see [Command line](docs/50-command-line.md#migrating-from-infinite-cat
   term and what has to be delivered.
 - Signed online by every party: each of the people who may sign for the
   label (all of them together or any one, as the label is set up), the payee,
-  and the original artist when they grant the rights. A signature is a typed
+  and the original artist of a remix when they are a party. A signature is a typed
   name, a confirmation and a one-time code sent by email, recorded with time,
   address and the SHA-256 hash of the text, which is frozen when the agreement
   is sent.
@@ -98,10 +104,14 @@ included; see [Command line](docs/50-command-line.md#migrating-from-infinite-cat
 - Deliverables per agreement: the payee hands in a file for each item (master,
   artwork, texts) under My agreements, it is filed with the release, and the
   label accepts it or hands it back with a note.
-- The royalty contract is made from the signed share with one click.
+- The royalty contract is made from the signed shares with one click: the
+  payee's and, on a remix, the original artist's.
+- An agreement is listed on the pages of its payee, contract, releases and
+  tracks.
 - Agreements signed on paper or elsewhere are filed with their signed copy.
-- Three example templates for German law and a GmbH (remix through the label,
-  remix through the artist, release). They are unreviewed examples, see
+- Four example templates for German law and a GmbH (remix through the label,
+  remix through the artist, remix between label, artist and remixer,
+  release). They are unreviewed examples, see
   [No legal guarantee](#no-legal-guarantee).
 - An admin can also be a payee of the label: an artist who helps run it reads
   their own share and signs their own agreements.
