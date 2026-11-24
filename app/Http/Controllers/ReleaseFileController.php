@@ -45,7 +45,7 @@ class ReleaseFileController extends Controller
             'file' => ['required_without:upload', 'file', 'max:'.config('royalties.uploads.max_kilobytes')],
             ...IncomingFile::RULES,
             'kind' => ['nullable', Rule::enum(ReleaseFileKind::class)],
-            'track_id' => ['nullable', 'integer', Rule::exists('tracks', 'id')->where('release_id', $release->id)],
+            'track_id' => ['nullable', 'integer', Rule::exists('release_track', 'track_id')->where('release_id', $release->id)],
         ], [
             'file.max' => 'The file is larger than the '.round(config('royalties.uploads.max_kilobytes') / 1024).' MB this server accepts in one upload.',
             'file.uploaded' => 'The upload did not arrive completely. The file may be larger than the server accepts.',
@@ -234,7 +234,7 @@ class ReleaseFileController extends Controller
     {
         $validated = $request->validate([
             'kind' => ['required', Rule::enum(ReleaseFileKind::class)],
-            'track_id' => ['nullable', 'integer', Rule::exists('tracks', 'id')->where('release_id', $releaseFile->release_id)],
+            'track_id' => ['nullable', 'integer', Rule::exists('release_track', 'track_id')->where('release_id', $releaseFile->release_id)],
         ]);
 
         $kind = ReleaseFileKind::from($validated['kind']);

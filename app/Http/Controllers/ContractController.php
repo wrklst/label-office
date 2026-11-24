@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ContractRequest;
+use App\Models\Agreement;
 use App\Models\Contract;
 use App\Models\ContractSplit;
 use App\Models\Release;
@@ -89,6 +90,7 @@ class ContractController extends Controller
         $trackSorting = Sorting::for($request, ['name' => 'name', 'release' => Sorting::related(Release::class, 'release_id')], fn (Builder $query) => $query->orderBy('name'), 'tracks');
 
         return Inertia::render('contracts/show', [
+            'agreements' => Agreement::linkedTo($contract),
             'contract' => [
                 ...$contract->only(['id', 'name', 'memo']),
                 'splits' => $contract->splits->map(fn (ContractSplit $split): array => [

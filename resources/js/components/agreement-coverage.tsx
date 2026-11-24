@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import { useState } from 'react';
 import AgreementController from '@/actions/App/Http/Controllers/AgreementController';
 import { CheckField } from '@/components/field';
+import { RecordLink } from '@/components/record-link';
 import { RecordSelect } from '@/components/record-select';
 import { Button } from '@/components/ui/button';
 
@@ -24,7 +25,13 @@ export function CoverageList({ coverage }: { coverage: CoveredRelease[] }) {
 
                 return (
                     <li key={release.id} className="px-3 py-2">
-                        <span className="font-medium">{release.name}</span>
+                        <RecordLink
+                            to="release"
+                            id={release.id}
+                            className="font-medium"
+                        >
+                            {release.name}
+                        </RecordLink>
                         {release.catalog_number && (
                             <span className="text-muted-foreground">
                                 {' '}
@@ -34,7 +41,14 @@ export function CoverageList({ coverage }: { coverage: CoveredRelease[] }) {
                         <span className="block text-muted-foreground">
                             {chosen.length === 0
                                 ? 'The whole release'
-                                : chosen.map((track) => track.name).join(', ')}
+                                : chosen.map((track, index) => (
+                                      <span key={track.id}>
+                                          {index > 0 && ', '}
+                                          <RecordLink to="track" id={track.id}>
+                                              {track.name}
+                                          </RecordLink>
+                                      </span>
+                                  ))}
                         </span>
                     </li>
                 );
@@ -49,7 +63,14 @@ export function CoverageList({ coverage }: { coverage: CoveredRelease[] }) {
  * on offer are those of the chosen releases. Sends `release_ids[]` and
  * `track_ids[]` with the form around it.
  */
-export function CoverageFields({ initial }: { initial: CoveredRelease[] }) {
+export function CoverageFields({
+    initial,
+    params = {},
+}: {
+    initial: CoveredRelease[];
+    /** The contract and payee chosen beside it: the releases on offer are the ones they pay for, with those tracks ticked. */
+    params?: { contract_id?: number | ''; payee_id?: number | '' };
+}) {
     const [releases, setReleases] = useState(initial);
 
     const add = async (id: number | '') => {
@@ -57,9 +78,15 @@ export function CoverageFields({ initial }: { initial: CoveredRelease[] }) {
             return;
         }
 
-        const response = await fetch(AgreementController.release.url(id), {
-            headers: { Accept: 'application/json' },
-        }).catch(() => null);
+        const query = Object.fromEntries(
+            Object.entries(params).filter(([, value]) => value),
+        );
+        const response = await fetch(
+            AgreementController.release.url(id, { query }),
+            {
+                headers: { Accept: 'application/json' },
+            },
+        ).catch(() => null);
 
         if (response?.ok) {
             const release: CoveredRelease = await response.json();
@@ -129,6 +156,7 @@ export function CoverageFields({ initial }: { initial: CoveredRelease[] }) {
                 records="releases"
                 value=""
                 onChange={add}
+                params={params}
                 placeholder={
                     releases.length === 0
                         ? 'Add a release…'

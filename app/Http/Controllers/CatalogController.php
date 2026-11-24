@@ -22,7 +22,7 @@ class CatalogController extends Controller
     public function index(Request $request): Response
     {
         $releases = Release::query()
-            ->with(['artist:id,name', 'contract:id,name', 'tracks.contract:id,name', 'tracks' => fn ($query) => $query->orderBy('track_number')->orderBy('id'), 'tracks.artist:id,name'])
+            ->with(['artist:id,name', 'contract:id,name', 'tracks.contract:id,name', 'tracks.artist:id,name'])
             ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where(fn ($query) => $query
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('catalog_number', 'like', "%{$search}%")

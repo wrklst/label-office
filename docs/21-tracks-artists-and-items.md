@@ -4,7 +4,7 @@ This page covers the track list and the track page, artists with their aliases a
 
 ## Tracks
 
-A track always belongs to exactly one release. The same recording on a single and on an album is therefore two tracks that share one ISRC.
+A track is one recording. The same recording on a single and on an album is one track that is on both releases, with its own track number on each. Its contract, credits, audio and details are the track's and so the same on every release; its income stays with the release each sale was booked on.
 
 Tracks are created in two ways: by an import, from the lines of a statement, or by you on the release form (**Add track**). There is no button to create a track on its own; see [Releases](20-releases.md).
 
@@ -25,7 +25,7 @@ Open **Catalog → Tracks**. The list shows 50 tracks per page, ordered by title
 - **All releases** narrows the list to one release.
 - **Clear filters** appears when a search or filter is set and resets it.
 
-A recording that is on several releases is one row in this list, naming all its releases; the row is the oldest of its tracks. A track without audio of its own plays the audio of the same recording on another release. Narrow the list to a release to see and edit that release's own track. A badge **No contract on Example Single** marks a release on which the recording has no contract.
+A track that is on several releases is one row in this list, naming all its releases. Narrow the list to a release to see the tracks on it.
 
 - Click a column heading to sort (Title, Artist, Release, ISRC, Contract), again to reverse, and a third time to return to the default order. **Listen** cannot be sorted.
 
@@ -61,7 +61,10 @@ Distributors ask whether AI was used in a track. Each track has three declaratio
 ### ISRC and ISWC
 
 - An **ISRC** identifies a recording. It must have 12 letters and digits. Dashes and spaces are ignored when you type it, and it is stored in upper case without dashes: `DE-A1B-26-00001` becomes `DEA1B2600001`. Anything else is rejected with a message.
-- Imports find a track by its ISRC within the release. If you entered a track by hand without an ISRC, the first statement line with the same title on that release fills the ISRC in.
+- Imports find a track by its ISRC anywhere in your catalog. A statement line that names a release the track is not on yet puts it on that release; no second track is made. If you entered a track by hand without an ISRC, the first statement line with the same title on that release fills the ISRC in.
+- No two tracks can have the same ISRC. In the release form, a new row with an ISRC the catalog already knows puts that track on the release instead of making another; the track keeps its own title and details, and the title you typed is kept under **Other spellings**.
+- **Other spellings** on the track form lists other ways the title is written, one per line, such as `Example Track (Example Remix)` beside `Example Track - Example Remix`. A statement or play-count file that writes the title that way is matched to the track. Imports add a spelling themselves when a line with the track's ISRC writes the title differently.
+- Tracks that shared an ISRC before this rule existed were merged into one when the application was updated. The track with a contract was kept, the others' titles became other spellings, and every transaction kept the contract it was paid by: where a merged track was paid by another contract than the one kept, that contract was written on its items.
 - An **ISWC** identifies the composition. It is stored as you type it (at most 16 characters) and is not checked for its format. It is shown on the track page and exported in the metadata CSV.
 
 ### A track's own contract
@@ -76,7 +79,7 @@ You can set a track contract in the release form, in the track dialog, or in the
 
 Click a track title anywhere to open its page. The heading shows the title (with the version in brackets), the artists and the release.
 
-**One recording, several releases.** All tracks of your label that share the same ISRC count as one recording on this page. Income, airplay, findings and the research log cover all of them together, whichever entry you opened. A track without an ISRC is never combined with another.
+**One recording, several releases.** Income, airplay, findings and the research log on this page cover the track on all its releases. The panel **On 2 releases** shows what it earned on each.
 
 **Buttons.** The play buttons appear when the track has audio. **Research airplay** appears when a web search is set up for your label; see [Airplay](23-airplay.md). **Edit** opens the track dialog. **Delete** opens the dialog **Delete {track title}?**; after you confirm you return to the track list.
 
@@ -89,11 +92,11 @@ Click a track title anywhere to open its page. The heading shows the title (with
 | Earned from airplay | The sum of the amounts of those entries.                                                                                          |
 | Findings to review  | The number of research findings you have not kept or dismissed yet, and when the track was last researched.                       |
 
-**Details.** ISRC, Release, Contract, Length, Track number, Genre, BPM / key and ISWC. When the track uses the release contract, the contract is followed by `(from the release)`. These details belong to the entry you opened, not to the whole recording.
+**Details.** ISRC, Release, Contract, Length, Track number, Genre, BPM / key and ISWC. When the track uses the release contract, the contract is followed by `(from the release)`.
 
 **On … releases.** Shown only when the recording is on more than one release. It lists each release with its catalog number and **Income there**, the income booked on the track of that release. The entry you opened is marked `(this entry)`.
 
-Example: `Opening` with the ISRC `ZZEXA2600001` is on the single `Opening` (EX001) and on the album `Example Release` (EX002). The single earned 40.00 and the album track 110.00. Both track pages show **Income** 150.00 and the same airplay, and the panel **On 2 releases** shows the two amounts separately.
+Example: `Opening` with the ISRC `ZZEXA2600001` is on the single `Opening` (EX001) and on the album `Example Release` (EX002). The single earned 40.00 and the album track 110.00. The track page shows **Income** 150.00, and the panel **On 2 releases** shows the two amounts separately.
 
 **Airplay.** Where the track was played: **Station**, **Known from** (a neighbouring rights statement, a web search, or entered by hand), **Played**, **Earned** and **Links**. **Manage airplay and findings** opens the Airplay page filtered to this track; see [Airplay](23-airplay.md).
 

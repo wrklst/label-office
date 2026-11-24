@@ -1,3 +1,4 @@
+import { AgreementLinks } from '@/components/agreement-links';
 import { PlatformLinks } from '@/components/platform-links';
 import type { PlatformLinksProps } from '@/components/platform-links';
 import { Link, router, setLayoutProps } from '@inertiajs/react';
@@ -322,7 +323,7 @@ export default function ShowTrack({
             {releases.length > 1 && (
                 <Panel
                     title={`On ${releases.length} releases`}
-                    description="The same recording (one ISRC) is on several releases. Airplay, findings and income on this page cover all of them."
+                    description="This recording is on several releases. Airplay, findings and income on this page cover all of them."
                     flush
                 >
                     <Table>
@@ -337,7 +338,9 @@ export default function ShowTrack({
                         </TableHeader>
                         <TableBody>
                             {releases.map((release) => (
-                                <TableRow key={release.track_id}>
+                                <TableRow
+                                    key={`${release.track_id}-${release.id}`}
+                                >
                                     <TableCell className="font-medium">
                                         <RecordLink
                                             to="release"
@@ -345,12 +348,16 @@ export default function ShowTrack({
                                         >
                                             {release.name}
                                         </RecordLink>
-                                        {release.track_id === track.id && (
-                                            <span className="font-normal text-muted-foreground">
-                                                {' '}
-                                                (this entry)
-                                            </span>
-                                        )}
+                                        {release.track_id === track.id &&
+                                            releases.some(
+                                                (other) =>
+                                                    other.track_id !== track.id,
+                                            ) && (
+                                                <span className="font-normal text-muted-foreground">
+                                                    {' '}
+                                                    (this entry)
+                                                </span>
+                                            )}
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">
                                         {release.catalog_number ?? '–'}
@@ -569,6 +576,7 @@ export default function ShowTrack({
                     <Pagination page={searches} noun="searches" />
                 </Panel>
             )}
+            <AgreementLinks />
         </Page>
     );
 }

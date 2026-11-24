@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\PayeeRequest;
+use App\Models\Agreement;
 use App\Models\ContractSplit;
 use App\Models\Ledger;
 use App\Models\Payee;
@@ -74,6 +75,7 @@ class PayeeController extends Controller
         $summary = $latestPeriod ? ($calculator->forPeriod($latestPeriod, $payee->id)['payees'][0] ?? null) : null;
 
         return Inertia::render('payees/show', [
+            'agreements' => Agreement::linkedTo($payee),
             'payee' => [...$payee->only(['id', 'name', 'email', 'tags', 'notes', 'legal_name', 'address', 'country', 'vat_id']), 'delete_block' => $payee->deleteBlock()],
             'period' => $latestPeriod?->only(['id', 'name']),
             'summary' => $summary ? ['totals' => $summary['totals'], 'ledgers' => collect($summary['ledgers'])->map(fn (array $ledger): array => collect($ledger)->except('releases')->all())->all()] : null,

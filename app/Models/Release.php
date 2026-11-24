@@ -15,9 +15,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\Pivot;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @property int $id
+ * @property-read Pivot&object{track_number: int|null, disc_number: int|null} $pivot Its place on the release when loaded through Track::releases().
  * @property int $label_id
  * @property int|null $artist_id
  * @property int|null $contract_id
@@ -88,6 +91,13 @@ class Release extends Model
         // Items that carry transactions stay behind as unassigned items so
         // their income can be given to another release; empty ones go.
         static::deleting(function (Release $release): void {
+            // A track that is also on another release stays, and counts as first released there.
+            DB::table('release_track')->join('tracks', 'tracks.id', '=', 'release_track.track_id')
+                ->where('tracks.release_id', $release->id)->where('release_track.release_id', '<>', $release->id)
+                ->orderByDesc('release_track.release_id')->get(['release_track.*'])
+                ->each(fn (object $other) => DB::table('tracks')->where('id', $other->track_id)
+                    ->update(['release_id' => $other->release_id, 'track_number' => $other->track_number, 'disc_number' => $other->disc_number]));
+
             // Stored files are removed one by one so each is deleted from disk.
             $release->files()->get()->each->delete();
 
@@ -161,11 +171,16 @@ class Release extends Model
     }
 
     /**
-     * @return HasMany<Track, $this>
+     * The tracks on the release in their order, each with the number it has
+     * here: a track that is on several releases has one per release.
+     *
+     * @return BelongsToMany<Track, $this>
      */
-    public function tracks(): HasMany
+    public function tracks(): BelongsToMany
     {
-        return $this->hasMany(Track::class);
+        return $this->belongsToMany(Track::class)
+            ->select(['tracks.*', 'release_track.track_number as track_number', 'release_track.disc_number as disc_number'])
+            ->orderBy('release_track.disc_number')->orderBy('release_track.track_number')->orderBy('tracks.id');
     }
 
     /**

@@ -137,6 +137,8 @@ An agreement that is out for signature has to be withdrawn first. One that was s
 
 ## Good to know
 
+- An agreement is listed under **Agreements** on the pages of its payee, its contract, each release it covers and each track it is about, and its own page links back to all of them under **Linked to**. A track counts when it is ticked, or when a release it is on is covered as a whole.
+- With a payee or a contract chosen, **Add a release…** offers the releases their contracts pay for, and the tracks those contracts are set on come ticked. While nothing is paid by them yet, every release is offered.
 - An agreement is only sent to people who have an account. A payee without access under **Settings → Team** cannot sign.
 - Asking for a signing code replaces an unused sign-in code of the same account.
 - A payee who is linked to payees of several labels sees the agreements of all of them under **My agreements**.

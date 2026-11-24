@@ -20,7 +20,7 @@ Label Office is royalty accounting and release management for independent record
 | **Label**           | One tenant of the installation, with its own catalog, contracts, transactions and team. An installation can hold several labels.                                 |
 | **Admin**           | A user who runs a label and sees everything in it. The one account that looks after the installation itself is the installation admin.                           |
 | **Payee**           | Anyone who is paid a share: an artist, a producer, a publisher, another label. A payee can be given a login to read their statements, also under several labels. |
-| **Release / track** | The catalog. A track belongs to one release; the same recording on several releases is recognised by its ISRC.                                                   |
+| **Release / track** | The catalog. A recording is one track, on every release it is on; it is recognised by its ISRC.                                                                  |
 | **Item**            | What is sold: a release or track in a format group (digital, physical, rights …). Transactions are matched to items.                                             |
 | **Contract**        | An agreement with percentage splits per payee. It can be set on a release, a track, an item or a single transaction.                                             |
 | **Ledger**          | The running balance of a payee under a contract. A negative ledger is unrecouped and carries forward.                                                            |

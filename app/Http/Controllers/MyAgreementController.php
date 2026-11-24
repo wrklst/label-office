@@ -146,7 +146,7 @@ class MyAgreementController extends Controller
 
         // Files go to the first release of the agreement, and to its track when the agreement is about just one there.
         $release = $agreement->releases()->firstOrFail();
-        $tracks = $agreement->tracks()->where('release_id', $release->id)->pluck('tracks.id');
+        $tracks = $agreement->tracks()->onRelease($release->id)->pluck('tracks.id');
         // A payee's picture is never made the cover of the release: that is the label's choice.
         $kind = ReleaseFileKind::guess($upload->mimeType, $upload->extension());
         $file = $files->store($release, $upload, $kind === ReleaseFileKind::Cover ? ReleaseFileKind::Artwork : $kind, $tracks->count() === 1 ? $tracks->first() : null, $request->user());

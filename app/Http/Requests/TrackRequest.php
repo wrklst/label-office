@@ -3,8 +3,11 @@
 namespace App\Http\Requests;
 
 use App\Enums\ArtistRole;
+use App\Models\Track;
 use App\Rules\Isrc;
+use App\Services\Imports\Identifiers;
 use App\Support\CurrentLabel;
+use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Exists;
@@ -22,6 +25,11 @@ class TrackRequest extends LabelFormRequest
         }
 
         $this->nullify(['artist_id', 'contract_id', 'track_number', 'duration', 'accounts_mechanicals', 'mechanicals_rate', 'ppd_rate', 'disc_number', 'explicit', 'bpm', 'preview_start', 'ai_recording', 'ai_composition', 'ai_lyrics']);
+
+        // Other spellings arrive one per line from a text field.
+        if (is_string($this->input('aliases')) || $this->input('aliases') === null && $this->has('aliases')) {
+            $this->merge(['aliases' => array_values(array_unique(array_filter(array_map('trim', preg_split('/\R/', (string) $this->input('aliases')) ?: []), fn (string $name): bool => $name !== '')))]);
+        }
 
         // Credits may arrive as "Name One, Name Two" per role from text fields.
         $credits = $this->input('credits');
@@ -71,8 +79,23 @@ class TrackRequest extends LabelFormRequest
      */
     public function rules(): array
     {
+        $track = $this->route('track');
+        $trackId = $track instanceof Track ? $track->id : null;
+
         return [
             ...self::sharedRules(),
+            // A recording is one track, whatever releases it is on.
+            'isrc' => ['nullable', 'string', 'max:16', new Isrc, function (string $attribute, mixed $value, Closure $fail) use ($trackId): void {
+                $other = Track::query()->where('isrc', Identifiers::isrc((string) $value))->when($trackId, fn ($query) => $query->whereKeyNot($trackId))->first();
+
+                if ($other !== null && Identifiers::isrc((string) $value) !== null) {
+                    $fail(__('Another track already has this ISRC: :name.', ['name' => $other->name]));
+                }
+            }],
+            'aliases' => ['array'],
+            'aliases.*' => ['string', 'max:255'],
+            // The release the numbers are for, when the track is on several.
+            'release_id' => ['nullable', 'integer', Rule::exists('release_track', 'release_id')->where('track_id', $trackId ?? 0)],
             // Null follows the release.
             'accounts_mechanicals' => ['nullable', 'boolean'],
             'mechanicals_rate' => ['nullable', 'numeric', 'min:0'],

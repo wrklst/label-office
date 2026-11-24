@@ -76,9 +76,9 @@ class ItemController extends Controller
         $attributes = $request->validated();
 
         if (! empty($attributes['track_id'])) {
-            $attributes['release_id'] = Track::query()->whereKey($attributes['track_id'])->firstOrFail()->release_id;
+            $attributes['release_id'] = Track::query()->whereKey($attributes['track_id'])->firstOrFail()->releaseFor($attributes['release_id'] ?? null);
         } elseif (array_key_exists('release_id', $attributes) && $attributes['release_id'] !== $item->release_id) {
-            // A track belongs to one release, so it cannot follow the item to another.
+            // The track was not named again, so it does not follow the item to another release.
             $attributes['track_id'] = null;
         }
 

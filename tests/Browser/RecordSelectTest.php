@@ -55,7 +55,7 @@ test('an agreement is given a release and only one of its tracks', function () {
         ->check('First Remix')
         ->press('Save')
         ->waitForText('Agreement saved.')
-        ->assertSee('What it covers')
+        ->assertSee('Linked to')
         ->assertSee('First Remix')
         ->assertDontSee('Second Remix')
         ->assertNoJavaScriptErrors();

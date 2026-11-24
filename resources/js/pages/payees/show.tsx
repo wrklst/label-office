@@ -1,3 +1,4 @@
+import { AgreementLinks } from '@/components/agreement-links';
 import { Link, setLayoutProps, usePage } from '@inertiajs/react';
 import { Pencil, Plus } from 'lucide-react';
 import PayeeController from '@/actions/App/Http/Controllers/PayeeController';
@@ -639,6 +640,7 @@ export default function ShowPayee({
                     </>
                 )}
             </Panel>
+            <AgreementLinks />
         </Page>
     );
 }

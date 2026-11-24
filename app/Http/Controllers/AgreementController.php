@@ -33,7 +33,7 @@ class AgreementController extends Controller
     public function index(): Response
     {
         return Inertia::render('agreements/index', [
-            'agreements' => Agreement::query()->with(['payee:id,name', 'releases:id,name', 'tracks:id,name,release_id'])->latest('id')->paginate(PageSize::MAIN)
+            'agreements' => Agreement::query()->with(['payee:id,name', 'releases:id,name', 'tracks:id,name', 'tracks.releases:id'])->latest('id')->paginate(PageSize::MAIN)
                 ->through(fn (Agreement $agreement): array => [
                     ...$agreement->only(['id', 'name', 'status']),
                     'payee' => $agreement->payee?->name,
@@ -41,7 +41,7 @@ class AgreementController extends Controller
                     // Each release with the tracks chosen from it; without any, the whole release.
                     'covers' => $agreement->releases->map(fn (Release $release): array => [
                         'release' => $release->name,
-                        'tracks' => $agreement->tracks->where('release_id', $release->id)->pluck('name')->values()->all(),
+                        'tracks' => $agreement->tracks->filter(fn (Track $track): bool => $track->releases->contains('id', $release->id))->pluck('name')->values()->all(),
                     ])->values()->all(),
                     'sent_at' => $agreement->sent_at?->toDateString(),
                     'signed_at' => $agreement->signed_at?->toDateString(),
@@ -73,7 +73,8 @@ class AgreementController extends Controller
 
         return Inertia::render('agreements/show', [
             'agreement' => [
-                ...$agreement->only(['id', 'name', 'status', 'licensor', 'body_hash', 'contract_id']),
+                ...$agreement->only(['id', 'name', 'status', 'licensor', 'body_hash', 'contract_id', 'payee_id']),
+                'contract' => $agreement->contract_id ? Contract::query()->find($agreement->contract_id)?->name : null,
                 'share' => $agreement->terms['share'] ?? null,
                 'payee' => $agreement->payee?->name,
                 'template' => $agreement->template?->name,
@@ -188,7 +189,7 @@ class AgreementController extends Controller
             'release_ids' => ['array'],
             'release_ids.*' => ['integer', 'distinct', $inLabel('releases')],
             'track_ids' => ['array'],
-            'track_ids.*' => ['integer', 'distinct', $inLabel('tracks')->whereIn('release_id', array_filter((array) $request->input('release_ids'), 'is_numeric') ?: [0])],
+            'track_ids.*' => ['integer', 'distinct', Rule::exists('release_track', 'track_id')->whereIn('release_id', array_filter((array) $request->input('release_ids'), 'is_numeric') ?: [0])],
         ]);
 
         DB::transaction(function () use ($agreement, $input): void {
@@ -282,9 +283,16 @@ class AgreementController extends Controller
      * A release with its tracks, for the form that chooses what an
      * agreement covers.
      */
-    public function release(Release $release): JsonResponse
+    public function release(Request $request, Release $release): JsonResponse
     {
-        return response()->json(Agreement::releaseRow($release));
+        // With a contract or payee chosen, the tracks their contracts are set on come ticked,
+        // unless the contract is on the release itself and so pays for all of it.
+        $contracts = $request->integer('contract_id')
+            ? [$request->integer('contract_id')]
+            : Contract::query()->whereHas('splits', fn ($splits) => $splits->where('payee_id', $request->integer('payee_id')))->pluck('id')->all();
+        $chosen = in_array($release->contract_id, $contracts, true) ? [] : array_values($release->tracks()->whereIn('tracks.contract_id', $contracts ?: [0])->pluck('tracks.id')->map(fn (mixed $id): int => (int) $id)->all());
+
+        return response()->json(Agreement::releaseRow($release, $chosen));
     }
 
     /**
@@ -332,7 +340,7 @@ class AgreementController extends Controller
 
         // What the contract goes on: the chosen tracks of each release, or the release itself when none is chosen.
         $targets = collect($agreement->releases()->get())->flatMap(function (Release $release) use ($agreement) {
-            $tracks = $agreement->tracks()->where('release_id', $release->id)->get();
+            $tracks = $agreement->tracks()->onRelease($release->id)->get();
 
             return $tracks->isEmpty() ? [$release] : $tracks->all();
         });

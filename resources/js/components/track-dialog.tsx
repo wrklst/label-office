@@ -56,11 +56,13 @@ export function TrackDialog({
     track,
     inheritedContract,
     genreOptions,
+    releaseId,
     trigger,
 }: {
     track: ListedTrack;
     inheritedContract?: Option | null;
     genreOptions?: string[];
+    releaseId?: number;
     trigger?: ReactNode;
 }) {
     return (
@@ -85,6 +87,7 @@ export function TrackDialog({
                     track={track}
                     inheritedContract={inheritedContract}
                     genreOptions={genreOptions}
+                    releaseId={releaseId}
                     errors={errors}
                 />
             )}

@@ -64,18 +64,25 @@ class OptionsController extends Controller
         // A record is not offered as its own parent or alias.
         $excludedId = $filtered ? $request->integer('exclude') : 0;
 
+        // What a chosen contract pays for; with only a payee chosen, what any of their contracts pays for.
+        $contracts = match (true) {
+            $contractId > 0 => [$contractId],
+            $payeeId > 0 && in_array($records, ['releases', 'tracks'], true) => Contract::query()->whereHas('splits', fn (Builder $splits) => $splits->where('payee_id', $payeeId))->pluck('id')->all(),
+            default => [],
+        };
+
         $query = match ($records) {
             // The releases a contract pays for: those it is set on and those with a track it is set on.
             'releases' => $this->narrowed(
                 Release::query()->with(['cover:id,release_id', 'artist:id,name'])->orderBy('name')->orderBy('id'),
-                $contractId ? fn (Builder $releases) => $releases->where(fn (Builder $paid) => $paid->where('contract_id', $contractId)->orWhereHas('tracks', fn (Builder $tracks) => $tracks->where('contract_id', $contractId))) : null,
+                $contracts ? fn (Builder $releases) => $releases->where(fn (Builder $paid) => $paid->whereIn('contract_id', $contracts)->orWhereHas('tracks', fn (Builder $tracks) => $tracks->whereIn('tracks.contract_id', $contracts))) : null,
             ),
             // A dropdown of tracks can be narrowed to the release chosen beside it, and to what a contract pays for.
             'tracks' => $this->narrowed(
                 Track::query()->with(['release:id,name', 'release.cover:id,release_id'])
-                    ->when($releaseId, fn (Builder $tracks) => $tracks->where('release_id', $releaseId))
+                    ->when($releaseId, fn (Builder $tracks) => $tracks->onRelease($releaseId))
                     ->orderBy('name')->orderBy('id'),
-                $contractId ? fn (Builder $tracks) => $tracks->where(fn (Builder $paid) => $paid->where('contract_id', $contractId)->orWhereHas('release', fn (Builder $release) => $release->where('contract_id', $contractId))) : null,
+                $contracts ? fn (Builder $tracks) => $tracks->where(fn (Builder $paid) => $paid->whereIn('contract_id', $contracts)->orWhereHas('releases', fn (Builder $release) => $release->whereIn('releases.contract_id', $contracts))) : null,
             ),
             'artists' => Artist::query()->orderBy('name')->orderBy('id'),
             'payees' => Payee::query()->orderBy('name')->orderBy('id'),

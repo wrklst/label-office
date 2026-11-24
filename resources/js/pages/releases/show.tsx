@@ -1,3 +1,4 @@
+import { AgreementLinks } from '@/components/agreement-links';
 import ReleaseController from '@/actions/App/Http/Controllers/ReleaseController';
 import { DeleteButton } from '@/components/delete-button';
 import { PlatformLinks } from '@/components/platform-links';
@@ -470,6 +471,7 @@ export default function ShowRelease({
                                         <TrackDialog
                                             track={track}
                                             genreOptions={genreOptions}
+                                            releaseId={release.id}
                                         />
                                     </TableCell>
                                 </TableRow>
@@ -697,6 +699,7 @@ export default function ShowRelease({
             </div>
 
             {release.notes && <Panel title="Notes">{release.notes}</Panel>}
+            <AgreementLinks />
         </Page>
     );
 }

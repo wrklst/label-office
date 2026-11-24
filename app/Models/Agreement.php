@@ -189,9 +189,35 @@ class Agreement extends Model
             'id' => $release->id,
             'name' => $release->name,
             'catalog_number' => $release->catalog_number,
-            'tracks' => array_values(Track::query()->withoutGlobalScope('label')->where('release_id', $release->id)->orderBy('track_number')->orderBy('name')->get(['id', 'name'])
+            'tracks' => array_values($release->tracks()->withoutGlobalScope('label')->get()
                 ->map(fn (Track $track): array => ['id' => $track->id, 'name' => $track->name, 'chosen' => in_array($track->id, $chosen)])->all()),
         ];
+    }
+
+    /**
+     * The agreements about a contract, payee, release or track, for the list on its page.
+     * A track counts when it is ticked, or when a release it is on is covered as a whole.
+     *
+     * @return list<array{id: int, name: string, status: string, payee: string|null, signed_at: string|null}>
+     */
+    public static function linkedTo(Contract|Payee|Release|Track $record): array
+    {
+        $releases = $record instanceof Track ? array_values($record->releases()->pluck('releases.id')->map(fn (mixed $id): int => (int) $id)->all()) : [];
+
+        return array_values(self::query()->with('payee:id,name')->latest('id')
+            ->where(fn (Builder $about) => match (true) {
+                $record instanceof Contract => $about->where('contract_id', $record->id),
+                $record instanceof Payee => $about->where('payee_id', $record->id)->orWhere('artist_payee_id', $record->id),
+                $record instanceof Release => $about->whereHas('releases', fn (Builder $covered) => $covered->whereKey($record->id)),
+                default => $about->whereHas('tracks', fn (Builder $ticked) => $ticked->whereKey($record->id))
+                    ->orWhere(fn (Builder $whole) => $whole->whereHas('releases', fn (Builder $covered) => $covered->whereKey($releases))
+                        ->whereDoesntHave('tracks', fn (Builder $ticked) => $ticked->onRelease($releases))),
+            })
+            ->get()->map(fn (Agreement $agreement): array => [
+                ...$agreement->only(['id', 'name', 'status']),
+                'payee' => $agreement->payee?->name,
+                'signed_at' => $agreement->signed_at?->toDateString(),
+            ])->all());
     }
 
     /**
@@ -203,7 +229,7 @@ class Agreement extends Model
     public function cover(array $releaseIds, array $trackIds): void
     {
         $this->releases()->sync($releaseIds);
-        $this->tracks()->sync(Track::query()->withoutGlobalScope('label')->whereIn('release_id', $releaseIds ?: [0])->whereIn('id', $trackIds ?: [0])->pluck('id')->all());
+        $this->tracks()->sync(Track::query()->withoutGlobalScope('label')->onRelease($releaseIds)->whereIn('id', $trackIds ?: [0])->pluck('id')->all());
     }
 
     /**

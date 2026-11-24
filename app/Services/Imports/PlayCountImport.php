@@ -190,13 +190,13 @@ class PlayCountImport
     {
         $catalog = ['isrc' => [], 'name' => []];
         $tracks = DB::table('tracks')->leftJoin('artists', 'artists.id', '=', 'tracks.artist_id')->where('tracks.label_id', $label->id)
-            ->orderBy('tracks.id')->get(['tracks.id', 'tracks.name', 'tracks.version', 'tracks.isrc', 'artists.name as artist']);
+            ->orderBy('tracks.id')->get(['tracks.id', 'tracks.name', 'tracks.aliases', 'tracks.version', 'tracks.isrc', 'artists.name as artist']);
 
         foreach ($tracks as $track) {
             $isrc = Identifiers::isrc($track->isrc);
             $id = $isrc === null ? $track->id : ($catalog['isrc'][$isrc] ??= $track->id);
 
-            foreach (array_unique([self::plain($track->name), self::plain($track->name.' '.$track->version)]) as $name) {
+            foreach (array_unique(array_map(self::plain(...), [$track->name, $track->name.' '.$track->version, ...(json_decode((string) $track->aliases, true) ?: [])])) as $name) {
                 $catalog['name'][$name][$isrc ?? 'track-'.$track->id] ??= ['id' => $id, 'artist' => self::plain((string) $track->artist)];
             }
         }

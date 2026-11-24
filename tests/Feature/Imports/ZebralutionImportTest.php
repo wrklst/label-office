@@ -43,13 +43,13 @@ test('lines without a product are matched to the track by isrc', function () {
         ->and(Item::query()->whereNull('release_id')->count())->toBe(0);
 });
 
-test('the same isrc on two releases creates one track per release', function () {
+test('the same isrc on two releases is one track on both releases', function () {
     $label = currentLabel();
     $import = pendingImport($label, 'zebralution', 'zebralution_2026q3_sample.csv', ['default_paid_timestamp' => '2026-10-15']);
 
     app(ImportRunner::class)->run($import, $label);
 
-    expect(Track::query()->where('isrc', 'ZZTST2600018')->distinct()->count('release_id'))->toBe(2);
+    expect(Track::query()->where('isrc', 'ZZTST2600018')->sole()->releases()->count())->toBe(2);
 });
 
 test('refund lines and unknown countries are kept as they are', function () {

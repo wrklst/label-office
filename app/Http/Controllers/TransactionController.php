@@ -208,7 +208,7 @@ class TransactionController extends Controller
         $label = $currentLabel->get();
 
         if (! empty($attributes['track_id'])) {
-            $attributes['release_id'] = Track::query()->whereKey($attributes['track_id'])->firstOrFail()->release_id;
+            $attributes['release_id'] = Track::query()->whereKey($attributes['track_id'])->firstOrFail()->releaseFor($attributes['release_id'] ?? null);
         }
 
         // An imported transaction keeps the item it was booked on; a new one,

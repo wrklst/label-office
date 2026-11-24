@@ -7,6 +7,7 @@ use App\Enums\ReleaseFileKind;
 use App\Enums\ReleaseStatus;
 use App\Enums\ReleaseType;
 use App\Http\Requests\ReleaseRequest;
+use App\Models\Agreement;
 use App\Models\Artist;
 use App\Models\Contract;
 use App\Models\Item;
@@ -28,6 +29,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -58,7 +60,7 @@ class ReleaseController extends Controller
             ->when($request->integer('artist'), fn ($query, int $artist) => $query->where(fn ($query) => $query
                 ->where('releases.artist_id', $artist)
                 ->orWhereExists(fn ($query) => $query->from('artist_release')->whereColumn('artist_release.release_id', 'releases.id')->where('artist_release.artist_id', $artist))
-                ->orWhereExists(fn ($query) => $query->from('tracks')->whereColumn('tracks.release_id', 'releases.id')->where(fn ($query) => $query
+                ->orWhereExists(fn ($query) => $query->from('tracks')->join('release_track', 'release_track.track_id', '=', 'tracks.id')->whereColumn('release_track.release_id', 'releases.id')->where(fn ($query) => $query
                     ->where('tracks.artist_id', $artist)
                     ->orWhereExists(fn ($query) => $query->from('artist_track')->whereColumn('artist_track.track_id', 'tracks.id')->where('artist_track.artist_id', $artist))))))
             ->when($request->boolean('without_contract'), fn ($query) => $query->whereNull('contract_id'))
@@ -143,6 +145,7 @@ class ReleaseController extends Controller
             ->groupBy('item_id', 'importer_source')->orderBy('importer_source')->toBase()->get()->groupBy('item_id');
 
         return Inertia::render('releases/show', [
+            'agreements' => Agreement::linkedTo($release),
             'release' => [
                 ...$release->only([
                     'id', 'name', 'artist_id', 'catalog_number', 'upc', 'spotify_id', 'discogs_id', 'notes', 'version', 'genre', 'subgenre', 'language', 'explicit',
@@ -281,14 +284,13 @@ class ReleaseController extends Controller
 
         $kept = [];
 
-        foreach ($request->validated('tracks', []) as $row) {
+        foreach ($request->validated('tracks', []) as $index => $row) {
             $attributes = [
                 'name' => $row['name'],
                 'artist_id' => $row['artist_id'] ?? null,
                 'contract_id' => $row['contract_id'] ?? null,
                 'isrc' => Identifiers::isrc($row['isrc'] ?? null),
                 'iswc' => $row['iswc'] ?? null,
-                'track_number' => $row['track_number'] ?? null,
                 'duration' => $row['duration'] ?? null,
             ];
 
@@ -298,11 +300,27 @@ class ReleaseController extends Controller
             }
 
             $track = isset($row['id']) ? $release->tracks()->whereKey($row['id'])->first() : null;
-            $track ? $track->update($attributes) : $track = $release->tracks()->create([...$attributes, 'label_id' => $release->label_id]);
+            $sameRecording = $attributes['isrc'] === null ? null : Track::query()->where('isrc', $attributes['isrc'])->when($track, fn ($query) => $query->whereKeyNot($track->id))->first();
+
+            if ($track && $sameRecording) {
+                throw ValidationException::withMessages(["tracks.{$index}.isrc" => __('Another track already has this ISRC: :name. Remove this row and add a new one with the ISRC to put that track on this release.', ['name' => $sameRecording->name])]);
+            }
+
+            if ($track) {
+                $track->update($attributes);
+            } elseif ($sameRecording) {
+                // A recording is one track: a new row with a known ISRC puts that track on this release too. It keeps its own details.
+                $track = $sameRecording;
+                $track->addAlias($row['name']);
+            } else {
+                $track = Track::query()->create([...$attributes, 'label_id' => $release->label_id, 'release_id' => $release->id]);
+            }
+
+            $track->putOn($release->id, $row['track_number'] ?? null);
             $kept[] = $track->id;
         }
 
-        $release->tracks()->whereNotIn('id', $kept)->get()->each->delete();
+        $release->tracks()->whereNotIn('tracks.id', $kept)->get()->each(fn (Track $track) => $track->takeOff($release->id));
     }
 
     /**

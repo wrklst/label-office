@@ -37,7 +37,7 @@ class RatesController extends Controller
                 ...$release->only(['id', 'name', 'catalog_number', 'accounts_mechanicals']),
                 'rate' => $plain($release->getAttribute($rate)),
             ],
-            'tracks' => $release->tracks()->orderBy('track_number')->orderBy('id')->get()->map(fn (Track $track): array => [
+            'tracks' => $release->tracks()->get()->map(fn (Track $track): array => [
                 ...$track->only(['id', 'name', 'track_number', 'duration', 'accounts_mechanicals']),
                 'rate' => $plain($track->getAttribute($rate)),
             ]),
@@ -62,7 +62,7 @@ class RatesController extends Controller
             'rate' => $rateRules,
             'accounts_mechanicals' => [Rule::requiredIf($tool === RoyaltyTool::Mechanicals), 'boolean'],
             'tracks' => ['array'],
-            'tracks.*.id' => ['required', 'integer', 'distinct', Rule::exists('tracks', 'id')->where('release_id', $release->id)],
+            'tracks.*.id' => ['required', 'integer', 'distinct', Rule::exists('release_track', 'track_id')->where('release_id', $release->id)],
             'tracks.*.rate' => $rateRules,
             'tracks.*.accounts_mechanicals' => ['nullable', 'boolean'],
             'items' => ['array'],

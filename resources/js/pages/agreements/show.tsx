@@ -17,6 +17,7 @@ import { CheckField, Field } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { Notice } from '@/components/notice';
 import { Page, Panel } from '@/components/page';
+import { RecordLink } from '@/components/record-link';
 import { RecordSelect } from '@/components/record-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,8 @@ type Agreement = {
     licensor: string;
     body_hash: string | null;
     contract_id: number | null;
+    contract: string | null;
+    payee_id: number | null;
     share: string | null;
     payee: string | null;
     template: string | null;
@@ -381,9 +384,45 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
                 </p>
             )}
 
-            {agreement.coverage.length > 0 && !agreement.filed && (
-                <Panel title="What it covers">
-                    <CoverageList coverage={agreement.coverage} />
+            {(agreement.payee_id !== null ||
+                agreement.contract_id !== null ||
+                agreement.coverage.length > 0) && (
+                <Panel title="Linked to">
+                    <dl className="mb-3 grid gap-1 text-sm">
+                        {agreement.payee_id !== null && (
+                            <div className="flex gap-2">
+                                <dt className="w-20 text-muted-foreground">
+                                    Payee
+                                </dt>
+                                <dd>
+                                    <RecordLink
+                                        to="payee"
+                                        id={agreement.payee_id}
+                                    >
+                                        {agreement.payee}
+                                    </RecordLink>
+                                </dd>
+                            </div>
+                        )}
+                        {agreement.contract_id !== null && (
+                            <div className="flex gap-2">
+                                <dt className="w-20 text-muted-foreground">
+                                    Contract
+                                </dt>
+                                <dd>
+                                    <RecordLink
+                                        to="contract"
+                                        id={agreement.contract_id}
+                                    >
+                                        {agreement.contract ?? 'Contract'}
+                                    </RecordLink>
+                                </dd>
+                            </div>
+                        )}
+                    </dl>
+                    {agreement.coverage.length > 0 && (
+                        <CoverageList coverage={agreement.coverage} />
+                    )}
                 </Panel>
             )}
 
@@ -498,6 +537,10 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
                                 >
                                     <CoverageFields
                                         initial={agreement.coverage}
+                                        params={{
+                                            contract_id: matched.contract,
+                                            payee_id: matched.payee,
+                                        }}
                                     />
                                 </Field>
                                 <div className="sm:col-span-2">

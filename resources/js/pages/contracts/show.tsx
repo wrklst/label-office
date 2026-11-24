@@ -1,3 +1,4 @@
+import { AgreementLinks } from '@/components/agreement-links';
 import { Link, setLayoutProps, usePage } from '@inertiajs/react';
 import { Pencil } from 'lucide-react';
 import ContractController from '@/actions/App/Http/Controllers/ContractController';
@@ -319,6 +320,7 @@ export default function ShowContract({
                     follow this contract.
                 </p>
             )}
+            <AgreementLinks />
         </Page>
     );
 }

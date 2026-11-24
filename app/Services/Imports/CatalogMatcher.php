@@ -7,12 +7,15 @@ use App\Models\Item;
 use App\Models\Label;
 use App\Models\Release;
 use App\Models\Track;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Links statement lines to the catalog and builds missing entries.
  *
  * A release is found by UPC/EAN, then catalog number. A track is found by
- * ISRC within that release. Whatever is missing gets created from the
+ * its ISRC anywhere in the catalog, and put on the release when it is not
+ * on it yet; without an ISRC by its title or another spelling of it within
+ * the release. Whatever is missing gets created from the
  * metadata in the file, so a first import builds the whole catalog. Lines
  * that carry too little to identify a release end up on an unassigned item
  * for manual review instead of being guessed.
@@ -28,8 +31,11 @@ class CatalogMatcher
     /** @var array<string, int> */
     private array $releasesByName = [];
 
-    /** @var array<string, int> "releaseId|isrc" => track id */
-    private array $tracksByReleaseIsrc = [];
+    /** @var array<string, true> "releaseId|trackId" for every release a track is on */
+    private array $tracksOnRelease = [];
+
+    /** @var array<int, array<string, true>> track id => the titles it is known by */
+    private array $trackNames = [];
 
     /** @var array<string, int> "releaseId|name" => track id */
     private array $tracksByReleaseName = [];
@@ -60,8 +66,12 @@ class CatalogMatcher
             ->each(fn (Release $release) => $this->rememberRelease($release));
 
         Track::query()->where('label_id', $label->id)->orderBy('id')
-            ->get(['id', 'release_id', 'name', 'isrc'])
+            ->get(['id', 'release_id', 'name', 'aliases', 'isrc'])
             ->each(fn (Track $track) => $this->rememberTrack($track));
+
+        DB::table('release_track')->join('tracks', 'tracks.id', '=', 'release_track.track_id')->where('tracks.label_id', $label->id)
+            ->orderBy('release_track.track_id')->get(['release_track.release_id', 'release_track.track_id'])
+            ->each(fn (object $row) => $this->rememberOnRelease((int) $row->release_id, (int) $row->track_id));
 
         // An alias is another spelling a statement uses: what it names belongs to the main artist.
         Artist::query()->where('label_id', $label->id)->orderBy('id')->get(['id', 'name', 'alias_of_id'])
@@ -150,8 +160,22 @@ class CatalogMatcher
 
     private function findTrack(int $releaseId, ImportRow $row): ?int
     {
-        if ($row->isrc && isset($this->tracksByReleaseIsrc["{$releaseId}|{$row->isrc}"])) {
-            return $this->tracksByReleaseIsrc["{$releaseId}|{$row->isrc}"];
+        // A recording is one track on every release it is on.
+        if ($row->isrc && isset($this->tracksByIsrc[$row->isrc])) {
+            $trackId = $this->tracksByIsrc[$row->isrc][0];
+
+            if (! isset($this->tracksOnRelease["{$releaseId}|{$trackId}"])) {
+                DB::table('release_track')->insertOrIgnore(['release_id' => $releaseId, 'track_id' => $trackId]);
+            }
+
+            if (($key = Identifiers::nameKey($row->trackName)) && ! isset($this->trackNames[$trackId][$key])) {
+                Track::query()->withoutGlobalScopes()->find($trackId)?->addAlias($row->trackName);
+                $this->trackNames[$trackId][$key] = true;
+            }
+
+            $this->rememberOnRelease($releaseId, $trackId);
+
+            return $trackId;
         }
 
         $trackId = $this->tracksByReleaseName[$releaseId.'|'.Identifiers::nameKey($row->trackName)] ?? null;
@@ -167,7 +191,6 @@ class CatalogMatcher
 
         Track::query()->withoutGlobalScopes()->whereKey($trackId)->update(['isrc' => $row->isrc]);
         unset($this->tracksWithoutIsrc[$trackId]);
-        $this->tracksByReleaseIsrc["{$releaseId}|{$row->isrc}"] = $trackId;
         $this->tracksByIsrc[$row->isrc] ??= [$trackId, $releaseId];
 
         return $trackId;
@@ -200,6 +223,7 @@ class CatalogMatcher
         ]);
 
         $this->rememberTrack($track);
+        $this->rememberOnRelease($releaseId, $track->id);
         $this->createdTracks++;
 
         return $track->id;
@@ -268,14 +292,27 @@ class CatalogMatcher
     private function rememberTrack(Track $track): void
     {
         if ($isrc = Identifiers::isrc($track->isrc)) {
-            $this->tracksByReleaseIsrc["{$track->release_id}|{$isrc}"] ??= $track->id;
             $this->tracksByIsrc[$isrc] ??= [$track->id, $track->release_id];
         } else {
             $this->tracksWithoutIsrc[$track->id] = true;
         }
 
-        if ($key = Identifiers::nameKey($track->name)) {
-            $this->tracksByReleaseName["{$track->release_id}|{$key}"] ??= $track->id;
+        foreach ([$track->name, ...($track->aliases ?? [])] as $name) {
+            if ($key = Identifiers::nameKey($name)) {
+                $this->trackNames[$track->id][$key] = true;
+            }
+        }
+    }
+
+    /**
+     * A track is found on a release by its title and by every other spelling of it.
+     */
+    private function rememberOnRelease(int $releaseId, int $trackId): void
+    {
+        $this->tracksOnRelease["{$releaseId}|{$trackId}"] = true;
+
+        foreach (array_keys($this->trackNames[$trackId] ?? []) as $key) {
+            $this->tracksByReleaseName["{$releaseId}|{$key}"] ??= $trackId;
         }
     }
 }

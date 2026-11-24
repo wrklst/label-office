@@ -107,7 +107,7 @@ The file is read by what its columns are called, not by where it comes from:
 | Optional: platform      | `platform`, `service`, `store`, `dsp`                                     |
 | Optional: day or period | `date`, or `from` and `to`                                                |
 
-A line is matched to a track by its ISRC, otherwise by its name. Punctuation does not matter: `Example Track - Example Remix` is the track `Example Track (Example Remix)`. Where several recordings share a name, the artist column decides. A recording on several releases is counted once.
+A line is matched to a track by its ISRC, otherwise by its name. Punctuation does not matter: `Example Track - Example Remix` is the track `Example Track (Example Remix)`. The track's other spellings count as its name. Where several recordings share a name, the artist column decides.
 
 Lines whose track is not in the catalog are kept and listed under the file as **Not in the catalog under that name**. They count for the label as a whole, not for a track.
 
@@ -123,7 +123,7 @@ Below the upload, **Importing → Play counts** shows what was counted, drawn li
 
 - **How the plays developed**: the counted plays month by month, stacked by platform.
 - **Platforms**: what each platform counted (**Counted by the platform**), its **Share**, its **Trend**, the streams the statements have for the same months (**On statements**, with their share of the count), and the days the count covers (**Counted from** and **to**).
-- **Releases by plays** and **Tracks by plays**: the twelve that were played most, each with its last twelve months, the **Last three months** held against the three before and the **Counted** total. A recording on several releases counts for the release of its first entry.
+- **Releases by plays** and **Tracks by plays**: the twelve that were played most, each with its last twelve months, the **Last three months** held against the three before and the **Counted** total. A track on several releases counts for the release it came out on first.
 
 Country and playlist are not kept, so there is no breakdown by them.
 

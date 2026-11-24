@@ -79,6 +79,9 @@ export default function AgreementForm({
         String(agreement?.agreement_template_id ?? ''),
     );
     const [licensor, setLicensor] = useState(agreement?.licensor ?? 'label');
+    const [payeeId, setPayeeId] = useState<number | ''>(
+        agreement?.payee_id ?? '',
+    );
     const template = templateOptions.find(
         (option) => String(option.id) === templateId,
     );
@@ -193,7 +196,8 @@ export default function AgreementForm({
                                         id="payee_id"
                                         records="payees"
                                         name="payee_id"
-                                        defaultValue={agreement?.payee_id}
+                                        value={payeeId}
+                                        onChange={setPayeeId}
                                         placeholder="Choose payee…"
                                         required
                                     />
@@ -207,6 +211,7 @@ export default function AgreementForm({
                         >
                             <CoverageFields
                                 initial={agreement?.coverage ?? []}
+                                params={{ payee_id: payeeId }}
                             />
                             {(errors.release_ids ?? errors.track_ids) && (
                                 <p className="mt-2 text-sm text-red-600">

@@ -102,7 +102,7 @@ class ReleaseRequest extends LabelFormRequest
             'artists.*.artist_id' => ['required', 'integer', $this->inLabel('artists')],
             'artists.*.role' => ['required', Rule::enum(ArtistRole::class)],
             'tracks' => ['array'],
-            'tracks.*.id' => ['nullable', 'integer', 'distinct', $this->inLabel('tracks')->where('release_id', $release instanceof Release ? $release->id : 0)],
+            'tracks.*.id' => ['nullable', 'integer', 'distinct', Rule::exists('release_track', 'track_id')->where('release_id', $release instanceof Release ? $release->id : 0)],
             // The track rows validate like the track form does.
             ...TrackRequest::sharedRules('tracks.*.'),
         ];

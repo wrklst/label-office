@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\TransactionType;
 use App\Http\Requests\TrackRequest;
+use App\Models\Agreement;
 use App\Models\Airplay;
 use App\Models\AirplayFinding;
 use App\Models\AirplaySearch;
@@ -43,7 +44,7 @@ class TrackController extends Controller
     {
         return [
             ...$track->only([
-                'id', 'name', 'isrc', 'iswc', 'track_number', 'disc_number', 'duration', 'artist_id', 'contract_id', 'version', 'genre',
+                'id', 'name', 'aliases', 'isrc', 'iswc', 'track_number', 'disc_number', 'duration', 'artist_id', 'contract_id', 'version', 'genre',
                 'language', 'explicit', 'musical_key', 'preview_start', 'p_line', 'ai_recording', 'ai_composition', 'ai_lyrics',
                 ...($withText ? ['lyrics', 'credits'] : []),
             ]),
@@ -65,14 +66,15 @@ class TrackController extends Controller
         $tracks = Track::query()
             ->with([
                 'artist:id,name', 'artists:id,name', 'contract:id,name', 'release:id,name,catalog_number,contract_id,artist_id', 'release.contract:id,name',
-                'release.artist:id,name', 'release.artists:id,name', 'release.cover:id,release_id',
+                'release.artist:id,name', 'release.artists:id,name', 'release.cover:id,release_id', 'releases:id,name',
             ])
             ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where(fn ($query) => $query
                 ->where('name', 'like', "%{$search}%")
+                ->orWhere('aliases', 'like', "%{$search}%")
                 ->orWhere('isrc', 'like', '%'.str_replace('-', '', $search).'%')))
             // A recording on several releases is listed once, by its first entry;
             // within one release every entry of that release is listed.
-            ->when($request->integer('release'), fn ($query, int $release) => $query->where('release_id', $release), fn ($query) => $query
+            ->when($request->integer('release'), fn ($query, int $release) => $query->onRelease($release), fn ($query) => $query
                 ->where(fn ($query) => $query->whereNull('isrc')->orWhereRaw('tracks.id = (select min(entries.id) from tracks as entries where entries.label_id = tracks.label_id and entries.isrc = tracks.isrc)')))
             ->tap($sorting)
             ->paginate(PageSize::MAIN)
@@ -80,14 +82,14 @@ class TrackController extends Controller
         $audio = PlayableAudio::forTracks($tracks->getCollection());
         $recordings = $request->integer('release') ? collect() : Track::query()
             ->whereIn('isrc', $tracks->getCollection()->pluck('isrc')->filter())
-            ->with(['release:id,name,contract_id'])->orderBy('id')->get()->groupBy('isrc');
+            ->with(['release:id,name,contract_id', 'releases:id,name'])->orderBy('id')->get()->groupBy('isrc');
 
         $tracks = $tracks->through(fn (Track $track): array => [
             ...self::editable($track, withText: false),
             ...$track->only(['mechanicals_rate', 'ppd_rate', 'release_id']),
             'artist' => $track->artist?->name,
             'release' => $track->release?->only(['id', 'name', 'catalog_number']),
-            'releases' => ($recordings->get($track->isrc) ?? collect([$track]))->map(fn (Track $entry): ?array => $entry->release?->only(['id', 'name']))->filter()->unique('id')->values(),
+            'releases' => ($recordings->get($track->isrc) ?? collect([$track]))->flatMap(fn (Track $entry) => $entry->releases->map(fn (Release $release): array => $release->only(['id', 'name'])))->unique('id')->values(),
             // Each entry has its own contract; one without is named here, as its row is not listed.
             'without_contract_on' => ($recordings->get($track->isrc) ?? collect())
                 ->filter(fn (Track $entry): bool => $entry->id !== $track->id && $entry->contract_id === null && $entry->release?->contract_id === null)
@@ -140,6 +142,7 @@ class TrackController extends Controller
         $income = Transaction::query()->whereIn('track_id', $ids)->where('type', TransactionType::Income);
 
         return Inertia::render('tracks/show', [
+            'agreements' => Agreement::linkedTo($track),
             'track' => [
                 ...self::editable($track),
                 'credited_artist' => ArtistCredits::display($track),
@@ -160,13 +163,13 @@ class TrackController extends Controller
                 'transactions' => (clone $income)->count(),
             ],
             'report' => IncomeReport::of(clone $income, PlayCount::query()->whereIn('track_id', $ids)),
-            'releases' => Track::query()->whereIn('id', $ids)->with('release:id,name,catalog_number')->orderBy('id')->get()
-                ->filter(fn (Track $entry): bool => $entry->release !== null)
-                ->map(fn (Track $entry): array => [
+            'releases' => Track::query()->whereIn('id', $ids)->with('releases:id,name,catalog_number')->orderBy('id')->get()
+                ->flatMap(fn (Track $entry) => $entry->releases->map(fn (Release $release): array => [
                     'track_id' => $entry->id,
-                    ...$entry->release->only(['id', 'name', 'catalog_number']),
-                    'income' => (string) (Transaction::query()->where('track_id', $entry->id)->where('type', TransactionType::Income)->sum('converted_total') ?: '0'),
-                ])->values(),
+                    ...$release->only(['id', 'name', 'catalog_number']),
+                    'track_number' => $release->pivot->track_number,
+                    'income' => (string) (Transaction::query()->where('track_id', $entry->id)->where('release_id', $release->id)->where('type', TransactionType::Income)->sum('converted_total') ?: '0'),
+                ]))->values(),
             'filters' => [...$airplaySorting->toArray(), ...$searchSorting->toArray()],
             'airplayTotals' => [
                 'plays' => Airplay::query()->whereIn('track_id', $ids)->count(),
@@ -195,7 +198,13 @@ class TrackController extends Controller
 
     public function update(TrackRequest $request, Track $track): RedirectResponse
     {
-        $attributes = $request->safe()->except('artists');
+        $attributes = $request->safe()->except(['artists', 'release_id']);
+
+        // On another release than its first, the track has its own number.
+        if ($request->filled('release_id') && $request->integer('release_id') !== $track->release_id) {
+            $track->putOn($request->integer('release_id'), $attributes['track_number'] ?? null, $attributes['disc_number'] ?? null);
+            unset($attributes['track_number'], $attributes['disc_number']);
+        }
 
         if ($request->has('artists')) {
             ArtistCredits::sync($track, $request->validated('artists', []));

@@ -107,7 +107,7 @@ class MechanicalsTool
             ->where(fn (Builder $query) => $query
                 ->where('accounts_mechanicals', true)
                 ->orWhereHas('tracks', fn (Builder $tracks) => $tracks->withoutGlobalScope('label')->where('accounts_mechanicals', true)))
-            ->with(['tracks' => fn ($tracks) => $tracks->withoutGlobalScope('label')->orderBy('track_number')->orderBy('id')])
+            ->with(['tracks' => fn ($tracks) => $tracks->withoutGlobalScope('label')])
             ->orderBy('name')
             ->get();
 

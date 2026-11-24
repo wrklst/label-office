@@ -18,6 +18,7 @@ export type TrackCredits = Partial<
 export type EditableTrack = {
     id: number;
     name: string;
+    aliases?: string[] | null;
     isrc: string | null;
     iswc: string | null;
     track_number: number | null;
@@ -61,6 +62,7 @@ export function TrackFields({
     track,
     inheritedContract,
     genreOptions = [],
+    releaseId,
     errors,
 }: {
     track: EditableTrack;
@@ -68,6 +70,8 @@ export function TrackFields({
     inheritedContract?: Option | null;
     /** Genres to suggest: Zebralution's list while the label delivers there. */
     genreOptions?: string[];
+    /** The release the track is edited on: its number there is the one shown and saved. */
+    releaseId?: number;
     errors: Record<string, string>;
 }) {
     const credit = (role: keyof TrackCredits) =>
@@ -132,6 +136,22 @@ export function TrackFields({
                     />
                 </Field>
             </div>
+            {releaseId !== undefined && (
+                <input type="hidden" name="release_id" value={releaseId} />
+            )}
+            <Field
+                label="Other spellings"
+                htmlFor="aliases"
+                error={errors.aliases}
+                hint="One per line. A statement or platform that writes the title like this is matched to this track."
+            >
+                <Textarea
+                    id="aliases"
+                    name="aliases"
+                    rows={2}
+                    defaultValue={(track.aliases ?? []).join('\n')}
+                />
+            </Field>
             <Field label="Further artist credits" error={errors.artists}>
                 <ArtistCreditRows defaultValue={track.artists} />
             </Field>
