@@ -75,9 +75,36 @@ included; see [Command line](docs/50-command-line.md#migrating-from-infinite-cat
   Anthropic, Mistral, Gemini or any OpenAI-compatible one) read it; what it
   reads is a proposal you check.
 - Optional tools for mechanicals, PPD and reserves.
-- My statements for payees, with passwordless sign-in by emailed one-time code.
+- My statements and My agreements for payees, with passwordless sign-in by
+  emailed one-time code or a passkey.
 - Each service the label works with (Zebralution, Bandcamp, Subvert, Rightz
   Audio) has a switch; what a label does not work with is hidden.
+
+**Agreements**
+
+- Written agreements with payees for a remix or a release, drafted from your
+  own templates before the release comes out: the parties, the share, the
+  term and what has to be delivered.
+- Signed online by every party: each of the people who may sign for the
+  label (all of them together or any one, as the label is set up), the payee,
+  and the original artist when they grant the rights. A signature is a typed
+  name, a confirmation and a one-time code sent by email, recorded with time,
+  address and the SHA-256 hash of the text, which is frozen when the agreement
+  is sent.
+- The same person cannot sign for the label and as its other party unless the
+  label marked them as exempt from the ban on self-dealing.
+- Every party is emailed a PDF of the signed agreement with the record of the
+  signatures.
+- Deliverables per agreement: the payee hands in a file for each item (master,
+  artwork, texts) under My agreements, it is filed with the release, and the
+  label accepts it or hands it back with a note.
+- The royalty contract is made from the signed share with one click.
+- Agreements signed on paper or elsewhere are filed with their signed copy.
+- Three example templates for German law and a GmbH (remix through the label,
+  remix through the artist, release). They are unreviewed examples, see
+  [No legal guarantee](#no-legal-guarantee).
+- An admin can also be a payee of the label: an artist who helps run it reads
+  their own share and signs their own agreements.
 
 **Importing statements**
 
