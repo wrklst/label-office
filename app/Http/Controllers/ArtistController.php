@@ -78,16 +78,15 @@ class ArtistController extends Controller
     public function show(Request $request, Artist $artist): Response
     {
         $tracks = Track::query()->where(fn ($query) => $query->where('artist_id', $artist->id)->orWhereHas('artists', fn ($query) => $query->whereKey($artist->id)))
-            ->with(['release:id,name,contract_id', 'releases:id,name'])->withCount('airplays')->orderBy('name')->get();
+            ->with(['release:id,name', 'releases:id,name'])->withCount('airplays')->orderBy('name')->get();
 
         // Also the releases of others that carry one of the artist's tracks, such as a remix or a compilation.
         $releases = Release::query()->where(fn ($query) => $query->where('artist_id', $artist->id)->orWhereHas('artists', fn ($query) => $query->whereKey($artist->id))
             ->orWhereIn('id', DB::table('release_track')->whereIn('track_id', $tracks->modelKeys())->select('release_id')))
-            ->orderByDesc('released_on')->orderBy('name')->get(['id', 'name', 'catalog_number', 'released_on', 'artist_id', 'contract_id']);
+            ->orderByDesc('released_on')->orderBy('name')->get(['id', 'name', 'catalog_number', 'released_on', 'artist_id']);
         $own = $releases->filter(fn (Release $release): bool => $release->artist_id === $artist->id || $release->artists->contains($artist))->modelKeys();
-        // The contract of a track is its own, otherwise that of its release.
         $contracts = Contract::query()->with('splits.payee:id,name')->orderBy('name')
-            ->findMany($tracks->toBase()->map(fn (Track $track): ?int => $track->contract_id ?? $track->release?->contract_id)->merge($releases->pluck('contract_id'))->filter()->unique());
+            ->findMany($tracks->pluck('contract_id')->filter()->unique());
 
         // Everything booked on the artist's releases, plus what their tracks earned on releases
         // of others, such as compilations. Each transaction counts once.

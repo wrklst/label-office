@@ -16,25 +16,29 @@ test('tracks with one ISRC become one track on all their releases, and no transa
     $remixDeal = Contract::factory()->create(['label_id' => $label->id]);
     $singleDeal = Contract::factory()->create(['label_id' => $label->id]);
     $album = Release::factory()->create(['label_id' => $label->id]);
-    $single = Release::factory()->create(['label_id' => $label->id, 'contract_id' => $singleDeal->id]);
-    $onAlbum = Track::factory()->create(['label_id' => $label->id, 'release_id' => $album->id, 'name' => 'Broken - Remix', 'isrc' => 'ZZTST2600001', 'track_number' => 7, 'contract_id' => $remixDeal->id]);
-    $onSingle = Track::factory()->create(['label_id' => $label->id, 'release_id' => $single->id, 'name' => 'Broken (Remix)', 'isrc' => 'ZZTST2600001', 'track_number' => 1, 'contract_id' => null, 'duration' => 251]);
+    $single = Release::factory()->create(['label_id' => $label->id]);
+    $onAlbum = Track::factory()->create(['label_id' => $label->id, 'release_id' => $album->id, 'name' => 'Broken - Remix', 'isrc' => 'ZZTST2600001', 'track_number' => 7, 'contract_id' => $remixDeal->id, 'duration' => 251]);
+    $onSingle = Track::factory()->create(['label_id' => $label->id, 'release_id' => $single->id, 'name' => 'Broken (Remix)', 'isrc' => 'ZZTST2600001', 'track_number' => 1, 'contract_id' => $singleDeal->id, 'duration' => null]);
     $other = Track::factory()->create(['label_id' => $label->id, 'release_id' => $album->id, 'isrc' => 'ZZTST2600002']);
-    $item = Item::factory()->create(['label_id' => $label->id, 'release_id' => $single->id, 'track_id' => $onSingle->id, 'contract_id' => null]);
-    $sale = Transaction::factory()->create(['label_id' => $label->id, 'release_id' => $single->id, 'track_id' => $onSingle->id, 'item_id' => $item->id, 'contract_id' => null]);
+    // The single's entry has more sales, so it is the one that stays; the album's entry has two different contracts to keep.
+    Transaction::factory()->count(2)->create(['label_id' => $label->id, 'release_id' => $single->id, 'track_id' => $onSingle->id, 'contract_id' => null]);
+    $item = Item::factory()->create(['label_id' => $label->id, 'release_id' => $album->id, 'track_id' => $onAlbum->id, 'contract_id' => null]);
+    $sale = Transaction::factory()->create(['label_id' => $label->id, 'release_id' => $album->id, 'track_id' => $onAlbum->id, 'item_id' => null, 'contract_id' => null]);
 
     $lines = RecordingMerge::run();
 
     $track = Track::query()->withoutGlobalScope('label')->where('isrc', 'ZZTST2600001')->sole();
 
     expect($lines)->toHaveCount(1)
-        ->and($track->id)->toBe($onAlbum->id)
-        ->and($track->aliases)->toBe(['Broken (Remix)'])
+        ->and($track->id)->toBe($onSingle->id)
+        ->and($track->contract_id)->toBe($singleDeal->id)
+        ->and($track->aliases)->toBe(['Broken - Remix'])
         ->and($track->duration)->toBe(251)
         ->and($sale->refresh()->track_id)->toBe($track->id)
-        ->and($sale->release_id)->toBe($single->id)
-        // The single paid by its release's contract and still does.
-        ->and($item->refresh()->contract_id)->toBe($singleDeal->id)
+        ->and($sale->release_id)->toBe($album->id)
+        // What the album's entry paid through its own contract it still does.
+        ->and($item->refresh()->contract_id)->toBe($remixDeal->id)
+        ->and($sale->contract_id)->toBe($remixDeal->id)
         ->and($album->tracks()->withoutGlobalScope('label')->get()->firstWhere('id', $track->id)->track_number)->toBe(7)
         ->and($single->tracks()->withoutGlobalScope('label')->sole()->track_number)->toBe(1)
         ->and(Track::query()->withoutGlobalScope('label')->whereKey($other->id)->exists())->toBeTrue();
@@ -103,12 +107,12 @@ test('choosing a payee offers the releases their contracts pay for, with those t
 
     expect(collect($tracks)->where('chosen', true)->pluck('id')->all())->toBe([$remix->id]);
 
-    // A single whose contract is on the release itself: its track comes ticked too.
-    $single = Release::factory()->create(['label_id' => $label->id, 'contract_id' => $contract->id]);
+    // A track without the contract is not ticked, whatever else is on its release.
+    $single = Release::factory()->create(['label_id' => $label->id]);
     $only = Track::factory()->create(['label_id' => $label->id, 'release_id' => $single->id, 'contract_id' => null]);
 
     expect($this->actingAs($admin)->getJson(route('agreements.release', ['release' => $single, 'contract_id' => $contract->id]))->json('tracks.0'))
-        ->toMatchArray(['id' => $only->id, 'chosen' => true]);
+        ->toMatchArray(['id' => $only->id, 'chosen' => false]);
 });
 
 test('an agreement is listed on the pages of its contract, payee, release and track', function () {

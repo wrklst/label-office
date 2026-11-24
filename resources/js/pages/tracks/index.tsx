@@ -34,7 +34,6 @@ type Track = EditableTrack & {
     releases: { id: number; name: string }[];
     without_contract_on: string[];
     contract: Option | null;
-    inherited_contract: Option | null;
 };
 
 type Props = {
@@ -147,11 +146,6 @@ export default function Tracks({ tracks, filters, genreOptions }: Props) {
                                     <TableCell>
                                         {track.contract ? (
                                             track.contract.name
-                                        ) : track.inherited_contract ? (
-                                            <span className="text-muted-foreground">
-                                                {track.inherited_contract.name}{' '}
-                                                (release)
-                                            </span>
                                         ) : (
                                             <Badge variant="warning">
                                                 No contract
@@ -200,9 +194,6 @@ export default function Tracks({ tracks, filters, genreOptions }: Props) {
                                             <TrackDialog
                                                 track={track}
                                                 genreOptions={genreOptions}
-                                                inheritedContract={
-                                                    track.inherited_contract
-                                                }
                                             />
                                             <DeleteButton
                                                 url={TrackController.destroy.url(

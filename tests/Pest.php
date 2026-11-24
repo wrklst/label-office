@@ -156,7 +156,7 @@ function xlsxFile(array $rows): string
 }
 
 /**
- * A label with one release under a 50% contract, income paid in 2026 Q1
+ * A label with one release whose track is under a 50% contract, income paid in 2026 Q1
  * and a period covering it: enough for every page to show real figures.
  *
  * @return array{label: Label, admin: User, payee: Payee, contract: Contract, release: Release, track: Track, period: Period}
@@ -169,8 +169,8 @@ function royaltyScenario(): array
     $contract = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Deal']);
     ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => $payee->id, 'split_amount' => '0.5']);
     $artist = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
-    $release = Release::factory()->create(['label_id' => $label->id, 'artist_id' => $artist->id, 'contract_id' => $contract->id, 'name' => 'Example Release', 'catalog_number' => 'EX001']);
-    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'artist_id' => $artist->id, 'name' => 'Example Track', 'isrc' => 'ZZTST2600001']);
+    $release = Release::factory()->create(['label_id' => $label->id, 'artist_id' => $artist->id, 'name' => 'Example Release', 'catalog_number' => 'EX001']);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'artist_id' => $artist->id, 'contract_id' => $contract->id, 'name' => 'Example Track', 'isrc' => 'ZZTST2600001']);
     $import = DataImport::factory()->create(['label_id' => $label->id, 'name' => 'Example statement', 'transactions_count' => 1, 'rows_count' => 1, 'total' => '100']);
     Transaction::factory()->create([
         'label_id' => $label->id, 'release_id' => $release->id, 'track_id' => $track->id, 'data_import_id' => $import->id,

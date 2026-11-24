@@ -1,5 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import CatalogController from '@/actions/App/Http/Controllers/CatalogController';
+import ReleaseController from '@/actions/App/Http/Controllers/ReleaseController';
 import { FilterBar } from '@/components/filter-bar';
 import { Pagination } from '@/components/pagination';
 import { RecordLink } from '@/components/record-link';
@@ -26,8 +27,6 @@ type Release = {
     id: number;
     name: string;
     catalog_number: string | null;
-    contract_id: number | null;
-    contract: string | null;
     artist: string | null;
     artist_id: number | null;
     tracks: Track[];
@@ -36,11 +35,24 @@ type Release = {
 const contractOption = (id: number | null, name: string | null) =>
     id !== null && name !== null ? { id, name, hint: null, image: null } : null;
 
-function assign(type: 'release' | 'track', id: number, value: number | '') {
+function assign(id: number, value: number | '') {
     router.patch(
         CatalogController.assign.url(),
-        { type, id, contract_id: value === '' ? null : value },
+        { id, contract_id: value === '' ? null : value },
         { preserveScroll: true, preserveState: true },
+    );
+}
+
+/** Writes the contract on the tracks of a release that have none. */
+function assignToTracks(releaseId: number, value: number | '') {
+    if (value === '') {
+        return;
+    }
+
+    router.put(
+        ReleaseController.contract.url(releaseId),
+        { contract_id: value },
+        { preserveScroll: true },
     );
 }
 
@@ -59,7 +71,7 @@ export default function CatalogManager({
     return (
         <Page
             title="Catalog manager"
-            description="Assign contracts across the whole catalog in one place. A track uses its own contract if it has one, otherwise the contract of its release. Changes save immediately."
+            description="Assign contracts across the whole catalog in one place. A release has no contract of its own: the contract of a release's dropdown is written on the tracks of the release that have none. Changes save immediately."
             actions={
                 <Button variant="outline" asChild>
                     <Link href={createContract({ query: { return_to: url } })}>
@@ -132,20 +144,18 @@ export default function CatalogManager({
                                     </span>
                                 }
                                 actions={
-                                    <RecordSelect
-                                        aria-label={`Contract for ${release.name}`}
-                                        records="contracts"
-                                        value={release.contract_id ?? ''}
-                                        initial={contractOption(
-                                            release.contract_id,
-                                            release.contract,
-                                        )}
-                                        onChange={(id) =>
-                                            assign('release', release.id, id)
-                                        }
-                                        placeholder="No release contract"
-                                        className="w-72"
-                                    />
+                                    release.tracks.length > 0 && (
+                                        <RecordSelect
+                                            aria-label={`Contract for the tracks of ${release.name}`}
+                                            records="contracts"
+                                            value=""
+                                            onChange={(id) =>
+                                                assignToTracks(release.id, id)
+                                            }
+                                            placeholder="Set contract on tracks without one"
+                                            className="w-72"
+                                        />
+                                    )
                                 }
                             >
                                 {release.tracks.length === 0 ? (
@@ -192,13 +202,11 @@ export default function CatalogManager({
                                                         </span>
                                                     )}
                                                 </span>
-                                                {track.contract_id === null &&
-                                                    release.contract_id ===
-                                                        null && (
-                                                        <Badge variant="destructive">
-                                                            No contract
-                                                        </Badge>
-                                                    )}
+                                                {track.contract_id === null && (
+                                                    <Badge variant="destructive">
+                                                        No contract
+                                                    </Badge>
+                                                )}
                                                 <RecordSelect
                                                     aria-label={`Contract for ${track.name}`}
                                                     records="contracts"
@@ -210,17 +218,9 @@ export default function CatalogManager({
                                                         track.contract,
                                                     )}
                                                     onChange={(id) =>
-                                                        assign(
-                                                            'track',
-                                                            track.id,
-                                                            id,
-                                                        )
+                                                        assign(track.id, id)
                                                     }
-                                                    placeholder={
-                                                        release.contract_id
-                                                            ? `Release: ${release.contract}`
-                                                            : 'No contract'
-                                                    }
+                                                    placeholder="No contract"
                                                     className="w-72"
                                                 />
                                             </li>

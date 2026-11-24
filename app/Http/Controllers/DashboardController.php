@@ -48,7 +48,7 @@ class DashboardController extends Controller
             'movers' => IncomeReport::movers($selection(), 'release_id', dateColumn: $dateColumn),
             'attention' => [
                 'unassigned_items' => Item::query()->whereNull('release_id')->count(),
-                'releases_without_contract' => Release::query()->whereNull('contract_id')->count(),
+                'releases_without_contract' => Release::query()->withoutContract()->count(),
                 'unconverted' => Transaction::query()->whereNull('converted_total')->count(),
                 'imports' => DataImport::query()->where('needs_cleanup', true)->count(),
             ],

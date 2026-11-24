@@ -627,8 +627,9 @@ test('the contract of a signed agreement is also set on the same recording on an
 
 test('an agreement covers several releases, a whole release or only some of its tracks, and the contract goes on exactly that', function () {
     ['label' => $label, 'signatory' => $admin, 'payee' => $payee, 'payeeUser' => $payeeUser, 'agreement' => $draft] = agreementBetweenLabelAndPayee();
-    $whole = Release::factory()->create(['label_id' => $label->id, 'name' => 'Whole Release', 'contract_id' => null]);
-    $partly = Release::factory()->create(['label_id' => $label->id, 'name' => 'Remix EP', 'contract_id' => null]);
+    $whole = Release::factory()->create(['label_id' => $label->id, 'name' => 'Whole Release']);
+    $wholeTrack = Track::factory()->create(['label_id' => $label->id, 'release_id' => $whole->id, 'name' => 'Whole Track', 'isrc' => null, 'contract_id' => null]);
+    $partly = Release::factory()->create(['label_id' => $label->id, 'name' => 'Remix EP']);
     $remixOne = Track::factory()->create(['label_id' => $label->id, 'release_id' => $partly->id, 'name' => 'Remix One', 'track_number' => 1, 'isrc' => null, 'contract_id' => null]);
     $remixTwo = Track::factory()->create(['label_id' => $label->id, 'release_id' => $partly->id, 'name' => 'Remix Two', 'track_number' => 2, 'isrc' => null, 'contract_id' => null]);
     $elsewhere = Track::factory()->create(['label_id' => $label->id, 'name' => 'Elsewhere', 'contract_id' => null]);
@@ -642,7 +643,9 @@ test('an agreement covers several releases, a whole release or only some of its 
     $agreement = Agreement::query()->where('name', 'Two releases')->sole();
 
     expect($agreement->coverage())->toBe([
-        ['id' => $whole->id, 'name' => 'Whole Release', 'catalog_number' => $whole->catalog_number, 'tracks' => []],
+        ['id' => $whole->id, 'name' => 'Whole Release', 'catalog_number' => $whole->catalog_number, 'tracks' => [
+            ['id' => $wholeTrack->id, 'name' => 'Whole Track', 'chosen' => false],
+        ]],
         ['id' => $partly->id, 'name' => 'Remix EP', 'catalog_number' => $partly->catalog_number, 'tracks' => [
             ['id' => $remixOne->id, 'name' => 'Remix One', 'chosen' => true],
             ['id' => $remixTwo->id, 'name' => 'Remix Two', 'chosen' => false],
@@ -668,11 +671,12 @@ test('an agreement covers several releases, a whole release or only some of its 
     signAgreement($agreement, $admin, 'label');
 
     $this->actingAs($admin)->post(route('agreements.contract', $agreement->id))
-        ->assertInertiaFlash('toast.message', 'Contract created. Set on: Whole Release, Remix One.');
+        ->assertInertiaFlash('toast.message', 'Contract created. Set on: Whole Track, Remix One.');
 
     $contractId = $agreement->refresh()->contract_id;
 
-    expect($whole->refresh()->contract_id)->toBe($contractId)
+    // A release ticked without tracks puts the contract on all its tracks.
+    expect($wholeTrack->refresh()->contract_id)->toBe($contractId)
         ->and($remixOne->refresh()->contract_id)->toBe($contractId)
         ->and($partly->refresh()->contract_id)->toBeNull()
         ->and($remixTwo->refresh()->contract_id)->toBeNull()

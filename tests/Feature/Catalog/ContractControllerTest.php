@@ -19,7 +19,7 @@ test('the contract list shows each contract with its splits and where it is used
     ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => $payee->id, 'ledger_id' => $ledger->id, 'split_amount' => '0.25']);
     $child = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Sub Deal']);
     $contract->children()->attach($child, ['weight' => 1]);
-    $release = Release::factory()->create(['label_id' => $label->id, 'contract_id' => $contract->id]);
+    $release = Release::factory()->create(['label_id' => $label->id]);
     Track::factory()->count(2)->create(['label_id' => $label->id, 'release_id' => $release->id, 'contract_id' => $contract->id]);
 
     $this->actingAs(labelAdmin($label))
@@ -59,7 +59,8 @@ test('the unused filter hides contracts that a release, track, item or parent co
     $onTrack = Contract::factory()->create(['label_id' => $label->id]);
     $onItem = Contract::factory()->create(['label_id' => $label->id]);
     $asChild = Contract::factory()->create(['label_id' => $label->id]);
-    $release = Release::factory()->create(['label_id' => $label->id, 'contract_id' => $onRelease->id]);
+    $release = Release::factory()->create(['label_id' => $label->id]);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'contract_id' => $onRelease->id]);
     Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'contract_id' => $onTrack->id]);
     Item::factory()->create(['label_id' => $label->id, 'contract_id' => $onItem->id]);
     $onRelease->children()->attach($asChild, ['weight' => 1]);
@@ -218,7 +219,7 @@ test('the contract form shows splits as percentages and its child contracts', fu
     $parent = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Umbrella Deal']);
     $contract->children()->attach($child, ['weight' => '2.5']);
     $parent->children()->attach($contract, ['weight' => 1]);
-    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'contract_id' => $contract->id]);
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release']);
     $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track', 'contract_id' => $contract->id]);
 
     $this->actingAs(labelAdmin($label))
@@ -295,13 +296,14 @@ test('a rejected contract update keeps the existing splits', function () {
     $this->assertModelExists($split);
 });
 
-test('deleting a contract removes its splits and links and leaves its releases without a contract', function () {
+test('deleting a contract removes its splits and links and leaves its tracks without a contract', function () {
     $label = Label::factory()->create();
     $contract = Contract::factory()->create(['label_id' => $label->id]);
     ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => Payee::factory()->create(['label_id' => $label->id])]);
     $child = Contract::factory()->create(['label_id' => $label->id]);
     $contract->children()->attach($child, ['weight' => 1]);
-    $release = Release::factory()->create(['label_id' => $label->id, 'contract_id' => $contract->id]);
+    $release = Release::factory()->create(['label_id' => $label->id]);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'contract_id' => $contract->id]);
 
     $this->actingAs(labelAdmin($label))
         ->delete(route('contracts.destroy', $contract->id))
@@ -311,7 +313,7 @@ test('deleting a contract removes its splits and links and leaves its releases w
     $this->assertModelExists($child);
     $this->assertDatabaseCount('contract_splits', 0);
     $this->assertDatabaseCount('contract_links', 0);
-    $this->assertDatabaseHas('releases', ['id' => $release->id, 'contract_id' => null]);
+    $this->assertDatabaseHas('tracks', ['id' => $track->id, 'contract_id' => null]);
 });
 
 test('the contract page shows its terms, its splits and where it applies', function () {
@@ -323,7 +325,7 @@ test('the contract page shows its terms, its splits and where it applies', funct
     $parent = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Umbrella Deal']);
     $contract->children()->attach($child, ['weight' => '2.5']);
     $parent->children()->attach($contract, ['weight' => 1]);
-    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'contract_id' => $contract->id]);
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release']);
     $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track', 'contract_id' => $contract->id]);
     Release::factory()->create(['label_id' => $label->id, 'name' => 'Other Release']);
 
@@ -347,7 +349,8 @@ test('the contract page shows its terms, its splits and where it applies', funct
 test('the releases and tracks of a contract are paged on their own', function () {
     $label = Label::factory()->create();
     $contract = Contract::factory()->create(['label_id' => $label->id]);
-    Release::factory()->count(27)->create(['label_id' => $label->id, 'contract_id' => $contract->id]);
+    Release::factory()->count(27)->create(['label_id' => $label->id])
+        ->each(fn (Release $release) => Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'contract_id' => $contract->id]));
 
     $this->actingAs(labelAdmin($label))
         ->get(route('contracts.show', ['contract' => $contract->id, 'releases_page' => 2]))

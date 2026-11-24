@@ -188,7 +188,7 @@ export default function Mechanicals({
                             Items page
                         </Link>
                         . The expense item keeps charging whoever bears the cost
-                        under the release contract.
+                        under the contracts of the release's tracks.
                     </p>
                     <p>
                         Units are downloads

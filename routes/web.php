@@ -88,6 +88,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('artists/{artist}/image', [ArtistImageController::class, 'store'])->name('artists.image.store');
             Route::delete('artists/{artist}/image', [ArtistImageController::class, 'destroy'])->name('artists.image.destroy');
             Route::resource('artists', ArtistController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
+            Route::put('releases/{release}/contract', [ReleaseController::class, 'contract'])->name('releases.contract');
             Route::resource('releases', ReleaseController::class);
 
             Route::post('platform-links', [PlatformLinkController::class, 'store'])->name('platform-links.store');

@@ -7,7 +7,6 @@ import { FormDialog } from '@/components/form-dialog';
 import { TrackFields } from '@/components/track-fields';
 import type { EditableTrack } from '@/components/track-fields';
 import { Button } from '@/components/ui/button';
-import type { Option } from '@/types';
 
 type ListedTrack = Omit<EditableTrack, 'lyrics' | 'credits'> &
     Partial<Pick<EditableTrack, 'lyrics' | 'credits'>>;
@@ -54,13 +53,11 @@ function LoadedTrackFields({
  */
 export function TrackDialog({
     track,
-    inheritedContract,
     genreOptions,
     releaseId,
     trigger,
 }: {
     track: ListedTrack;
-    inheritedContract?: Option | null;
     genreOptions?: string[];
     releaseId?: number;
     trigger?: ReactNode;
@@ -85,7 +82,6 @@ export function TrackDialog({
             {(errors) => (
                 <LoadedTrackFields
                     track={track}
-                    inheritedContract={inheritedContract}
                     genreOptions={genreOptions}
                     releaseId={releaseId}
                     errors={errors}

@@ -40,18 +40,22 @@ test('the release list can be narrowed to one artist', function () {
             ->where('filters.artist', $artist->id));
 });
 
-test('the release list can be narrowed to releases without a contract', function () {
+test('the release list can be narrowed to releases with a track without a contract, which a release without tracks is not', function () {
     $label = Label::factory()->create();
     $contract = Contract::factory()->create(['label_id' => $label->id]);
-    Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'contract_id' => $contract->id]);
+    $covered = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release']);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $covered->id, 'contract_id' => $contract->id]);
+    $partly = Release::factory()->create(['label_id' => $label->id, 'name' => 'Partly Covered']);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $partly->id, 'contract_id' => $contract->id]);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $partly->id]);
     Release::factory()->create(['label_id' => $label->id, 'name' => 'Sample Album']);
 
     $this->actingAs(labelAdmin($label))
-        ->get(route('releases.index', ['without_contract' => 1]))
+        ->get(route('releases.index', ['without_contract' => 1, 'sort' => 'name', 'direction' => 'asc']))
         ->assertInertia(fn (Assert $page) => $page
             ->has('releases.data', 1)
-            ->where('releases.data.0.name', 'Sample Album')
-            ->where('releases.data.0.contract', null)
+            ->where('releases.data.0.name', 'Partly Covered')
+            ->where('releases.data.0.mixed', true)
             ->where('filters.without_contract', true));
 });
 
@@ -79,13 +83,11 @@ test('the release list sums income only and puts releases without a catalog numb
 test('a release is created with its tracks and normalised identifiers', function () {
     $label = Label::factory()->create();
     $artist = Artist::factory()->create(['label_id' => $label->id]);
-    $contract = Contract::factory()->create(['label_id' => $label->id]);
     $trackContract = Contract::factory()->create(['label_id' => $label->id]);
 
     $response = $this->actingAs(labelAdmin($label))->post(route('releases.store'), [
         'name' => 'Example Release',
         'artist_id' => $artist->id,
-        'contract_id' => $contract->id,
         'catalog_number' => 'EX001',
         'upc' => '4-000000-000017',
         'released_on' => '2026-02-06',
@@ -107,7 +109,6 @@ test('a release is created with its tracks and normalised identifiers', function
         'label_id' => $label->id,
         'name' => 'Example Release',
         'artist_id' => $artist->id,
-        'contract_id' => $contract->id,
         'catalog_number' => 'EX001',
         'upc' => '4000000000017',
         'accounts_mechanicals' => true,
@@ -141,10 +142,10 @@ test('empty selections and rates on the release form are stored as null', functi
     $label = Label::factory()->create();
 
     $this->actingAs(labelAdmin($label))
-        ->post(route('releases.store'), ['name' => 'Example Release', 'artist_id' => '', 'contract_id' => '', 'released_on' => '', 'mechanicals_rate' => '', 'ppd_rate' => '', 'reserves_rate' => ''])
+        ->post(route('releases.store'), ['name' => 'Example Release', 'artist_id' => '', 'released_on' => '', 'mechanicals_rate' => '', 'ppd_rate' => '', 'reserves_rate' => ''])
         ->assertSessionHasNoErrors();
 
-    $this->assertDatabaseHas('releases', ['name' => 'Example Release', 'artist_id' => null, 'contract_id' => null, 'released_on' => null, 'mechanicals_rate' => null, 'ppd_rate' => null, 'reserves_rate' => null]);
+    $this->assertDatabaseHas('releases', ['name' => 'Example Release', 'artist_id' => null, 'released_on' => null, 'mechanicals_rate' => null, 'ppd_rate' => null, 'reserves_rate' => null]);
 });
 
 test('a release and each of its tracks need a name', function () {
@@ -200,9 +201,9 @@ test('the release page totals income and expenses and breaks income down by trac
     $label = Label::factory()->create();
     $artist = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
     $contract = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Deal']);
-    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'artist_id' => $artist->id, 'contract_id' => $contract->id]);
-    $second = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track Two', 'track_number' => 2]);
-    $first = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track One', 'track_number' => 1]);
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'artist_id' => $artist->id]);
+    $second = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track Two', 'track_number' => 2, 'contract_id' => $contract->id]);
+    $first = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track One', 'track_number' => 1, 'contract_id' => $contract->id]);
     $shared = ['label_id' => $label->id, 'release_id' => $release->id];
     Transaction::factory()->create([...$shared, 'track_id' => $first->id, 'total' => '6', 'quantity' => 3, 'retailer' => 'Example Stream']);
     Transaction::factory()->create([...$shared, 'track_id' => $first->id, 'total' => '4', 'quantity' => 2, 'retailer' => 'Example Stream']);
@@ -219,6 +220,7 @@ test('the release page totals income and expenses and breaks income down by trac
             ->where('release.name', 'Example Release')
             ->where('release.artist', 'Example Artist')
             ->where('release.contract', ['id' => $contract->id, 'name' => 'Example Deal'])
+            ->where('release.mixed', false)
             ->has('release.tracks', 2)
             ->where('release.tracks.0.name', 'Example Track One')
             ->where('release.tracks.0.income', $equals('10'))
@@ -343,4 +345,66 @@ test('deleting a release removes its tracks and items but keeps its transactions
     $this->assertModelMissing($track);
     $this->assertDatabaseCount('items', 0);
     $this->assertDatabaseHas('transactions', ['id' => $transaction->id, 'release_id' => null, 'track_id' => null, 'item_id' => null]);
+});
+
+test('a contract is set on the tracks of a release that have none, and the others keep theirs', function () {
+    $label = Label::factory()->create();
+    $contract = Contract::factory()->create(['label_id' => $label->id]);
+    $own = Contract::factory()->create(['label_id' => $label->id]);
+    $release = Release::factory()->create(['label_id' => $label->id]);
+    $bare = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id]);
+    $owned = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'contract_id' => $own->id]);
+    $elsewhere = Track::factory()->create(['label_id' => $label->id]);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('releases.contract', $release->id), ['contract_id' => $contract->id])
+        ->assertSessionHasNoErrors()
+        ->assertInertiaFlash('toast.message', 'Contract set on 1 track. 1 track kept its own.');
+
+    expect($bare->refresh()->contract_id)->toBe($contract->id)
+        ->and($owned->refresh()->contract_id)->toBe($own->id)
+        ->and($elsewhere->refresh()->contract_id)->toBeNull();
+});
+
+test('a contract set on the tracks of a release can replace the contracts they have, or clear them', function () {
+    $label = Label::factory()->create();
+    $contract = Contract::factory()->create(['label_id' => $label->id]);
+    $own = Contract::factory()->create(['label_id' => $label->id]);
+    $release = Release::factory()->create(['label_id' => $label->id]);
+    $bare = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id]);
+    $owned = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'contract_id' => $own->id]);
+    $admin = labelAdmin($label);
+
+    $this->actingAs($admin)->put(route('releases.contract', $release->id), ['contract_id' => $contract->id, 'replace' => '1'])
+        ->assertSessionHasNoErrors()
+        ->assertInertiaFlash('toast.message', 'Contract set on 2 tracks.');
+
+    expect($bare->refresh()->contract_id)->toBe($contract->id)
+        ->and($owned->refresh()->contract_id)->toBe($contract->id);
+
+    $this->actingAs($admin)->put(route('releases.contract', $release->id), ['contract_id' => '', 'replace' => '1'])->assertSessionHasNoErrors();
+
+    expect($bare->refresh()->contract_id)->toBeNull()
+        ->and($owned->refresh()->contract_id)->toBeNull();
+});
+
+test('the contract of another label cannot be set on the tracks of a release', function () {
+    $label = Label::factory()->create();
+    $release = Release::factory()->create(['label_id' => $label->id]);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id]);
+    $foreign = Contract::factory()->create(['label_id' => Label::factory()]);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('releases.contract', $release->id), ['contract_id' => $foreign->id, 'replace' => '1'])
+        ->assertSessionHasErrors('contract_id');
+
+    expect($track->refresh()->contract_id)->toBeNull();
+});
+
+test('a release of another label cannot be given a contract on its tracks', function () {
+    $label = Label::factory()->create();
+    $contract = Contract::factory()->create(['label_id' => $label->id]);
+    $foreign = Release::factory()->create(['label_id' => Label::factory()]);
+
+    $this->actingAs(labelAdmin($label))->put(route('releases.contract', $foreign->id), ['contract_id' => $contract->id])->assertNotFound();
 });

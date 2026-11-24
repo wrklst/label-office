@@ -12,18 +12,18 @@ You can also create a release by hand, for example before its first statement ar
 
 Open **Catalog → Releases**. The list shows 50 releases per page.
 
-| Column         | What it shows                                                                                                                            |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| (cover)        | A small thumbnail of the cover, if one is uploaded.                                                                                      |
-| (play)         | **Play release** and **Queue release** buttons, only when at least one track has audio.                                                  |
-| Cat. no.       | The catalog number.                                                                                                                      |
-| Release        | The name, linked to the release page. A status badge appears unless the status is Done, and a badge with the release type if one is set. |
-| Artist         | The credited artists, for example `Example Artist feat. Guest Artist`.                                                                   |
-| UPC / EAN      | The barcode number.                                                                                                                      |
-| Released       | The release date.                                                                                                                        |
-| Tracks         | The number of tracks.                                                                                                                    |
-| Contract       | The contract of the release, or the badge **No contract**.                                                                               |
-| Income to date | The sum of all income transactions of the release, in your label currency. Expenses are not subtracted here.                             |
+| Column         | What it shows                                                                                                                                 |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| (cover)        | A small thumbnail of the cover, if one is uploaded.                                                                                           |
+| (play)         | **Play release** and **Queue release** buttons, only when at least one track has audio.                                                       |
+| Cat. no.       | The catalog number.                                                                                                                           |
+| Release        | The name, linked to the release page. A status badge appears unless the status is Done, and a badge with the release type if one is set.      |
+| Artist         | The credited artists, for example `Example Artist feat. Guest Artist`.                                                                        |
+| UPC / EAN      | The barcode number.                                                                                                                           |
+| Released       | The release date.                                                                                                                             |
+| Tracks         | The number of tracks.                                                                                                                         |
+| Contract       | The contract of the release's tracks when they all have the same one, or the badge **No contract**, or the badge **Several or some missing**. |
+| Income to date | The sum of all income transactions of the release, in your label currency. Expenses are not subtracted here.                                  |
 
 **Search.** The box **Search name, catalog number or UPC…** matches any part of those three values. The list updates while you type.
 
@@ -31,7 +31,7 @@ Open **Catalog → Releases**. The list shows 50 releases per page.
 
 - **All artists** narrows the list to one artist. It matches a release when the artist is its main artist, a further artist credit of the release, or on one of its tracks, in any role. This is also how the release count in the artist list is made, and that count links here.
 - **Any status** narrows the list to **To do**, **In progress** or **Done**.
-- **Without contract** shows only releases that have no contract of their own.
+- **Without contract** shows only releases with at least one track that has no contract. A release without tracks is not listed: it has nothing a contract could be set on.
 - **Clear filters** appears when any search or filter is set and resets all of them.
 
 **Sorting.** Without a sort the list is ordered by catalog number, with releases that have no catalog number last, then by name. Click a column heading to sort by it, click again to reverse, and a third time to go back to the default order. Every column with a heading text can be sorted, and the sort applies to all pages, not only the one you see.
@@ -65,7 +65,6 @@ To delete, click **Delete** in the header of the release page, next to **Edit**;
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | Name                   | The title. Required.                                                                                                          |
 | Artist                 | The main artist. Leave it at **No artist / various** for compilations.                                                        |
-| Contract               | The contract that splits the income of this release. See [Contract on a release](#contract-on-a-release).                     |
 | Catalog number         | Your own number, for example `EX001`. Imports use it to find the release when a line has no known UPC.                        |
 | UPC / EAN              | The barcode number, 8 to 14 digits. Spaces and dashes are removed when you save. Imports find the release by this code first. |
 | Release date           | The date the release comes out.                                                                                               |
@@ -123,7 +122,7 @@ Each row is one track with these columns: `#` (track number), **Title**, **Main 
 - **Add track** adds a row. The number is prefilled with the next position and the main artist with the artist of the release.
 - A title is required for every row.
 - An ISRC must have 12 letters and digits. Dashes and spaces are ignored, so `DE-A1B-26-00001` and `DEA1B2600001` are the same. It is stored without dashes.
-- Leave **Contract** at **Same as release** unless the track has its own deal.
+- **Contract for all tracks** above the rows fills the contract of every row at once; change a row afterwards for a track with its own deal. Leave a row at **No contract** when no deal covers it. The contracts are saved with the tracks.
 - The **X** at the end of a row removes the track. When you remove a track that was already saved, a warning appears: saving deletes the track, and its transactions stay on the release but lose the track and any track-level contract.
 
 These rows are the quick way to add tracks while you create a release. Further track details (version, disc number, ISWC, length, credits, lyrics and more) are edited in the track dialog, which opens from the release page, the track list and the track page. The rows use the same labels and are checked by the same rules as the dialog. See [Tracks, artists and items](21-tracks-artists-and-items.md).
@@ -148,14 +147,15 @@ The field is labelled **Format** on the form and on the release page. The values
 
 ## Contract on a release
 
-The contract of a release applies to every track that has no contract of its own. Without any contract, the label keeps all income.
+A release has no contract of its own, see [why](30-contracts-payees-and-ledgers.md#why-a-release-has-no-contract-of-its-own). Contracts belong to its tracks, and a track without a contract earns nothing for any payee: the label keeps all of its income.
 
-The most specific contract wins: a contract set on a single transaction, then on the item, then on the track, then on the release. See [Contracts, payees and ledgers](30-contracts-payees-and-ledgers.md).
+The most specific contract wins: a contract set on a single transaction, then on the item, then on the track. See [Contracts, payees and ledgers](30-contracts-payees-and-ledgers.md).
 
-You can set the contract in three places:
+You can set the contract of a track in four places:
 
-- on the release form, in the field **Contract**,
 - per track on the release form or in the track dialog,
+- for every track of the release at once with **Contract for all tracks** on the release form,
+- for every track of the release at once with **Set contract on all tracks** on the release page, which writes the contract on the tracks that have none, or on all of them when you tick **Also replace the contracts tracks already have**,
 - for many releases and tracks at once in the [Catalog manager](#catalog-manager).
 
 ## The release page
@@ -171,19 +171,19 @@ Click a release name anywhere to open its page. The heading shows the name (with
 
 **Cover and figures.** Next to the cover there are four tiles:
 
-| Tile             | What it shows                                            |
-| ---------------- | -------------------------------------------------------- |
-| Income to date   | The sum of all income transactions of the release.       |
-| Expenses to date | The sum of all expense transactions (shown negative).    |
-| Net              | Income plus expenses.                                    |
-| Contract         | The contract of the release, linked, or **No contract**. |
+| Tile             | What it shows                                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Income to date   | The sum of all income transactions of the release.                                                                             |
+| Expenses to date | The sum of all expense transactions (shown negative).                                                                          |
+| Net              | Income plus expenses.                                                                                                          |
+| Contract         | The contract of the tracks, linked, when they all have the same one; otherwise **No contract** or **Several or some missing**. |
 
 Example: with 1,250.00 of income and −400.00 of expenses, **Net** shows 850.00.
 
 **Tracks.** The table has the columns `#`, **Title**, **Artist**, **ISRC**, **Length**, **Listen**, **Contract**, **Units** and **Income**. Click a heading to sort.
 
 - **Units** and **Income** are the units and amount of the income transactions booked on that track.
-- **Contract** shows the track's own contract, **Release contract** when it uses the one of the release, or **No contract**.
+- **Contract** shows the track's own contract, or **No contract**.
 - **Listen** holds the play buttons, or **No audio** when no audio file is attached to the track.
 - The pencil at the end of a row opens the track dialog **Edit {track title}** with all track details, the same one as in the track list and on the track page.
 - If income was booked on the release without a track, a last line reads **Booked on the release as a whole (album sales, additionals)** with that amount.
@@ -233,6 +233,7 @@ Example: for `Example Release` (EX001, UPC 4000000000001), **Find links** adds D
 When at least one track of a release has audio, two buttons appear above the track table:
 
 - **Play release** replaces the current queue with the tracks of the release and starts the first one.
+- **Set contract on all tracks** above the table opens a dialog with a contract field and the box **Also replace the contracts tracks already have**. Without the box only the tracks without a contract get it. An empty contract with the box ticked removes the contract from all tracks. A message says on how many tracks the contract was set and how many kept their own.
 - **Queue release** adds the tracks to the end of the queue. Tracks that are already queued are not added twice.
 
 The same two actions are available as icon buttons in the release list and on an artist's page. Tracks without audio are left out. See [Files, audio and delivery](22-files-audio-and-delivery.md#the-audio-player) for the player itself.
@@ -241,21 +242,21 @@ The same two actions are available as icon buttons in the release list and on an
 
 Open **Catalog → Catalog manager** (`/catalog`). It is the place to assign contracts across the whole catalog without opening each release.
 
-Every release is a box with its catalog number, name and artist, and a contract field on the right. Below it, each track has its own contract field.
+Every release is a box with its catalog number, name and artist, and a field on the right that sets a contract on the tracks of the release that have none. Below it, each track has its own contract field.
 
-1. Choose a contract in the field of a release to set the release contract. **No release contract** clears it.
-2. Choose a contract in the field of a track to give that track its own contract. When left empty, the field shows `Release: …` with the name of the release contract, or **No contract**.
+1. Choose a contract in the field of a release to write it on the tracks of that release that have none. Tracks with a contract keep theirs.
+2. Choose a contract in the field of a track to give that track its own contract. When left empty, the field shows **No contract**.
 3. Nothing else is needed: every change is saved immediately.
 
 Tools on the page:
 
 - **Search releases and tracks…** narrows the page to releases where the release name, catalog number, artist, a track title, a track ISRC or a track artist contains your text.
-- **Without contract** hides every release that has a release contract. A release without a contract is also hidden when all of its tracks have their own contract.
+- **Without contract** shows only releases with at least one track that has no contract. A release without tracks is not listed: it has nothing a contract could be set on.
 - The counter on the right says how many tracks have no contract at all, or **Every track is covered by a contract.**
-- A badge **No contract** marks each track that has neither its own contract nor a release contract.
+- A badge **No contract** marks each track that has no contract.
 - **New contract** opens the contract form.
 
-Example: `Example Release` has no contract and two tracks. The counter shows `2 tracks without a contract`. You pick the contract `Example Artist 50/50` on the release; both badges disappear and the counter drops by two. `Second Track` is a remix with its own deal, so you pick `Remixer deal` on that track only.
+Example: `Example Release` has two tracks without a contract. The counter shows `2 tracks without a contract`. You pick the contract `Example Artist 50/50` in the field of the release; both badges disappear and the counter drops by two. `Second Track` is a remix with its own deal, so you pick `Remixer deal` on that track only.
 
 ## Good to know
 

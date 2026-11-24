@@ -57,7 +57,7 @@ use Illuminate\Support\Facades\DB;
  *     converted_total: int|float|string,
  *     category: string|null,
  *     memo: string|null,
- *     contract_id: int|null
+ *     contract_ids: list<int>
  * }
  * @phpstan-type PayoutRow array{
  *     payout_id: int,
@@ -71,7 +71,7 @@ use Illuminate\Support\Facades\DB;
  */
 class RoyaltyCalculator
 {
-    private const string RESOLVED_CONTRACT = 'COALESCE(t.contract_id, i.contract_id, tr.contract_id, r.contract_id)';
+    private const string RESOLVED_CONTRACT = 'COALESCE(t.contract_id, i.contract_id, tr.contract_id)';
 
     /** Nothing pays for the transaction: no contract of its own, and booked on a release whose tracks do not all have one. */
     private const string WITHOUT_CONTRACT = self::RESOLVED_CONTRACT.' IS NULL AND ('.ReleaseSales::BOOKED_ON_RELEASE.' = 0 OR '.ReleaseSales::WITHOUT_CONTRACT.')';
@@ -178,8 +178,15 @@ class RoyaltyCalculator
             $ledgerId = $transfer['ledger_id'];
 
             if ($ledgerId === null) {
-                $viaSplit = collect($splits[$transfer['contract_id']] ?? [])->firstWhere('payee_id', $transfer['payee_id']);
-                $ledgerId = $viaSplit['ledger_id'] ?? null;
+                foreach ($transfer['contract_ids'] as $contractId) {
+                    $viaSplit = collect($splits[$contractId] ?? [])->firstWhere('payee_id', $transfer['payee_id']);
+
+                    if ($viaSplit !== null) {
+                        $ledgerId = $viaSplit['ledger_id'];
+
+                        break;
+                    }
+                }
             }
 
             $ledger = &$this->ledger($payees, $transfer['payee_id'], $ledgerId);
@@ -473,6 +480,7 @@ class RoyaltyCalculator
      */
     private function transfers(int $labelId, string $end): iterable
     {
+        $releaseSales = new ReleaseSales($labelId);
         $rows = $this->base($labelId)
             ->where('t.type', 'transfer')
             ->whereNotNull('t.payee_id')
@@ -492,7 +500,8 @@ class RoyaltyCalculator
                 'converted_total' => $row->converted_total,
                 'category' => $row->category,
                 'memo' => $row->memo,
-                'contract_id' => $row->contract_id,
+                // A transfer booked on a release as a whole follows the contracts of that release's tracks.
+                'contract_ids' => $row->contract_id !== null ? [(int) $row->contract_id] : ($row->release_id === null ? [] : $releaseSales->contractIds((int) $row->release_id)),
             ];
         }
     }

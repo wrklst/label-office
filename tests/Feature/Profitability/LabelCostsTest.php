@@ -9,6 +9,7 @@ use App\Models\Period;
 use App\Models\Receipt;
 use App\Models\RecurringExpense;
 use App\Models\Release;
+use App\Models\Track;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\Royalties\ProfitabilityReport;
@@ -209,7 +210,8 @@ test('label costs lower the label result as overheads and leave royalties untouc
     $payee = Payee::factory()->create(['label_id' => $this->label->id]);
     $contract = Contract::factory()->create(['label_id' => $this->label->id]);
     ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => $payee->id, 'split_amount' => '0.5']);
-    $release = Release::factory()->create(['label_id' => $this->label->id, 'contract_id' => $contract->id, 'name' => 'Example Release']);
+    $release = Release::factory()->create(['label_id' => $this->label->id, 'name' => 'Example Release']);
+    Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $release->id, 'contract_id' => $contract->id]);
     Transaction::factory()->create(['label_id' => $this->label->id, 'release_id' => $release->id, 'total' => '100']);
     $period = Period::factory()->create(['label_id' => $this->label->id]);
 

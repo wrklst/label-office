@@ -12,14 +12,14 @@ Tracks are created in two ways: by an import, from the lines of a statement, or 
 
 Open **Catalog → Tracks**. The list shows 50 tracks per page, ordered by title.
 
-| Column   | What it shows                                                                                            |
-| -------- | -------------------------------------------------------------------------------------------------------- |
-| Title    | The track title, linked to the track page.                                                               |
-| Artist   | The main artist of the track.                                                                            |
-| Release  | The release or releases the track is on.                                                                 |
-| ISRC     | The ISRC, or `–`.                                                                                        |
-| Contract | The track's own contract; or the release contract followed by `(release)`; or the badge **No contract**. |
-| Listen   | Play buttons, or **No audio** when no audio file is attached.                                            |
+| Column   | What it shows                                                 |
+| -------- | ------------------------------------------------------------- |
+| Title    | The track title, linked to the track page.                    |
+| Artist   | The main artist of the track.                                 |
+| Release  | The release or releases the track is on.                      |
+| ISRC     | The ISRC, or `–`.                                             |
+| Contract | The track's own contract, or the badge **No contract**.       |
+| Listen   | Play buttons, or **No audio** when no audio file is attached. |
 
 - **Search title or ISRC…** matches part of the title or of the ISRC. You can type the ISRC with or without dashes.
 - **All releases** narrows the list to one release.
@@ -40,7 +40,7 @@ One dialog edits a track wherever you open it: the pencil in the track list, the
 | Title                                                        | Required.                                                                                                                                                                      |
 | Version                                                      | For example `Radio Edit` or the remix name. Shown in brackets after the title.                                                                                                 |
 | Main artist                                                  | Empty means **Same as release**.                                                                                                                                               |
-| Contract                                                     | Empty means **Same as release**.                                                                                                                                               |
+| Contract                                                     | Empty means **No contract**.                                                                                                                                                   |
 | Further artist credits                                       | Additional artists with a role; see [Artist credits](#artist-credits).                                                                                                         |
 | ISRC, ISWC                                                   | See below.                                                                                                                                                                     |
 | Length (seconds)                                             | The length in whole seconds. Shown as minutes and seconds elsewhere.                                                                                                           |
@@ -69,9 +69,9 @@ Distributors ask whether AI was used in a track. Each track has three declaratio
 
 ### A track's own contract
 
-A track without a contract uses the contract of its release. Give a track its own contract only when its deal differs, for example a remix where the remixer gets a share.
+Contracts belong to tracks; a release has none of its own, see [why](30-contracts-payees-and-ledgers.md#why-a-release-has-no-contract-of-its-own). A track without a contract earns nothing for any payee, and the label keeps its income. To give every track of a release one contract, use **Set contract on all tracks** on the release page, see [Releases](20-releases.md#contract-on-a-release); then change only the tracks whose deal differs, for example a remix where the remixer gets a share.
 
-Example: `Example Release` has the contract `Example Artist 50/50`. `Second Track` is a remix, so you set the contract `Remixer deal` on that track. Income booked on `Second Track` is now split by `Remixer deal`; income booked on `Opening` or on the release as a whole is still split by `Example Artist 50/50`.
+Example: both tracks of `Example Release` have the contract `Example Artist 50/50`. `Second Track` is a remix, so you set the contract `Remixer deal` on that track. Income booked on `Second Track` is now split by `Remixer deal`; income booked on `Opening` is still split by `Example Artist 50/50`, and income booked on the release as a whole is divided between the two tracks and paid by their contracts.
 
 You can set a track contract in the release form, in the track dialog, or in the Catalog manager; see [Releases](20-releases.md#catalog-manager). How contracts split income is explained in [Contracts, payees and ledgers](30-contracts-payees-and-ledgers.md).
 
@@ -92,7 +92,7 @@ Click a track title anywhere to open its page. The heading shows the title (with
 | Earned from airplay | The sum of the amounts of those entries.                                                                                          |
 | Findings to review  | The number of research findings you have not kept or dismissed yet, and when the track was last researched.                       |
 
-**Details.** ISRC, Release, Contract, Length, Track number, Genre, BPM / key and ISWC. When the track uses the release contract, the contract is followed by `(from the release)`.
+**Details.** ISRC, Release, Contract, Length, Track number, Genre, BPM / key and ISWC. The contract is the track's own, or **–** when it has none.
 
 **On … releases.** Shown only when the recording is on more than one release. It lists each release with its catalog number and **Income there**, the income booked on the track of that release. The entry you opened is marked `(this entry)`.
 
@@ -155,7 +155,7 @@ Click an artist name anywhere to open the page. It shows:
 - **Income by release**: a bar of what each release brought in. Shown only when more than one release has income.
 - **The report**: how the income developed and which platforms it came from, and **Releases by income**; see [Reports and play counts](12-reports-and-play-counts.md).
 - **Releases**: every release the artist is on, as main artist, in any credit role or with one of their tracks, newest first by default. The columns are **Release**, **Catalog number**, **Released** and **Income**, with the buttons to play or queue the whole release. Sortable, 25 to a page. On a release of another artist, **Income** is what this artist's tracks earned on it.
-- **Contracts and payees**: the contracts of these releases and tracks, each with its payees and their share. A track uses its own contract, otherwise that of its release.
+- **Contracts and payees**: the contracts of these releases and tracks, each with its payees and their share. A track has its own contract, or none.
 - **Tracks**: every track the artist is on, as main artist or in any credit role, with **Release**, **ISRC**, **Airplay** (the number of airplay entries) and **Income**. Sortable, 25 to a page. A recording that is on several releases is one row naming all of them, with airplay and income added up.
 
 **Edit** in the header opens a dialog with the same fields as **New artist**. **Delete** opens the dialog **Delete {artist name}?**; after you confirm you return to the artist list.
@@ -232,13 +232,13 @@ Income on an unassigned item stays with the label until you assign the item.
 
 All transactions of the item move with it to the release and track you chose. The confirmation tells you how many were moved.
 
-Example: an unassigned item `Opening` with the ISRC `ZZEXA2600001` has 37 transactions. You assign it to `Example Release` and the track `Opening`. The message reads `Item saved and 37 transactions moved with it.`, and the income now counts for the contract of that track or release.
+Example: an unassigned item `Opening` with the ISRC `ZZEXA2600001` has 37 transactions. You assign it to `Example Release` and the track `Opening`. The message reads `Item saved and 37 transactions moved with it.`, and the income now counts for the contract of that track.
 
 ### Contracts on items
 
-**Contract override** in the same dialog gives the item its own contract. Use it only for items with their own deal, such as a licensed vinyl run. Leave it at **Use track / release contract** otherwise.
+**Contract override** in the same dialog gives the item its own contract. Use it only for items with their own deal, such as a licensed vinyl run. Leave it at **Use track contract** otherwise.
 
-An item contract beats the track and release contract. Only a contract set directly on a single transaction is more specific.
+An item contract beats the track contract. Only a contract set directly on a single transaction is more specific.
 
 ## Good to know
 

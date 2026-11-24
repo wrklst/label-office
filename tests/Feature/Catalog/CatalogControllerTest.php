@@ -10,10 +10,9 @@ use Inertia\Testing\AssertableInertia as Assert;
 test('the catalog manager lists every release with its tracks and their contracts', function () {
     $label = Label::factory()->create();
     $artist = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
-    $contract = Contract::factory()->create(['label_id' => $label->id]);
     $trackContract = Contract::factory()->create(['label_id' => $label->id]);
     Release::factory()->create(['label_id' => $label->id, 'name' => 'Uncatalogued', 'catalog_number' => null]);
-    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'catalog_number' => 'EX001', 'artist_id' => $artist->id, 'contract_id' => $contract->id]);
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'catalog_number' => 'EX001', 'artist_id' => $artist->id]);
     Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track Two', 'track_number' => 2, 'contract_id' => $trackContract->id]);
     Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track One', 'track_number' => 1, 'isrc' => 'ZZTST2600001', 'artist_id' => $artist->id]);
 
@@ -25,7 +24,8 @@ test('the catalog manager lists every release with its tracks and their contract
             ->has('releases.data', 2)
             ->where('releases.data.0.name', 'Example Release')
             ->where('releases.data.0.artist', 'Example Artist')
-            ->where('releases.data.0.contract_id', $contract->id)
+            ->where('releases.data.0.contract', null)
+            ->where('releases.data.0.mixed', true)
             ->has('releases.data.0.tracks', 2)
             ->where('releases.data.0.tracks.0.name', 'Example Track One')
             ->where('releases.data.0.tracks.0.isrc', 'ZZTST2600001')
@@ -38,48 +38,34 @@ test('the catalog manager lists every release with its tracks and their contract
             ->missing('contractOptions'));
 });
 
-test('a contract is assigned to a release', function () {
+test('a contract is assigned to a track and to no other', function () {
     $label = Label::factory()->create();
     $release = Release::factory()->create(['label_id' => $label->id]);
     $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id]);
+    $other = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id]);
     $contract = Contract::factory()->create(['label_id' => $label->id]);
 
     $this->actingAs(labelAdmin($label))
         ->from(route('catalog.index'))
-        ->patch(route('catalog.assign'), ['type' => 'release', 'id' => $release->id, 'contract_id' => $contract->id])
-        ->assertSessionHasNoErrors()
-        ->assertRedirect(route('catalog.index'));
-
-    $this->assertDatabaseHas('releases', ['id' => $release->id, 'contract_id' => $contract->id]);
-    $this->assertDatabaseHas('tracks', ['id' => $track->id, 'contract_id' => null]);
-});
-
-test('a contract is assigned to a track', function () {
-    $label = Label::factory()->create();
-    $release = Release::factory()->create(['label_id' => $label->id]);
-    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id]);
-    $contract = Contract::factory()->create(['label_id' => $label->id]);
-
-    $this->actingAs(labelAdmin($label))
-        ->from(route('catalog.index'))
-        ->patch(route('catalog.assign'), ['type' => 'track', 'id' => $track->id, 'contract_id' => $contract->id])
+        ->patch(route('catalog.assign'), ['id' => $track->id, 'contract_id' => $contract->id])
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('catalog.index'));
 
     $this->assertDatabaseHas('tracks', ['id' => $track->id, 'contract_id' => $contract->id]);
-    $this->assertDatabaseHas('releases', ['id' => $release->id, 'contract_id' => null]);
+    $this->assertDatabaseHas('tracks', ['id' => $other->id, 'contract_id' => null]);
 });
 
 test('assigning no contract clears the current one', function (array $input) {
     $label = Label::factory()->create();
     $contract = Contract::factory()->create(['label_id' => $label->id]);
-    $release = Release::factory()->create(['label_id' => $label->id, 'contract_id' => $contract->id]);
+    $release = Release::factory()->create(['label_id' => $label->id]);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'contract_id' => $contract->id]);
 
     $this->actingAs(labelAdmin($label))
-        ->patch(route('catalog.assign'), ['type' => 'release', 'id' => $release->id, ...$input])
+        ->patch(route('catalog.assign'), ['id' => $track->id, ...$input])
         ->assertSessionHasNoErrors();
 
-    $this->assertDatabaseHas('releases', ['id' => $release->id, 'contract_id' => null]);
+    $this->assertDatabaseHas('tracks', ['id' => $track->id, 'contract_id' => null]);
 })->with([
     'null contract' => [['contract_id' => null]],
     'empty contract' => [['contract_id' => '']],
@@ -89,34 +75,51 @@ test('assigning no contract clears the current one', function (array $input) {
 test('a contract of another label cannot be assigned in the catalog manager', function () {
     $label = Label::factory()->create();
     $release = Release::factory()->create(['label_id' => $label->id]);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id]);
     $foreign = Contract::factory()->create(['label_id' => Label::factory()]);
 
     $this->actingAs(labelAdmin($label))
-        ->patch(route('catalog.assign'), ['type' => 'release', 'id' => $release->id, 'contract_id' => $foreign->id])
+        ->patch(route('catalog.assign'), ['id' => $track->id, 'contract_id' => $foreign->id])
         ->assertSessionHasErrors('contract_id');
 
-    $this->assertDatabaseHas('releases', ['id' => $release->id, 'contract_id' => null]);
+    $this->assertDatabaseHas('tracks', ['id' => $track->id, 'contract_id' => null]);
 });
 
-test('a release or track of another label cannot be given a contract', function (string $type, string $model, string $table) {
+test('a track of another label cannot be given a contract', function () {
     $label = Label::factory()->create();
     $contract = Contract::factory()->create(['label_id' => $label->id]);
-    $foreign = $model::factory()->create(['label_id' => Label::factory()]);
+    $foreign = Track::factory()->create(['label_id' => Label::factory()]);
 
     $this->actingAs(labelAdmin($label))
-        ->patch(route('catalog.assign'), ['type' => $type, 'id' => $foreign->id, 'contract_id' => $contract->id])
+        ->patch(route('catalog.assign'), ['id' => $foreign->id, 'contract_id' => $contract->id])
         ->assertNotFound();
 
-    $this->assertDatabaseHas($table, ['id' => $foreign->id, 'contract_id' => null]);
-})->with([
-    'release' => ['release', Release::class, 'releases'],
-    'track' => ['track', Track::class, 'tracks'],
-]);
+    $this->assertDatabaseHas('tracks', ['id' => $foreign->id, 'contract_id' => null]);
+});
 
-test('a catalog assignment needs a known type and an id', function () {
+test('a catalog assignment needs an id', function () {
     $label = Label::factory()->create();
 
     $this->actingAs(labelAdmin($label))
-        ->patch(route('catalog.assign'), ['type' => 'item', 'id' => ''])
-        ->assertSessionHasErrors(['type', 'id']);
+        ->patch(route('catalog.assign'), ['id' => ''])
+        ->assertSessionHasErrors(['id']);
+});
+
+test('the manager counts the tracks without a contract and filters the releases with one', function () {
+    $label = Label::factory()->create();
+    $contract = Contract::factory()->create(['label_id' => $label->id]);
+    $covered = Release::factory()->create(['label_id' => $label->id, 'name' => 'Covered']);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $covered->id, 'contract_id' => $contract->id]);
+    $partly = Release::factory()->create(['label_id' => $label->id, 'name' => 'Partly']);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $partly->id, 'contract_id' => $contract->id]);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $partly->id]);
+    Release::factory()->create(['label_id' => $label->id, 'name' => 'Empty']);
+
+    $this->actingAs(labelAdmin($label))
+        ->get(route('catalog.index', ['without_contract' => 1]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('uncovered', 1)
+            // A release without tracks has nothing to set a contract on and is not an issue.
+            ->has('releases.data', 1)
+            ->where('releases.data.0.name', 'Partly'));
 });

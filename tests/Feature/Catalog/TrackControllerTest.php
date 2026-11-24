@@ -42,11 +42,10 @@ test('the track list can be narrowed to one release', function () {
             ->where('filters.release', $release->id));
 });
 
-test('the track list shows the release contract as inherited only for tracks without their own contract', function () {
+test('the track list shows each track with its own contract only, as a release has none', function () {
     $label = Label::factory()->create();
-    $releaseContract = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Release Deal']);
     $trackContract = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Remix Deal']);
-    $release = Release::factory()->create(['label_id' => $label->id, 'contract_id' => $releaseContract->id]);
+    $release = Release::factory()->create(['label_id' => $label->id]);
     Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'A Example Track']);
     Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'B Example Remix', 'contract_id' => $trackContract->id]);
 
@@ -54,9 +53,8 @@ test('the track list shows the release contract as inherited only for tracks wit
         ->get(route('tracks.index'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('tracks.data.0.contract', null)
-            ->where('tracks.data.0.inherited_contract', ['id' => $releaseContract->id, 'name' => 'Example Release Deal'])
-            ->where('tracks.data.1.contract', ['id' => $trackContract->id, 'name' => 'Example Remix Deal'])
-            ->where('tracks.data.1.inherited_contract', null));
+            ->missing('tracks.data.0.inherited_contract')
+            ->where('tracks.data.1.contract', ['id' => $trackContract->id, 'name' => 'Example Remix Deal']));
 });
 
 test('a track is updated and its ISRC normalised', function () {

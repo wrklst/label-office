@@ -65,7 +65,7 @@ class TrackController extends Controller
 
         $tracks = Track::query()
             ->with([
-                'artist:id,name', 'artists:id,name', 'contract:id,name', 'release:id,name,catalog_number,contract_id,artist_id', 'release.contract:id,name',
+                'artist:id,name', 'artists:id,name', 'contract:id,name', 'release:id,name,catalog_number,artist_id',
                 'release.artist:id,name', 'release.artists:id,name', 'release.cover:id,release_id', 'releases:id,name',
             ])
             ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where(fn ($query) => $query
@@ -82,7 +82,7 @@ class TrackController extends Controller
         $audio = PlayableAudio::forTracks($tracks->getCollection());
         $recordings = $request->integer('release') ? collect() : Track::query()
             ->whereIn('isrc', $tracks->getCollection()->pluck('isrc')->filter())
-            ->with(['release:id,name,contract_id', 'releases:id,name'])->orderBy('id')->get()->groupBy('isrc');
+            ->with(['release:id,name', 'releases:id,name'])->orderBy('id')->get()->groupBy('isrc');
 
         $tracks = $tracks->through(fn (Track $track): array => [
             ...self::editable($track, withText: false),
@@ -92,13 +92,12 @@ class TrackController extends Controller
             'releases' => ($recordings->get($track->isrc) ?? collect([$track]))->flatMap(fn (Track $entry) => $entry->releases->map(fn (Release $release): array => $release->only(['id', 'name'])))->unique('id')->values(),
             // Each entry has its own contract; one without is named here, as its row is not listed.
             'without_contract_on' => ($recordings->get($track->isrc) ?? collect())
-                ->filter(fn (Track $entry): bool => $entry->id !== $track->id && $entry->contract_id === null && $entry->release?->contract_id === null)
+                ->filter(fn (Track $entry): bool => $entry->id !== $track->id && $entry->contract_id === null)
                 ->map(fn (Track $entry): string => $entry->release->name ?? $entry->name)->values(),
             'audio_file_id' => $audio->get($track->id)?->id,
             'credited_artist' => ArtistCredits::display($track) ?? ($track->release ? ArtistCredits::display($track->release) : null),
             'cover_file_id' => $track->release?->cover?->id,
             'contract' => $track->contract?->only(['id', 'name']),
-            'inherited_contract' => $track->contract ? null : $track->release?->contract?->only(['id', 'name']),
         ]);
 
         return Inertia::render('tracks/index', [
@@ -134,7 +133,7 @@ class TrackController extends Controller
         ], fn (Builder $query) => $query->latest('id'), 'searches');
 
         $track->load([
-            'artist:id,name', 'artists:id,name', 'contract:id,name', 'release:id,name,catalog_number,contract_id', 'release.contract:id,name',
+            'artist:id,name', 'artists:id,name', 'contract:id,name', 'release:id,name,catalog_number',
             'release.cover:id,release_id',
         ]);
 
@@ -153,7 +152,6 @@ class TrackController extends Controller
                 'cover_file_id' => $track->release?->cover?->id,
                 'audio_file_id' => PlayableAudio::forTracks(collect([$track]))->get($track->id)?->id,
                 'contract' => $track->contract?->only(['id', 'name']),
-                'inherited_contract' => $track->contract ? null : $track->release?->contract?->only(['id', 'name']),
                 'researched_at' => $track->researched_at?->toIso8601String(),
                 'research_state' => ResearchState::visible($track->research_state, $track->research_state_at),
                 'research_step' => $track->research_step,

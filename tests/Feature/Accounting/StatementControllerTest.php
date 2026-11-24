@@ -8,6 +8,7 @@ use App\Models\Payee;
 use App\Models\Period;
 use App\Models\Release;
 use App\Models\Statement;
+use App\Models\Track;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\Royalties\PayoutService;
@@ -144,7 +145,8 @@ test('the csv download lists the summary, ledgers, income, expenses, transfers a
     $payee = Payee::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
     $contract = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Contract']);
     ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => $payee->id, 'split_amount' => '0.5']);
-    $release = Release::factory()->create(['label_id' => $label->id, 'contract_id' => $contract->id, 'name' => 'Example Release']);
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release']);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'contract_id' => $contract->id]);
     Transaction::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'total' => '100', 'quantity' => 4, 'format' => 'Download Track']);
     Transaction::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'type' => 'expense', 'total' => '-40', 'category' => 'Mastering']);
     Transaction::factory()->create([

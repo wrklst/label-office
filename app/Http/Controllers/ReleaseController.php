@@ -6,10 +6,10 @@ use App\Enums\ArtistRole;
 use App\Enums\ReleaseFileKind;
 use App\Enums\ReleaseStatus;
 use App\Enums\ReleaseType;
+use App\Http\Requests\ReleaseContractRequest;
 use App\Http\Requests\ReleaseRequest;
 use App\Models\Agreement;
 use App\Models\Artist;
-use App\Models\Contract;
 use App\Models\Item;
 use App\Models\PlayCount;
 use App\Models\Release;
@@ -32,6 +32,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use SortDirection;
 
 class ReleaseController extends Controller
 {
@@ -44,12 +45,18 @@ class ReleaseController extends Controller
             'upc' => Sorting::nullsLast('upc'),
             'released_on' => Sorting::nullsLast('released_on'),
             'tracks_count' => 'tracks_count',
-            'contract' => Sorting::related(Contract::class, 'contract_id'),
+            // By the first contract name among its tracks; releases without one come last.
+            'contract' => function (Builder $query, SortDirection $direction): void {
+                $contracts = fn () => DB::table('release_track')->join('tracks', 'tracks.id', '=', 'release_track.track_id')->join('contracts', 'contracts.id', '=', 'tracks.contract_id')
+                    ->whereColumn('release_track.release_id', 'releases.id');
+
+                $query->orderBy($contracts()->selectRaw('count(*) = 0'))->orderBy($contracts()->selectRaw('min(contracts.name)'), $direction);
+            },
             'income' => Sorting::sum('income'),
         ], fn (Builder $query) => $query->orderByRaw('catalog_number IS NULL')->orderBy('catalog_number')->orderBy('name'));
 
         $releases = Release::query()
-            ->with(['artist:id,name', 'artists:id,name', 'contract:id,name', 'cover:id,release_id'])
+            ->with(['artist:id,name', 'artists:id,name', 'tracks.contract:id,name', 'cover:id,release_id'])
             ->withCount('tracks')
             ->withSum(['transactions as income' => fn ($query) => $query->where('type', 'income')], 'converted_total')
             ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where(fn ($query) => $query
@@ -63,7 +70,7 @@ class ReleaseController extends Controller
                 ->orWhereExists(fn ($query) => $query->from('tracks')->join('release_track', 'release_track.track_id', '=', 'tracks.id')->whereColumn('release_track.release_id', 'releases.id')->where(fn ($query) => $query
                     ->where('tracks.artist_id', $artist)
                     ->orWhereExists(fn ($query) => $query->from('artist_track')->whereColumn('artist_track.track_id', 'tracks.id')->where('artist_track.artist_id', $artist))))))
-            ->when($request->boolean('without_contract'), fn ($query) => $query->whereNull('contract_id'))
+            ->when($request->boolean('without_contract'), fn ($query) => $query->withoutContract())
             ->when(ReleaseStatus::tryFrom(Filters::text($request, 'status')), fn ($query, ReleaseStatus $status) => $query->where('status', $status))
             ->tap($sorting)
             ->paginate(PageSize::MAIN)
@@ -78,7 +85,7 @@ class ReleaseController extends Controller
                 'status' => $release->status->value,
                 'release_type' => $release->release_type?->label(),
                 'cover_file_id' => $release->cover?->id,
-                'contract' => $release->contract?->only(['id', 'name']),
+                ...$release->contractSummary(),
                 'income' => (string) ($release->income ?? '0'),
             ]);
 
@@ -130,7 +137,7 @@ class ReleaseController extends Controller
             ->paginate(PageSize::SECONDARY, pageName: 'items_page')->withQueryString();
 
         $release->load([
-            'artist:id,name', 'artists:id,name', 'contract:id,name', 'tracks.artist:id,name', 'tracks.artists:id,name', 'tracks.contract:id,name',
+            'artist:id,name', 'artists:id,name', 'tracks.artist:id,name', 'tracks.artists:id,name', 'tracks.contract:id,name',
             'files.track:id,name',
         ]);
         $audioByTrack = $release->files->where('kind', ReleaseFileKind::Audio)->whereNotNull('track_id')->groupBy('track_id');
@@ -158,7 +165,7 @@ class ReleaseController extends Controller
                 'release_type' => $release->release_type?->label(),
                 'artist' => ArtistCredits::display($release),
                 'cover_file_id' => $release->files->where('kind', ReleaseFileKind::Cover)->sortByDesc('id')->first()?->id,
-                'contract' => $release->contract?->only(['id', 'name']),
+                ...$release->contractSummary(),
                 'files' => $release->files->sortBy([['kind', 'asc'], ['id', 'asc']])->values()->map(fn (ReleaseFile $file): array => [
                     ...$file->only(['id', 'original_name', 'mime_type', 'size', 'track_id']),
                     'kind' => $file->kind->value,
@@ -208,7 +215,7 @@ class ReleaseController extends Controller
             'returnTo' => ReturnTo::path($request->query('return_to')),
             'release' => [
                 ...$release->only([
-                    'id', 'name', 'artist_id', 'contract_id', 'catalog_number', 'upc', 'spotify_id', 'discogs_id', 'accounts_mechanicals', 'mechanicals_rate',
+                    'id', 'name', 'artist_id', 'catalog_number', 'upc', 'spotify_id', 'discogs_id', 'accounts_mechanicals', 'mechanicals_rate',
                     'ppd_rate', 'reserves_rate', 'notes', 'version', 'genre', 'subgenre', 'language', 'explicit', 'p_line', 'c_line', 'press_release',
                     'key_facts', 'todo', 'files_url', 'ai_artwork',
                 ]),
@@ -238,6 +245,29 @@ class ReleaseController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Release saved.')]);
 
         return redirect(ReturnTo::from($request, route('releases.show', $release)));
+    }
+
+    /**
+     * Write one contract on the tracks of a release. Without "replace" it
+     * only fills the tracks that have none; with it, every track gets it,
+     * and no contract clears them all.
+     */
+    public function contract(ReleaseContractRequest $request, Release $release): RedirectResponse
+    {
+        $contractId = $request->validated('contract_id');
+        $tracks = $release->tracks()->get();
+        $set = $request->boolean('replace') ? $tracks : $tracks->whereNull('contract_id');
+
+        Track::query()->whereKey($set->modelKeys())->update(['contract_id' => $contractId]);
+
+        $message = $contractId === null
+            ? trans_choice(':count track now has no contract.|:count tracks now have no contract.', $set->count())
+            : trans_choice('Contract set on :count track.|Contract set on :count tracks.', $set->count());
+        $kept = $tracks->count() - $set->count();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $kept > 0 ? $message.' '.trans_choice(':count track kept its own.|:count tracks kept their own.', $kept) : $message]);
+
+        return back();
     }
 
     public function destroy(Release $release): RedirectResponse

@@ -15,7 +15,8 @@ use App\Services\Royalties\RoyaltyCalculator;
 
 /**
  * A label with all three tools switched on, an admin signed in, and a
- * release whose contract pays "Example Artist" half. The first quarter of
+ * release whose tracks (made with toolTrack) are under a contract that
+ * pays "Example Artist" half. The first quarter of
  * 2026 is the period most sales in these tests are paid in.
  *
  * @param  array<string, mixed>  $labelAttributes
@@ -30,7 +31,7 @@ function toolScenario(array $labelAttributes = []): void
     $test->artist = Payee::factory()->create(['label_id' => $test->label->id, 'name' => 'Example Artist']);
     $test->contract = Contract::factory()->create(['label_id' => $test->label->id, 'name' => 'Example Deal']);
     ContractSplit::factory()->create(['contract_id' => $test->contract->id, 'payee_id' => $test->artist->id, 'split_amount' => '0.5']);
-    $test->release = Release::factory()->create(['label_id' => $test->label->id, 'contract_id' => $test->contract->id, 'name' => 'Example Release']);
+    $test->release = Release::factory()->create(['label_id' => $test->label->id, 'name' => 'Example Release']);
     $test->firstQuarter = Period::factory()->create(['label_id' => $test->label->id]);
     $test->secondQuarter = Period::factory()->create(['label_id' => $test->label->id, 'name' => '2026 Q2', 'starts_on' => '2026-04-01', 'ends_on' => '2026-06-30']);
 }
@@ -40,7 +41,7 @@ function toolScenario(array $labelAttributes = []): void
  */
 function toolTrack(string $name, array $attributes = []): Track
 {
-    return Track::factory()->create(['label_id' => test()->label->id, 'release_id' => test()->release->id, 'name' => $name, ...$attributes]);
+    return Track::factory()->create(['label_id' => test()->label->id, 'release_id' => test()->release->id, 'contract_id' => test()->contract->id, 'name' => $name, ...$attributes]);
 }
 
 /**

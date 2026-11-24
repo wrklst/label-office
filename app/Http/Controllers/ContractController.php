@@ -35,9 +35,11 @@ class ContractController extends Controller
 
         $contracts = Contract::query()
             ->with(['splits.payee:id,name', 'splits.ledger:id,name'])
-            ->withCount(['releases', 'tracks', 'items', 'children', 'parents'])
+            ->withCount(['tracks', 'items', 'children', 'parents'])
+            ->addSelect(['releases_count' => DB::table('release_track')->join('tracks', 'tracks.id', '=', 'release_track.track_id')
+                ->whereColumn('tracks.contract_id', 'contracts.id')->selectRaw('count(distinct release_track.release_id)')])
             ->when(trim(Filters::text($request, 'search')), fn ($query, string $search) => $query->where('name', 'like', "%{$search}%"))
-            ->when($request->boolean('unused'), fn ($query) => $query->doesntHave('releases')->doesntHave('tracks')->doesntHave('items')->doesntHave('parents'))
+            ->when($request->boolean('unused'), fn ($query) => $query->doesntHave('tracks')->doesntHave('items')->doesntHave('parents'))
             ->tap($sorting)
             ->paginate(PageSize::MAIN)
             ->withQueryString()
@@ -107,7 +109,7 @@ class ContractController extends Controller
                 'parents' => $contract->parents->map->only(['id', 'name']),
                 'items_count' => $contract->items()->count(),
             ],
-            'releases' => $contract->releases()->tap($releaseSorting)->paginate(PageSize::SECONDARY, ['id', 'name', 'catalog_number'], 'releases_page')->withQueryString(),
+            'releases' => $contract->releasesQuery()->tap($releaseSorting)->paginate(PageSize::SECONDARY, ['id', 'name', 'catalog_number'], 'releases_page')->withQueryString(),
             'tracks' => $contract->tracks()->with('release:id,name')->tap($trackSorting)->paginate(PageSize::SECONDARY, ['id', 'name', 'release_id'], 'tracks_page')->withQueryString()
                 ->through(fn (Track $track): array => ['id' => $track->id, 'name' => $track->name, 'release' => $track->release?->only(['id', 'name'])]),
             'filters' => [...$releaseSorting->toArray(), ...$trackSorting->toArray()],

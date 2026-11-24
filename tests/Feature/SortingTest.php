@@ -37,11 +37,11 @@ function sortingScenario(): User
     ];
     Contract::factory()->create([...$owned, 'name' => 'Charlie Deal']);
 
-    $alphaRelease = Release::factory()->create([...$owned, 'name' => 'Alpha Release', 'catalog_number' => 'EX003', 'upc' => '4000000000031', 'released_on' => '2026-01-01', 'artist_id' => $betaArtist->id, 'contract_id' => $dealA->id]);
-    $bravoRelease = Release::factory()->create([...$owned, 'name' => 'Bravo Release', 'catalog_number' => 'EX002', 'upc' => '4000000000024', 'released_on' => '2026-03-01', 'artist_id' => $alphaArtist->id, 'contract_id' => $dealB->id]);
+    $alphaRelease = Release::factory()->create([...$owned, 'name' => 'Alpha Release', 'catalog_number' => 'EX003', 'upc' => '4000000000031', 'released_on' => '2026-01-01', 'artist_id' => $betaArtist->id]);
+    $bravoRelease = Release::factory()->create([...$owned, 'name' => 'Bravo Release', 'catalog_number' => 'EX002', 'upc' => '4000000000024', 'released_on' => '2026-03-01', 'artist_id' => $alphaArtist->id]);
     Release::factory()->create([...$owned, 'name' => 'Charlie Release', 'catalog_number' => null, 'upc' => null, 'released_on' => null]);
 
-    Track::factory()->create([...$owned, 'name' => 'Alpha Track', 'release_id' => $alphaRelease->id, 'artist_id' => $betaArtist->id, 'isrc' => 'ZZTST2600003']);
+    Track::factory()->create([...$owned, 'name' => 'Alpha Track', 'release_id' => $alphaRelease->id, 'artist_id' => $betaArtist->id, 'isrc' => 'ZZTST2600003', 'contract_id' => $dealB->id]);
     Track::factory()->create([...$owned, 'name' => 'Bravo Track', 'release_id' => $alphaRelease->id, 'artist_id' => $alphaArtist->id, 'isrc' => 'ZZTST2600001']);
     Track::factory()->create([...$owned, 'name' => 'Charlie Track', 'release_id' => $bravoRelease->id, 'artist_id' => $betaArtist->id, 'isrc' => null, 'contract_id' => $dealA->id]);
 
@@ -100,7 +100,7 @@ test('a paginated list is ordered by the chosen column', function (string $route
     'releases by catalog number, none last' => ['releases.index', ['sort' => 'catalog_number', 'direction' => 'desc'], 'releases', 'name', ['Alpha', 'Bravo', 'Charlie']],
     'releases by artist' => ['releases.index', ['sort' => 'artist', 'direction' => 'asc'], 'releases', 'name', ['Bravo', 'Alpha', 'Charlie']],
     'releases by artist, descending, none last' => ['releases.index', ['sort' => 'artist', 'direction' => 'desc'], 'releases', 'name', ['Alpha', 'Bravo', 'Charlie']],
-    'releases by contract' => ['releases.index', ['sort' => 'contract', 'direction' => 'asc'], 'releases', 'name', ['Alpha', 'Bravo', 'Charlie']],
+    'releases by the contract of their tracks' => ['releases.index', ['sort' => 'contract', 'direction' => 'asc'], 'releases', 'name', ['Bravo', 'Alpha', 'Charlie']],
     'releases by release date' => ['releases.index', ['sort' => 'released_on', 'direction' => 'desc'], 'releases', 'name', ['Bravo', 'Alpha', 'Charlie']],
     'releases by track count' => ['releases.index', ['sort' => 'tracks_count', 'direction' => 'desc'], 'releases', 'name', ['Alpha', 'Bravo', 'Charlie']],
     'releases by income' => ['releases.index', ['sort' => 'income', 'direction' => 'desc'], 'releases', 'name', ['Bravo', 'Alpha', 'Charlie']],
@@ -123,8 +123,8 @@ test('a paginated list is ordered by the chosen column', function (string $route
     'items by transaction count, ascending' => ['items.index', ['search' => 'Item', 'sort' => 'transactions_count', 'direction' => 'asc'], 'items', 'name', ['Charlie', 'Alpha', 'Bravo']],
 
     'contracts by name, descending' => ['contracts.index', ['sort' => 'name', 'direction' => 'desc'], 'contracts', 'name', ['Charlie', 'Bravo', 'Alpha']],
-    'contracts by use' => ['contracts.index', ['sort' => 'usage', 'direction' => 'desc'], 'contracts', 'name', ['Alpha', 'Bravo', 'Charlie']],
-    'contracts by use, ascending' => ['contracts.index', ['sort' => 'usage', 'direction' => 'asc'], 'contracts', 'name', ['Charlie', 'Bravo', 'Alpha']],
+    'contracts by use' => ['contracts.index', ['sort' => 'usage', 'direction' => 'desc'], 'contracts', 'name', ['Bravo', 'Alpha', 'Charlie']],
+    'contracts by use, ascending' => ['contracts.index', ['sort' => 'usage', 'direction' => 'asc'], 'contracts', 'name', ['Charlie', 'Alpha', 'Bravo']],
 
     'payees by name, descending' => ['payees.index', ['sort' => 'name', 'direction' => 'desc'], 'payees', 'name', ['Charlie', 'Bravo', 'Alpha']],
     'payees by email, none last' => ['payees.index', ['sort' => 'email', 'direction' => 'asc'], 'payees', 'name', ['Charlie', 'Bravo', 'Alpha']],

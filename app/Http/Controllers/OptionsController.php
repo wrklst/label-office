@@ -73,13 +73,10 @@ class OptionsController extends Controller
         };
 
         $query = match ($records) {
-            // First the releases a contract pays for: those it is set on and those with a track it is set on.
+            // First the releases with a track a contract is set on.
             'releases' => $this->narrowed(
                 Release::query()->with(['cover:id,release_id', 'artist:id,name'])->orderBy('name')->orderBy('id'),
-                $contracts ? fn (Builder $releases) => $releases->where(fn (Builder $paid) => $paid->whereIn('contract_id', $contracts)->orWhereHas('tracks', fn (Builder $tracks) => $tracks->where(fn (Builder $track) => $track
-                    ->whereIn('tracks.contract_id', $contracts)
-                    // Also the other releases of a track that is on a release the contract is set on, such as the album beside the single.
-                    ->orWhereIn('tracks.id', DB::table('release_track')->join('releases as paid_releases', 'paid_releases.id', '=', 'release_track.release_id')->whereIn('paid_releases.contract_id', $contracts)->select('release_track.track_id'))))) : null,
+                $contracts ? fn (Builder $releases) => $releases->whereHas('tracks', fn (Builder $tracks) => $tracks->whereIn('tracks.contract_id', $contracts)) : null,
                 $excluded,
             ),
             // A dropdown of tracks is narrowed to the release chosen beside it, and lists what a contract pays for first.
@@ -87,7 +84,7 @@ class OptionsController extends Controller
                 Track::query()->with(['release:id,name', 'release.cover:id,release_id'])
                     ->when($releaseId, fn (Builder $tracks) => $tracks->onRelease($releaseId))
                     ->orderBy('name')->orderBy('id'),
-                $contracts ? fn (Builder $tracks) => $tracks->where(fn (Builder $paid) => $paid->whereIn('contract_id', $contracts)->orWhereHas('releases', fn (Builder $release) => $release->whereIn('releases.contract_id', $contracts))) : null,
+                $contracts ? fn (Builder $tracks) => $tracks->whereIn('contract_id', $contracts) : null,
                 $excluded,
             ),
             'artists' => Artist::query()->orderBy('name')->orderBy('id'),

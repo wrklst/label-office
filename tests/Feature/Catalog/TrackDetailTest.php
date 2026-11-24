@@ -81,8 +81,8 @@ test('an artist page lists the releases and tracks credited to the artist', func
 test('a recording on several releases is listed once, with all its releases and what it earned on them', function () {
     $label = Label::factory()->create();
     $artist = Artist::factory()->create(['label_id' => $label->id]);
-    $album = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'contract_id' => Contract::factory()->create(['label_id' => $label->id])->id]);
-    $single = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Single', 'contract_id' => null]);
+    $album = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release']);
+    $single = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Single']);
     $entry = fn (Release $release, array $attributes = []): Track => Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'artist_id' => $artist->id, 'contract_id' => null, ...$attributes]);
     $onAlbum = $entry($album, ['name' => 'Opening', 'isrc' => 'ZZTST2600001']);
     $onSingle = $entry($single, ['name' => 'Opening', 'isrc' => 'ZZTST2600001']);
@@ -135,18 +135,18 @@ test('a release of another artist that carries a track of the artist is listed w
         ->where('artists.data.0.tracks_count', 1));
 });
 
-test('an artist page lists the contracts of the artist\'s releases and tracks with their payees', function () {
+test('an artist page lists the contracts of the artist\'s tracks with their payees', function () {
     $label = Label::factory()->create();
     $artist = Artist::factory()->create(['label_id' => $label->id]);
     $payee = Payee::factory()->create(['label_id' => $label->id, 'name' => 'Example Payee']);
     $own = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Remixer deal']);
-    $inherited = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist 50/50']);
+    $trackContract = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist 50/50']);
     Contract::factory()->create(['label_id' => $label->id, 'name' => 'Unrelated']);
     ContractSplit::factory()->create(['contract_id' => $own->id, 'payee_id' => $payee->id, 'split_amount' => '0.5']);
-    $release = Release::factory()->create(['label_id' => $label->id, 'contract_id' => $inherited->id]);
+    $release = Release::factory()->create(['label_id' => $label->id]);
     Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'contract_id' => $own->id])
         ->artists()->attach($artist->id, ['role' => 'remixer', 'position' => 0]);
-    Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'artist_id' => $artist->id, 'contract_id' => null]);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'artist_id' => $artist->id, 'contract_id' => $trackContract->id]);
 
     $this->actingAs(labelAdmin($label))
         ->get(route('artists.show', $artist->id))

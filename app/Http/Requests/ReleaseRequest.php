@@ -24,7 +24,7 @@ class ReleaseRequest extends LabelFormRequest
             $this->merge(['artists' => []]);
         }
 
-        $this->nullify(['artist_id', 'contract_id', 'released_on', 'mechanicals_rate', 'ppd_rate', 'reserves_rate', 'release_type', 'explicit', 'ai_artwork', 'original_released_on', 'preorder_on', 'files_url']);
+        $this->nullify(['artist_id', 'released_on', 'mechanicals_rate', 'ppd_rate', 'reserves_rate', 'release_type', 'explicit', 'ai_artwork', 'original_released_on', 'preorder_on', 'files_url']);
 
         // Lists may arrive as "Spotify, Tidal" from a text field.
         foreach (['blocked_services' => false, 'blocked_territories' => true] as $key => $uppercase) {
@@ -55,7 +55,6 @@ class ReleaseRequest extends LabelFormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'artist_id' => ['nullable', 'integer', $this->inLabel('artists')],
-            'contract_id' => ['nullable', 'integer', $this->inLabel('contracts')],
             'catalog_number' => ['nullable', 'string', 'max:255'],
             'upc' => ['nullable', 'string', 'max:32', new Upc, function (string $attribute, mixed $value, Closure $fail) use ($release): void {
                 // A 12 digit UPC and its 13 digit EAN form are the same code.

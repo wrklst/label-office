@@ -81,21 +81,25 @@ class PayeeController extends Controller
             'summary' => $summary ? ['totals' => $summary['totals'], 'ledgers' => collect($summary['ledgers'])->map(fn (array $ledger): array => collect($ledger)->except('releases')->all())->all()] : null,
             'splits' => ContractSplit::query()
                 ->where('payee_id', $payee->id)
-                ->with(['contract:id,name', 'ledger:id,name', 'territory:id,name', 'contract.releases:id,name,contract_id', 'contract.tracks:id,name,contract_id'])
+                ->with(['contract:id,name', 'ledger:id,name', 'territory:id,name', 'contract.tracks:id,name,contract_id'])
                 ->get()
-                ->map(fn (ContractSplit $split): array => [
-                    'id' => $split->id,
-                    'contract_id' => $split->contract_id,
-                    'contract' => $split->contract?->name,
-                    'split_amount' => $split->split_amount,
-                    'ledger' => $split->ledger?->name,
-                    'territory' => $split->territory?->name,
-                    'used_by' => [...($split->contract?->releases->pluck('name')->all() ?? []), ...($split->contract?->tracks->pluck('name')->all() ?? [])],
-                    'used_by_links' => [
-                        ...($split->contract?->releases->map(fn ($release): array => ['to' => 'release', 'id' => $release->id, 'name' => $release->name])->all() ?? []),
+                ->map(function (ContractSplit $split): array {
+                    $usedBy = [
+                        ...($split->contract?->releasesQuery()->get(['id', 'name'])->map(fn (Release $release): array => ['to' => 'release', 'id' => $release->id, 'name' => $release->name])->all() ?? []),
                         ...($split->contract?->tracks->map(fn ($track): array => ['to' => 'track', 'id' => $track->id, 'name' => $track->name])->all() ?? []),
-                    ],
-                ]),
+                    ];
+
+                    return [
+                        'id' => $split->id,
+                        'contract_id' => $split->contract_id,
+                        'contract' => $split->contract?->name,
+                        'split_amount' => $split->split_amount,
+                        'ledger' => $split->ledger?->name,
+                        'territory' => $split->territory?->name,
+                        'used_by' => array_column($usedBy, 'name'),
+                        'used_by_links' => $usedBy,
+                    ];
+                }),
             'payouts' => Payout::query()->where('payee_id', $payee->id)->with('period:id,name')->tap($payoutSorting)
                 ->paginate(PageSize::SECONDARY, pageName: 'payouts_page')->withQueryString()
                 ->through(fn (Payout $payout): array => [

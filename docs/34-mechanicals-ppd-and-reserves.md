@@ -105,7 +105,7 @@ For every track with units, two transactions of the same amount, with the catego
 - an **expense** on the item "Track name [Mechanicals Expenses]",
 - an **income** line on the item "Track name [Mechanicals Income]".
 
-Both items are created on the first run and reused afterwards. They have no contract of their own, so both follow the track or release contract and **the pair cancels out**. Nothing changes for anyone until you give the income item a publishing contract under **Catalog → Items**.
+Both items are created on the first run and reused afterwards. They have no contract of their own, so both follow the contract of the track and **the pair cancels out**. Nothing changes for anyone until you give the income item a publishing contract under **Catalog → Items**.
 
 ### Example
 
@@ -115,12 +115,12 @@ The run calculates 100 × 0.1179 = 11.79 and books −11.79 and +11.79.
 
 |                                                        | Before the run | After the run             | With a publishing contract on the income item |
 | ------------------------------------------------------ | -------------- | ------------------------- | --------------------------------------------- |
-| Net under the release contract                         | 100            | 100 − 11.79 + 11.79 = 100 | 100 − 11.79 = 88.21                           |
+| Net under the track contract                           | 100            | 100 − 11.79 + 11.79 = 100 | 100 − 11.79 = 88.21                           |
 | Example Artist (50%)                                   | 50             | 50                        | 44.105                                        |
 | Second Payee, the songwriter (100% of the income item) |                |                           | 11.79                                         |
 | Label keeps                                            | 50             | 50                        | 44.105                                        |
 
-In the last column the income item has a contract that pays Second Payee 100%, ideally on a ledger of its own. The expense stays under the release contract, so the artist and the label each bear half of the mechanicals.
+In the last column the income item has a contract that pays Second Payee 100%, ideally on a ledger of its own. The expense stays under the track contract, so the artist and the label each bear half of the mechanicals.
 
 ## PPD
 
@@ -146,7 +146,7 @@ For every release and track with a PPD total, two income transactions with the c
 Without contracts of their own the two cancel out. You decide who gets what under **Catalog → Items**:
 
 - Give the **PPD Income** item a contract with the PPD royalty as its split.
-- Give the **PPD Income Offset** item to whoever bears that cost. Left alone, it follows the release contract and reduces the net of the release for its payees.
+- Give the **PPD Income Offset** item to whoever bears that cost. Left alone, it follows the track contract and reduces the net of the release for its payees.
 
 ### Example
 
@@ -154,11 +154,11 @@ Example Release sold 100 LPs, paid in the first quarter, with income of 1,000. E
 
 The run calculates 100 × 2.00 = 200 and books +200 and −200. The PPD Income item gets a contract with Second Payee at 15%: 200 × 15% = 30.
 
-|                | No contracts on the PPD items | Offset left on the release contract | Offset on a contract without splits |
-| -------------- | ----------------------------- | ----------------------------------- | ----------------------------------- |
-| Second Payee   | 0                             | 30                                  | 30                                  |
-| Example Artist | 500                           | (1,000 − 200) × 50% = 400           | 500                                 |
-| Label keeps    | 500                           | 570                                 | 470                                 |
+|                | No contracts on the PPD items | Offset left on the track contract | Offset on a contract without splits |
+| -------------- | ----------------------------- | --------------------------------- | ----------------------------------- |
+| Second Payee   | 0                             | 30                                | 30                                  |
+| Example Artist | 500                           | (1,000 − 200) × 50% = 400         | 500                                 |
+| Label keeps    | 500                           | 570                               | 470                                 |
 
 The middle column charges the artist half of the PPD total, which is rarely what a deal says. If the label is meant to bear the PPD royalty, create a contract without splits and set it on the offset item, as in the right column.
 
@@ -179,7 +179,7 @@ When creating the transactions you enter two dates: **Held on** and **Liquidated
 - the reserve as a **negative** amount, paid on the held date, format Reserves (Held),
 - the same amount back as a **positive** amount, paid on the liquidation date, format Reserves (Liquidated).
 
-The release earns that much less in the period of the first date and gets it back in the period of the second, for payees and label alike. The item follows the release contract.
+The release earns that much less in the period of the first date and gets it back in the period of the second, for payees and label alike. The item follows the contract of the track.
 
 The table **Reserves by release** on the tool page shows per release what was **Held**, what was **Liquidated so far** (up to today) and what is **Still held**. The report above it shows **Reserves to hold**, **Physical income** and the number of **Releases**; **Reserves %** is set on the release form, not on the tool page.
 

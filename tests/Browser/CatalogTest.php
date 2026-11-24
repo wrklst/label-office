@@ -73,22 +73,22 @@ test('the contract form warns when the splits exceed the whole', function () {
         ->assertSee('add up to more than 100%');
 });
 
-test('choosing a contract in the catalog manager saves it straight away', function () {
+test('choosing a contract for a release in the catalog manager writes it on its tracks straight away', function () {
     $label = Label::factory()->create();
     $contract = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Deal']);
     $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release']);
-    Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track']);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track']);
     $this->actingAs(labelAdmin($label));
 
     visit('/catalog')
         ->assertSee('1 track without a contract')
-        ->click('button[aria-label="Contract for Example Release"]')
+        ->click('button[aria-label="Contract for the tracks of Example Release"]')
         ->waitForText('Example Deal')
         ->click('Example Deal')
         ->assertSee('Every track is covered by a contract.')
         ->assertNoJavaScriptErrors();
 
-    $this->assertDatabaseHas('releases', ['id' => $release->id, 'contract_id' => $contract->id]);
+    $this->assertDatabaseHas('tracks', ['id' => $track->id, 'contract_id' => $contract->id]);
 });
 
 test('typing in a search box narrows the list', function () {

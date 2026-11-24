@@ -124,14 +124,14 @@ function AssignFields({
                 label="Contract override"
                 htmlFor="contract_id"
                 error={errors.contract_id}
-                hint="Only for items with their own deal, such as a licensed vinyl run. Otherwise the track or release contract applies."
+                hint="Only for items with their own deal, such as a licensed vinyl run. Otherwise the track contract applies."
             >
                 <RecordSelect
                     id="contract_id"
                     name="contract_id"
                     records="contracts"
                     defaultValue={item.contract_id}
-                    placeholder="Use track / release contract"
+                    placeholder="Use track contract"
                 />
             </Field>
         </>

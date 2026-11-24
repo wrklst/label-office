@@ -6,11 +6,13 @@ use App\Models\Concerns\BelongsToLabel;
 use Carbon\CarbonImmutable;
 use Database\Factories\ContractFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\Pivot;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @property int $id
@@ -52,11 +54,16 @@ class Contract extends Model
     }
 
     /**
-     * @return HasMany<Release, $this>
+     * The releases that have a track with this contract.
+     *
+     * @return Builder<Release>
      */
-    public function releases(): HasMany
+    public function releasesQuery(): Builder
     {
-        return $this->hasMany(Release::class);
+        return Release::query()->whereIn('releases.id', DB::table('release_track')
+            ->join('tracks', 'tracks.id', '=', 'release_track.track_id')
+            ->where('tracks.contract_id', $this->id)
+            ->select('release_track.release_id'));
     }
 
     /**

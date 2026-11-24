@@ -144,6 +144,7 @@ class ImportInfiniteCatalog extends Command
         }
 
         $upcs = [];
+        $releaseContracts = [];
 
         foreach ($this->read('releases') as $release) {
             $upc = Identifiers::upc($release['upc'] ?? null);
@@ -161,17 +162,18 @@ class ImportInfiniteCatalog extends Command
             $this->ids['releases'][$release['id']] = Release::query()->create([
                 'name' => $release['name'],
                 'artist_id' => $this->map('artists', $release['artist']),
-                'contract_id' => $this->map('contracts', $release['contract']),
                 'catalog_number' => $release['catalog_number'] ?: null,
                 'upc' => $upc,
             ])->id;
+            $releaseContracts[$this->ids['releases'][$release['id']]] = $this->map('contracts', $release['contract']);
         }
 
+        // A release has no contract here: the one the old system gave it goes to each of its tracks that has none.
         foreach ($this->read('tracks') as $track) {
             $this->ids['tracks'][$track['id']] = Track::query()->create([
                 'release_id' => $this->map('releases', $track['release']),
                 'artist_id' => $this->map('artists', $track['artist']),
-                'contract_id' => $this->map('contracts', $track['contract']),
+                'contract_id' => $this->map('contracts', $track['contract']) ?? $releaseContracts[$this->map('releases', $track['release'])] ?? null,
                 'name' => $track['name'],
                 'isrc' => $track['isrc'] ?: null,
                 'iswc' => $track['iswc'] ?: null,

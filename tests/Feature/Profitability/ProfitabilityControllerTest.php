@@ -7,6 +7,7 @@ use App\Models\ContractSplit;
 use App\Models\Label;
 use App\Models\Payee;
 use App\Models\Release;
+use App\Models\Track;
 use App\Models\Transaction;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -22,7 +23,8 @@ function profitableRelease(Label $label, array $releaseAttributes = []): Release
     $contract = Contract::factory()->create(['label_id' => $label->id]);
     ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => Payee::factory()->create(['label_id' => $label->id])->id, 'split_amount' => '0.5']);
     $artist = Artist::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
-    $release = Release::factory()->create(['label_id' => $label->id, 'artist_id' => $artist->id, 'contract_id' => $contract->id, 'name' => 'Example Release', 'catalog_number' => 'EX001', ...$releaseAttributes]);
+    $release = Release::factory()->create(['label_id' => $label->id, 'artist_id' => $artist->id, 'name' => 'Example Release', 'catalog_number' => 'EX001', ...$releaseAttributes]);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'contract_id' => $contract->id]);
 
     $dates = ['timestamp' => '2026-01-20', 'paid_timestamp' => '2026-02-15'];
     Transaction::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'total' => '200', ...$dates]);

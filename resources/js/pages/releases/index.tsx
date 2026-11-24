@@ -7,6 +7,7 @@ import { Pagination } from '@/components/pagination';
 import type { PlayerTrack } from '@/components/player/player-store';
 import { ReleaseActions } from '@/components/player/track-actions';
 import { RecordLink } from '@/components/record-link';
+import { ReleaseContract } from '@/components/release-contract';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ type Release = {
     artist: string | null;
     artist_id: number | null;
     contract: Option | null;
+    mixed: boolean;
     income: string;
     status: 'todo' | 'in_progress' | 'done';
     release_type: string | null;
@@ -266,18 +268,10 @@ export default function Releases({
                                         {count(release.tracks_count)}
                                     </TableCell>
                                     <TableCell>
-                                        {release.contract ? (
-                                            <RecordLink
-                                                to="contract"
-                                                id={release.contract.id}
-                                            >
-                                                {release.contract.name}
-                                            </RecordLink>
-                                        ) : (
-                                            <Badge variant="warning">
-                                                No contract
-                                            </Badge>
-                                        )}
+                                        <ReleaseContract
+                                            contract={release.contract}
+                                            mixed={release.mixed}
+                                        />
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Amount value={release.income} />

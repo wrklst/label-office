@@ -9,6 +9,7 @@ use App\Models\Payout;
 use App\Models\Period;
 use App\Models\Release;
 use App\Models\Statement;
+use App\Models\Track;
 use App\Models\Transaction;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -21,7 +22,8 @@ function payeeEarningHalf(Label $label, string $name, string $income): Payee
     $payee = Payee::factory()->create(['label_id' => $label->id, 'name' => $name]);
     $contract = Contract::factory()->create(['label_id' => $label->id, 'name' => "{$name} contract"]);
     ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => $payee->id, 'split_amount' => '0.5']);
-    $release = Release::factory()->create(['label_id' => $label->id, 'contract_id' => $contract->id, 'name' => "{$name} release"]);
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => "{$name} release"]);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'contract_id' => $contract->id]);
     Transaction::factory()->create([
         'label_id' => $label->id, 'release_id' => $release->id, 'total' => $income, 'format' => 'Download Track',
         'timestamp' => '2026-02-01', 'paid_timestamp' => '2026-02-15',

@@ -123,6 +123,7 @@ test('creating transactions books the reserve as held and as liquidated on the t
 });
 
 test('a reserve lowers the payee share in the period it is held and restores it in the period it is liquidated', function () {
+    toolTrack('Example Track');
     toolSale(['format' => 'LP', 'total' => '400']);
     toolSale(['format' => 'Download Album', 'total' => '20', 'paid_timestamp' => '2026-05-01']);
 
@@ -155,6 +156,7 @@ test('the liquidation date cannot be before the held date', function (array $inp
 ]);
 
 test('a reserve can be held and liquidated on the same day', function () {
+    toolTrack('Example Track');
     toolSale(['format' => 'LP', 'total' => '400']);
 
     bookReserves(['held_on' => '2026-03-31', 'liquidated_on' => '2026-03-31'])->assertSessionHasNoErrors();
@@ -211,6 +213,7 @@ test('an overlapping range is flagged and needs a confirmation to be booked agai
 });
 
 test('deleting the import of a run removes both lines and the balance', function () {
+    toolTrack('Example Track');
     toolSale(['format' => 'LP', 'total' => '400']);
     bookReserves()->assertSessionHasNoErrors();
 

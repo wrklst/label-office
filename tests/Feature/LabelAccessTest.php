@@ -6,6 +6,7 @@ use App\Models\Label;
 use App\Models\Payee;
 use App\Models\Release;
 use App\Models\Statement;
+use App\Models\Track;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -57,16 +58,17 @@ test('a record of another label cannot be opened or changed', function () {
     $this->assertDatabaseHas('releases', ['id' => $foreign->id, 'name' => 'Theirs']);
 });
 
-test('a contract of another label cannot be assigned to a release', function () {
+test('a contract of another label cannot be set on the tracks of a release', function () {
     $label = Label::factory()->create();
     $release = Release::factory()->create(['label_id' => $label->id]);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id]);
     $foreign = Contract::factory()->create(['label_id' => Label::factory()]);
 
     $this->actingAs(labelAdmin($label))
-        ->put(route('releases.update', $release->id), ['name' => $release->name, 'contract_id' => $foreign->id])
-        ->assertSessionHasErrors('contract_id');
+        ->put(route('releases.update', $release->id), ['name' => $release->name, 'tracks' => [['id' => $track->id, 'name' => $track->name, 'contract_id' => $foreign->id]]])
+        ->assertSessionHasErrors('tracks.0.contract_id');
 
-    $this->assertDatabaseHas('releases', ['id' => $release->id, 'contract_id' => null]);
+    $this->assertDatabaseHas('tracks', ['id' => $track->id, 'contract_id' => null]);
 });
 
 test('a user cannot switch to a label they do not belong to', function () {

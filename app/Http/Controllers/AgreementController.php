@@ -285,14 +285,12 @@ class AgreementController extends Controller
      */
     public function release(Request $request, Release $release): JsonResponse
     {
-        // With a contract or payee chosen, the tracks their contracts pay for come ticked: those the contract
-        // is set on and, where it is set on the release, those without a contract of their own.
+        // With a contract or payee chosen, the tracks their contracts pay for come ticked: those the contract is set on.
         $contracts = $request->integer('contract_id')
             ? [$request->integer('contract_id')]
             : Contract::query()->whereHas('splits', fn ($splits) => $splits->where('payee_id', $request->integer('payee_id')))->pluck('id')->all();
         $chosen = array_values($release->tracks()
-            ->where(fn ($paid) => $paid->whereIn('tracks.contract_id', $contracts ?: [0])
-                ->when(in_array($release->contract_id, $contracts, true), fn ($paid) => $paid->orWhereNull('tracks.contract_id')))
+            ->whereIn('tracks.contract_id', $contracts ?: [0])
             ->pluck('tracks.id')->map(fn (mixed $id): int => (int) $id)->all());
 
         return response()->json(Agreement::releaseRow($release, $chosen));
@@ -325,8 +323,8 @@ class AgreementController extends Controller
 
     /**
      * Make the contract that pays what was signed: one split for the
-     * payee at the agreed share. It is set on the linked track, or else
-     * the linked release, unless that already has a contract: income
+     * payee at the agreed share. It is set on the linked tracks, or else
+     * on all tracks of the linked release, unless a track already has a contract: income
      * that is accounted for one way is not silently accounted another.
      */
     public function contract(Agreement $agreement): RedirectResponse
@@ -341,11 +339,11 @@ class AgreementController extends Controller
             return back();
         }
 
-        // What the contract goes on: the chosen tracks of each release, or the release itself when none is chosen.
+        // What the contract goes on: the chosen tracks of each release, or all its tracks when none is chosen.
         $targets = collect($agreement->releases()->get())->flatMap(function (Release $release) use ($agreement) {
             $tracks = $agreement->tracks()->onRelease($release->id)->get();
 
-            return $tracks->isEmpty() ? [$release] : $tracks->all();
+            return $tracks->isEmpty() ? $release->tracks()->get()->all() : $tracks->all();
         });
         // The same recording on another release, such as a single beside the album, is paid the same way.
         $isrcs = $targets->whereInstanceOf(Track::class)->pluck('isrc')->filter()->unique()->all();
@@ -388,7 +386,7 @@ class AgreementController extends Controller
             __('Contract created.'),
             $set === [] ? null : __('Set on: :names.', ['names' => implode(', ', $set)]),
             $left === [] ? null : __('Left as they are, because they have a contract: :names.', ['names' => implode(', ', $left)]),
-            $set === [] && $left === [] ? __('Set it on the release or track it pays for.') : null,
+            $set === [] && $left === [] ? __('Set it on the track it pays for.') : null,
         ]))]);
 
         return to_route('contracts.show', $contract->id);

@@ -1,5 +1,6 @@
 import { Link, setLayoutProps, useForm, usePage } from '@inertiajs/react';
 import { Plus, X } from 'lucide-react';
+import { useState } from 'react';
 import ReleaseController from '@/actions/App/Http/Controllers/ReleaseController';
 import { ArtistCreditRows } from '@/components/artist-credit-rows';
 import type { ArtistCredit } from '@/components/artist-credit-rows';
@@ -29,7 +30,6 @@ type Release = {
     id: number;
     name: string;
     artist_id: number | null;
-    contract_id: number | null;
     catalog_number: string | null;
     upc: string | null;
     released_on: string | null;
@@ -93,7 +93,6 @@ export default function ReleaseForm({
         return_to: returnTo ?? '',
         name: release?.name ?? '',
         artist_id: (release?.artist_id ?? '') as number | '',
-        contract_id: (release?.contract_id ?? '') as number | '',
         catalog_number: release?.catalog_number ?? '',
         upc: release?.upc ?? '',
         released_on: release?.released_on ?? '',
@@ -135,6 +134,7 @@ export default function ReleaseForm({
         })) as TrackRow[],
     });
 
+    const [allContract, setAllContract] = useState<number | ''>('');
     const errors = form.errors as Record<string, string>;
     const removedExisting =
         (release?.tracks.length ?? 0) >
@@ -202,22 +202,6 @@ export default function ReleaseForm({
                                 value={form.data.artist_id}
                                 onChange={(id) => form.setData('artist_id', id)}
                                 placeholder="No artist / various"
-                            />
-                        </Field>
-                        <Field
-                            label="Contract"
-                            htmlFor="contract_id"
-                            error={errors.contract_id}
-                            hint="The contract of every track on the release that has none of its own. A sale of the release as a whole is divided equally between its tracks and paid by each track's contract."
-                        >
-                            <RecordSelect
-                                id="contract_id"
-                                records="contracts"
-                                value={form.data.contract_id}
-                                onChange={(id) =>
-                                    form.setData('contract_id', id)
-                                }
-                                placeholder="No contract"
                             />
                         </Field>
                         <Field
@@ -663,7 +647,7 @@ export default function ReleaseForm({
 
                 <Panel
                     title="Tracks"
-                    description="Give a track its own contract only when its deal differs from the release, e.g. a remix."
+                    description="Contracts belong to tracks. Give every track its own, or fill them all at once below."
                     actions={
                         <Button
                             type="button"
@@ -676,7 +660,7 @@ export default function ReleaseForm({
                                         id: null,
                                         name: '',
                                         artist_id: form.data.artist_id,
-                                        contract_id: '',
+                                        contract_id: allContract,
                                         isrc: '',
                                         iswc: '',
                                         track_number:
@@ -698,6 +682,28 @@ export default function ReleaseForm({
                         </p>
                     ) : (
                         <div className="grid gap-3">
+                            <Field
+                                label="Contract for all tracks"
+                                htmlFor="all_contract_id"
+                                hint="Fills the contract of every track row below; change a row afterwards for a track with a different deal."
+                            >
+                                <RecordSelect
+                                    id="all_contract_id"
+                                    records="contracts"
+                                    value={allContract}
+                                    onChange={(id) => {
+                                        setAllContract(id);
+                                        form.setData(
+                                            'tracks',
+                                            form.data.tracks.map((track) => ({
+                                                ...track,
+                                                contract_id: id,
+                                            })),
+                                        );
+                                    }}
+                                    placeholder="No contract"
+                                />
+                            </Field>
                             <div className="hidden grid-cols-[3.5rem_1.6fr_1fr_9rem_1.2fr_2.25rem] gap-2 text-xs font-medium text-muted-foreground lg:grid">
                                 <span>#</span>
                                 <span>{TRACK_FIELD.name.label}</span>

@@ -4,6 +4,7 @@ use App\Models\Label;
 use App\Models\Payout;
 use App\Models\Period;
 use App\Models\Release;
+use App\Models\Track;
 use App\Models\Transaction;
 use App\Services\Royalties\RoyaltyCalculator;
 use App\Support\CurrentLabel;
@@ -65,7 +66,8 @@ test('an infinite catalog export is migrated with its catalog, contracts and pay
     app(CurrentLabel::class)->set($label);
     $payee = collect(app(RoyaltyCalculator::class)->forPeriod(Period::query()->sole())['payees'])->sole();
 
-    expect(Release::query()->sole()->contract->splits()->sole()->split_amount)->toBe('0.500000000')
+    // The old system's contract of the release is on the tracks that had none.
+    expect(Track::query()->sole()->contract->splits()->sole()->split_amount)->toBe('0.500000000')
         ->and(Transaction::query()->count())->toBe(3)
         ->and(Payout::query()->sole()->paid_on->toDateString())->toBe('2024-12-02')
         ->and($payee['totals']['income'])->toBe('100.000000000000000')

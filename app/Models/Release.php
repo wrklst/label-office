@@ -9,6 +9,7 @@ use App\Models\Concerns\BelongsToLabel;
 use Carbon\CarbonImmutable;
 use Database\Factories\ReleaseFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,7 +24,6 @@ use Illuminate\Support\Facades\DB;
  * @property-read Pivot&object{track_number: int|null, disc_number: int|null} $pivot Its place on the release when loaded through Track::releases().
  * @property int $label_id
  * @property int|null $artist_id
- * @property int|null $contract_id
  * @property string $name
  * @property string|null $catalog_number
  * @property string|null $upc
@@ -57,7 +57,7 @@ use Illuminate\Support\Facades\DB;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['label_id', 'artist_id', 'contract_id', 'name', 'catalog_number', 'upc', 'image_path', 'released_on', 'spotify_id', 'discogs_id', 'accounts_mechanicals', 'mechanicals_rate', 'ppd_rate', 'reserves_rate', 'notes', 'status', 'release_type', 'version', 'genre', 'subgenre', 'language', 'explicit', 'p_line', 'c_line', 'original_released_on', 'preorder_on', 'press_release', 'key_facts', 'todo', 'files_url', 'blocked_services', 'blocked_territories', 'ai_artwork'])]
+#[Fillable(['label_id', 'artist_id', 'name', 'catalog_number', 'upc', 'image_path', 'released_on', 'spotify_id', 'discogs_id', 'accounts_mechanicals', 'mechanicals_rate', 'ppd_rate', 'reserves_rate', 'notes', 'status', 'release_type', 'version', 'genre', 'subgenre', 'language', 'explicit', 'p_line', 'c_line', 'original_released_on', 'preorder_on', 'press_release', 'key_facts', 'todo', 'files_url', 'blocked_services', 'blocked_territories', 'ai_artwork'])]
 class Release extends Model
 {
     /** @use HasFactory<ReleaseFactory> */
@@ -163,11 +163,15 @@ class Release extends Model
     }
 
     /**
-     * @return BelongsTo<Contract, $this>
+     * Only the releases with a track that has no contract. A release without
+     * tracks has nothing a contract could be set on and is not among them.
+     *
+     * @param  Builder<Release>  $query
      */
-    public function contract(): BelongsTo
+    public function scopeWithoutContract(Builder $query): void
     {
-        return $this->belongsTo(Contract::class);
+        $query->whereExists(fn ($tracks) => $tracks->from('release_track')->join('tracks', 'tracks.id', '=', 'release_track.track_id')
+            ->whereColumn('release_track.release_id', 'releases.id')->whereNull('tracks.contract_id'));
     }
 
     /**
@@ -197,5 +201,30 @@ class Release extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    /**
+     * What the contracts of the tracks add up to, for showing: the one
+     * contract when every track has it; none when no track has a contract;
+     * "mixed" when the tracks have several, or some have none. A release has
+     * no contract of its own. Needs the tracks loaded with their contract.
+     *
+     * @return array{contract: array{id: int, name: string}|null, mixed: bool}
+     */
+    public function contractSummary(): array
+    {
+        $contractIds = $this->tracks->map(fn (Track $track): ?int => $track->contract_id)->unique();
+
+        if ($contractIds->filter()->isEmpty()) {
+            return ['contract' => null, 'mixed' => false];
+        }
+
+        if ($contractIds->count() > 1) {
+            return ['contract' => null, 'mixed' => true];
+        }
+
+        $contract = $this->tracks->first()?->contract;
+
+        return ['contract' => $contract === null ? null : ['id' => $contract->id, 'name' => $contract->name], 'mixed' => false];
     }
 }

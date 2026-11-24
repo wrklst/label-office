@@ -16,6 +16,10 @@ import {
     TrackActions,
 } from '@/components/player/track-actions';
 import { RecordLink } from '@/components/record-link';
+import {
+    ReleaseContract,
+    SetContractDialog,
+} from '@/components/release-contract';
 import { TrackDialog } from '@/components/track-dialog';
 import type { EditableTrack } from '@/components/track-fields';
 import { ReleaseFiles } from '@/components/release-files';
@@ -83,6 +87,7 @@ type Props = {
         notes: string | null;
         cover_file_id: number | null;
         contract: Option | null;
+        mixed: boolean;
         files: ReleaseFile[];
         tracks: Track[];
     };
@@ -307,22 +312,16 @@ export default function ShowRelease({
                     <Stat
                         label="Contract"
                         value={
-                            release.contract ? (
-                                <RecordLink
-                                    to="contract"
-                                    id={release.contract.id}
-                                    className="text-base"
-                                >
-                                    {release.contract.name}
-                                </RecordLink>
-                            ) : (
-                                <span className="text-base">No contract</span>
-                            )
+                            <ReleaseContract
+                                contract={release.contract}
+                                mixed={release.mixed}
+                                className="text-base"
+                            />
                         }
                         hint={
                             release.contract
                                 ? undefined
-                                : 'The label keeps all income from tracks without their own contract.'
+                                : 'The label keeps all income from tracks without a contract.'
                         }
                     />
                 </div>
@@ -334,6 +333,9 @@ export default function ShowRelease({
                 actions={
                     <div className="flex flex-wrap items-center gap-2">
                         <ReleaseActions tracks={playableTracks} />
+                        {release.tracks.length > 0 && (
+                            <SetContractDialog releaseId={release.id} />
+                        )}
                         <Button variant="outline" size="sm" asChild>
                             <Link
                                 href={transactions({
@@ -451,10 +453,6 @@ export default function ShowRelease({
                                             >
                                                 {track.contract.name}
                                             </RecordLink>
-                                        ) : release.contract ? (
-                                            <span className="text-muted-foreground">
-                                                Release contract
-                                            </span>
                                         ) : (
                                             <Badge variant="warning">
                                                 No contract

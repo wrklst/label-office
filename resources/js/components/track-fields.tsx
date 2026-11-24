@@ -5,7 +5,6 @@ import { Field, SelectInput } from '@/components/field';
 import { RecordSelect } from '@/components/record-select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import type { Option } from '@/types';
 
 export type TrackCredits = Partial<
     Record<
@@ -51,7 +50,7 @@ export const TRACK_FIELD = {
     name: { label: 'Title', placeholder: 'Track title' },
     version: { label: 'Version', hint: 'e.g. Radio Edit, Remix name' },
     artist_id: { label: 'Main artist', blank: 'Same as release' },
-    contract_id: { label: 'Contract', blank: 'Same as release' },
+    contract_id: { label: 'Contract', blank: 'No contract' },
     isrc: { label: 'ISRC', placeholder: 'DEXXX2600001' },
     iswc: { label: 'ISWC' },
     track_number: { label: 'Track number' },
@@ -60,14 +59,11 @@ export const TRACK_FIELD = {
 
 export function TrackFields({
     track,
-    inheritedContract,
     genreOptions = [],
     releaseId,
     errors,
 }: {
     track: EditableTrack;
-    /** The contract the release gives the track while it has none of its own. */
-    inheritedContract?: Option | null;
     /** Genres to suggest: Zebralution's list while the label delivers there. */
     genreOptions?: string[];
     /** The release the track is edited on: its number there is the one shown and saved. */
@@ -128,11 +124,7 @@ export function TrackFields({
                         name="contract_id"
                         records="contracts"
                         defaultValue={track.contract_id}
-                        placeholder={
-                            inheritedContract
-                                ? `${TRACK_FIELD.contract_id.blank} (${inheritedContract.name})`
-                                : TRACK_FIELD.contract_id.blank
-                        }
+                        placeholder={TRACK_FIELD.contract_id.blank}
                     />
                 </Field>
             </div>

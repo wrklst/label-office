@@ -193,6 +193,7 @@ test('creating transactions books the total and its offset as income for each re
 });
 
 test('the two lines cancel out until a contract is set on the PPD income item', function () {
+    toolTrack('Example Track');
     $this->release->update(['ppd_rate' => '2']);
     toolSale(['quantity' => 10, 'total' => '100']);
 
@@ -202,6 +203,7 @@ test('the two lines cancel out until a contract is set on the PPD income item', 
 });
 
 test('a contract on the PPD income item pays its split of the PPD total', function () {
+    toolTrack('Example Track');
     $this->release->update(['ppd_rate' => '2']);
     toolSale(['quantity' => 10, 'total' => '100']);
     bookPpd()->assertSessionHasNoErrors();
@@ -220,7 +222,8 @@ test('a contract on the PPD income item pays its split of the PPD total', functi
         ->and(toolPayeeTotals($this->firstQuarter, $this->artist)['payee_share'])->toBe('50.000000000000000');
 });
 
-test('the offset left on the release contract charges its payees their split', function () {
+test('the offset left on the track contract charges its payees their split', function () {
+    toolTrack('Example Track');
     $this->release->update(['ppd_rate' => '2']);
     toolSale(['quantity' => 10, 'total' => '100']);
     bookPpd()->assertSessionHasNoErrors();

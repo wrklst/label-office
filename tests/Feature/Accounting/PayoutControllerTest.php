@@ -10,6 +10,7 @@ use App\Models\Payout;
 use App\Models\PayoutAllocation;
 use App\Models\Period;
 use App\Models\Release;
+use App\Models\Track;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\Royalties\PayoutService;
@@ -56,7 +57,8 @@ test('deleting a payout makes the amount payable again', function () {
     $payee = Payee::factory()->create(['label_id' => $label->id]);
     $contract = Contract::factory()->create(['label_id' => $label->id]);
     ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => $payee->id, 'split_amount' => '0.5']);
-    $release = Release::factory()->create(['label_id' => $label->id, 'contract_id' => $contract->id]);
+    $release = Release::factory()->create(['label_id' => $label->id]);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'contract_id' => $contract->id]);
     Transaction::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'total' => '100']);
     $payout = app(PayoutService::class)->record($period, $payee, '20', '2026-04-10');
     $this->actingAs(labelAdmin($label));

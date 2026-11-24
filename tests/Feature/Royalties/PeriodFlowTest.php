@@ -7,6 +7,7 @@ use App\Models\Payee;
 use App\Models\Period;
 use App\Models\Release;
 use App\Models\Statement;
+use App\Models\Track;
 use App\Models\Transaction;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -17,7 +18,8 @@ beforeEach(function () {
     $this->payee = Payee::factory()->create(['label_id' => $this->label->id]);
     $contract = Contract::factory()->create(['label_id' => $this->label->id]);
     ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => $this->payee->id, 'split_amount' => '0.5']);
-    $release = Release::factory()->create(['label_id' => $this->label->id, 'contract_id' => $contract->id]);
+    $release = Release::factory()->create(['label_id' => $this->label->id]);
+    Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $release->id, 'contract_id' => $contract->id]);
     Transaction::factory()->create(['label_id' => $this->label->id, 'release_id' => $release->id, 'total' => '100']);
     $this->actingAs($this->admin);
 });

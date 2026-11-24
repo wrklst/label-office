@@ -233,7 +233,8 @@ test('the statements and payouts a payee sees have pages of their own and sort a
 test('the catalog manager pages the releases, and its search and filter cover every page', function () {
     $label = Label::factory()->create();
     foreach (range(1, 51) as $number) {
-        Release::factory()->create(['label_id' => $label->id, 'name' => sprintf('Release %02d', $number), 'catalog_number' => sprintf('EX%03d', $number)]);
+        $release = Release::factory()->create(['label_id' => $label->id, 'name' => sprintf('Release %02d', $number), 'catalog_number' => sprintf('EX%03d', $number)]);
+        Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'contract_id' => null]);
     }
     $admin = labelAdmin($label);
 

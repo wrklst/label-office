@@ -3,6 +3,7 @@
 namespace App\Services\Catalog;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use stdClass;
 
 /**
@@ -88,21 +89,24 @@ class RecordingMerge
     /**
      * Write the contract a merged track resolved to on its items, and on its
      * transactions without an item, where the track that stays would give another.
+     * Where releases still have a contract (before the migration that removes it)
+     * that counts too; afterwards only the contracts of the tracks do.
      */
     private static function keepContracts(stdClass $entry, stdClass $kept): int
     {
         $pinned = 0;
+        $releaseContracts = Schema::hasColumn('releases', 'contract_id');
 
         foreach (['items' => 'id', 'transactions' => 'item_id'] as $table => $withoutItem) {
             $rows = DB::table($table)->where("{$table}.track_id", $entry->id)->whereNull("{$table}.contract_id")
                 ->when($table === 'transactions', fn ($query) => $query->whereNull("{$table}.{$withoutItem}"))
-                ->leftJoin('releases', 'releases.id', '=', "{$table}.release_id")
-                ->get(["{$table}.id", 'releases.contract_id as release_contract_id']);
+                ->when($releaseContracts, fn ($query) => $query->leftJoin('releases', 'releases.id', '=', "{$table}.release_id"))
+                ->get(["{$table}.id", ...($releaseContracts ? ['releases.contract_id as release_contract_id'] : [])]);
 
             foreach ($rows as $row) {
-                $before = $entry->contract_id ?? $row->release_contract_id;
+                $before = $entry->contract_id ?? $row->release_contract_id ?? null;
 
-                if ($before !== null && $before !== ($kept->contract_id ?? $row->release_contract_id)) {
+                if ($before !== null && $before !== ($kept->contract_id ?? $row->release_contract_id ?? null)) {
                     $pinned += DB::table($table)->where('id', $row->id)->update(['contract_id' => $before]);
                 }
             }

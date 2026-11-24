@@ -55,7 +55,8 @@ test('the payee page shows what the payee is owed in the latest period', functio
     $payee = Payee::factory()->create(['label_id' => $label->id, 'name' => 'Example Payee']);
     $contract = Contract::factory()->create(['label_id' => $label->id]);
     ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => $payee->id, 'split_amount' => '0.5']);
-    $release = Release::factory()->create(['label_id' => $label->id, 'contract_id' => $contract->id]);
+    $release = Release::factory()->create(['label_id' => $label->id]);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'contract_id' => $contract->id]);
     Period::factory()->create(['label_id' => $label->id, 'name' => '2025 Q4', 'starts_on' => '2025-10-01', 'ends_on' => '2025-12-31']);
     $latest = Period::factory()->create(['label_id' => $label->id, 'name' => '2026 Q1', 'starts_on' => '2026-01-01', 'ends_on' => '2026-03-31']);
     Transaction::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'total' => '100']);
@@ -92,7 +93,7 @@ test('the payee page lists the payee\'s own splits, payouts, statements and tran
     $contract = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Example Deal']);
     $split = ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => $payee->id, 'ledger_id' => $ledger->id, 'split_amount' => '0.25']);
     ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => $other->id]);
-    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release', 'contract_id' => $contract->id]);
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Release']);
     $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Example Track', 'contract_id' => $contract->id]);
     $shared = ['label_id' => $label->id, 'period_id' => $period->id];
     Payout::factory()->create([...$shared, 'payee_id' => $payee->id, 'total' => '20', 'paid_on' => '2026-04-10', 'memo' => 'Bank transfer']);

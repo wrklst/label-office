@@ -21,7 +21,8 @@ beforeEach(function () {
     $this->payee = Payee::factory()->create(['label_id' => $this->label->id, 'name' => 'Artist A']);
     $this->contract = Contract::factory()->create(['label_id' => $this->label->id]);
     ContractSplit::factory()->create(['contract_id' => $this->contract->id, 'payee_id' => $this->payee->id, 'split_amount' => '0.5']);
-    $this->release = Release::factory()->create(['label_id' => $this->label->id, 'contract_id' => $this->contract->id]);
+    $this->release = Release::factory()->create(['label_id' => $this->label->id]);
+    Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $this->release->id, 'contract_id' => $this->contract->id]);
 });
 
 function transaction(array $attributes = []): Transaction
@@ -85,9 +86,6 @@ test('a track\'s own contract pays for the track, and a sale of the release is d
     ContractSplit::factory()->create(['contract_id' => $remixContract->id, 'payee_id' => $remixer->id, 'split_amount' => '0.25']);
     $track = Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $this->release->id, 'contract_id' => $remixContract->id]);
 
-    // A second track without a contract of its own: the contract of the release is its contract.
-    Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $this->release->id, 'contract_id' => null]);
-
     transaction(['total' => '100', 'track_id' => $track->id]);
     transaction(['total' => '100']);
 
@@ -99,7 +97,7 @@ test('a track\'s own contract pays for the track, and a sale of the release is d
 test('a sale of a release whose tracks all have one contract goes to that contract whole, also when the release has none', function () {
     $contract = Contract::factory()->create(['label_id' => $this->label->id]);
     ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => $this->payee->id, 'split_amount' => '0.4']);
-    $single = Release::factory()->create(['label_id' => $this->label->id, 'contract_id' => null]);
+    $single = Release::factory()->create(['label_id' => $this->label->id]);
     Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $single->id, 'contract_id' => $contract->id]);
 
     transaction(['total' => '100', 'release_id' => $single->id]);
@@ -128,7 +126,7 @@ test('a prorated contract distributes income across its child contracts by weigh
 
     $compilation = Contract::factory()->create(['label_id' => $this->label->id]);
     $compilation->children()->attach([$this->contract->id => ['weight' => 3], $secondContract->id => ['weight' => 1]]);
-    $this->release->update(['contract_id' => $compilation->id]);
+    Track::query()->where('release_id', $this->release->id)->update(['contract_id' => $compilation->id]);
 
     transaction(['total' => '100']);
 
@@ -151,7 +149,7 @@ test('an unrecouped ledger carries forward and does not reduce other ledgers', f
     $second = Release::factory()->create(['label_id' => $this->label->id]);
     $secondContract = Contract::factory()->create(['label_id' => $this->label->id]);
     ContractSplit::factory()->create(['contract_id' => $secondContract->id, 'payee_id' => $this->payee->id, 'ledger_id' => $advance->id, 'split_amount' => '0.5']);
-    $second->update(['contract_id' => $secondContract->id]);
+    Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $second->id, 'contract_id' => $secondContract->id]);
 
     transaction(['total' => '100']);
     transaction(['total' => '200', 'release_id' => $second->id]);
@@ -215,6 +213,21 @@ test('releases without a contract are reported in the audit', function () {
     expect($audit['missing_contract'])->toBe(1)
         ->and($audit['unassigned'])->toBe(1)
         ->and($audit['releases_without_contract'][0]['release_id'])->toBe($orphan->id);
+});
+
+test('a release with a track without a contract is reported in the audit, a release whose tracks all have one is not', function () {
+    $covered = Release::factory()->create(['label_id' => $this->label->id]);
+    Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $covered->id, 'contract_id' => $this->contract->id]);
+    $partly = Release::factory()->create(['label_id' => $this->label->id]);
+    Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $partly->id, 'contract_id' => $this->contract->id]);
+    Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $partly->id, 'contract_id' => null]);
+    transaction(['total' => '10', 'release_id' => $covered->id]);
+    transaction(['total' => '10', 'release_id' => $partly->id]);
+
+    $audit = app(RoyaltyCalculator::class)->forPeriod($this->period)['audit'];
+
+    expect($audit['missing_contract'])->toBe(1)
+        ->and(collect($audit['releases_without_contract'])->pluck('release_id')->all())->toBe([$partly->id]);
 });
 
 test('regenerating a statement archives the previous one as a revision', function () {

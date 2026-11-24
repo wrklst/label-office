@@ -32,7 +32,7 @@ Label Office is royalty accounting and release management for independent record
 ## How the pieces fit together
 
 1. A statement file is imported. Every line becomes a transaction on a release, a track and an item.
-2. The transaction's contract is looked up: the one on the transaction itself, else the item's, else the track's, else the release's. Income without a contract stays with the label.
+2. The transaction's contract is looked up: the one on the transaction itself, else the item's, else the track's. A sale of a whole release is divided between its tracks and paid by their contracts. Income without a contract stays with the label.
 3. The contract's splits book each payee's share on a ledger.
 4. A period sums the ledgers for its paid dates. Positive ledgers are payable, negative ones carry forward.
 5. You generate statements, publish them, and record payouts.
@@ -47,7 +47,7 @@ This assumes the software is installed and you can sign in. If not, start with [
 2. **Import a statement.** Open **Importing → Data imports**, choose **Import a statement** and upload a file from your distributor. The source is detected from the columns. See [Importing statements](10-importing-statements.md).
 3. **Look at what was created.** **Catalog → Releases** now lists the releases named in the file. Open one to see its tracks and its income by track and platform.
 4. **Add a payee and a contract.** Under **Deals → Payees** create the artist, then under **Deals → Contracts** a contract that gives them, say, 50%. See [Contracts, payees and ledgers](30-contracts-payees-and-ledgers.md).
-5. **Assign the contract.** Open **Catalog → Catalog manager** and set the contract on the release. Every transaction of that release now follows it.
+5. **Assign the contract.** Open **Catalog → Catalog manager** and choose the contract beside the release. It is written on the tracks of that release, and every transaction of them now follows it.
 6. **Create a period.** Under **Accounting → Periods** create the quarter the statement was paid in. The period lists each payee with their share.
 7. **Generate and publish statements**, then record the payout once you have paid.
 

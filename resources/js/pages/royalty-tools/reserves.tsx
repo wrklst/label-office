@@ -123,8 +123,8 @@ export default function Reserves({
                         liquidated automatically; you choose both dates.
                     </p>
                     <p>
-                        The item follows the release contract. Change that on
-                        the{' '}
+                        The item follows the contracts of the release's tracks.
+                        Change that on the{' '}
                         <Link
                             href={items({ query: { search: '[Reserves]' } })}
                             className="underline"

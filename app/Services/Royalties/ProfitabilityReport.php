@@ -81,7 +81,7 @@ class ProfitabilityReport
     /** Row key for label costs that belong to no release. */
     private const int OVERHEAD_KEY = -1;
 
-    private const string RESOLVED_CONTRACT = 'COALESCE(t.contract_id, i.contract_id, tr.contract_id, r.contract_id)';
+    private const string RESOLVED_CONTRACT = 'COALESCE(t.contract_id, i.contract_id, tr.contract_id)';
 
     public function __construct(private readonly SplitResolver $splitResolver) {}
 

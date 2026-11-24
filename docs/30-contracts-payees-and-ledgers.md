@@ -7,7 +7,7 @@ This page explains who gets paid (payees), on what terms (contracts and their sp
 | Piece     | What it is                                                                                               | Where                 |
 | --------- | -------------------------------------------------------------------------------------------------------- | --------------------- |
 | Payee     | Someone you owe royalties to: an artist, remixer, producer, sub-label.                                   | **Deals → Payees**    |
-| Contract  | A named deal. It holds splits and is assigned to releases, tracks, items or single transactions.         | **Deals → Contracts** |
+| Contract  | A named deal. It holds splits and is assigned to tracks, items or single transactions.                   | **Deals → Contracts** |
 | Split     | One line of a contract: a payee, a percentage, optionally a ledger and a territory.                      | On the contract       |
 | Ledger    | A separate running balance for a payee. Every split books to the primary ledger unless you pick another. | **Deals → Ledgers**   |
 | Territory | A named group of countries, used to limit a split to part of the world.                                  | **Settings → Label**  |
@@ -50,41 +50,57 @@ The form shows the sum as you type, for example "Payees get 60% worldwide, the l
 
 The contract list shows **Splits**, **Label keeps** and **Used by** for every contract. Search by name (**Search contracts…**), sort by **Contract** or **Used by**, or tick **Unused** to find contracts that no release, track, item or prorated contract relies on. The list pages 50 at a time. A bar shows how the splits divide the contract; a contract without splits shows **no splits**, one that pays out more than 100% shows **over 100%**, and a prorated contract shows **prorated · N contracts** and takes its splits **From child contracts**.
 
-Click a contract name, here or anywhere a contract is named, to open its page. It shows the terms (name and memo), the splits with payee, share, ledger and territory, the contracts a prorated contract is made of or is part of, and the **Releases** and **Tracks** the contract applies to, 25 to a page each and sortable. **Edit** in the header opens the form; after you save you return to the page you came from, the contract's own page when there is none. **Delete** opens **Delete {contract name}?**, which says that the contract's splits go with it and that releases, tracks and items fall back to the next contract up the chain.
+Click a contract name, here or anywhere a contract is named, to open its page. It shows the terms (name and memo), the splits with payee, share, ledger and territory, the contracts a prorated contract is made of or is part of, and the **Releases** (those with a track under the contract) and **Tracks** the contract applies to, 25 to a page each and sortable. **Edit** in the header opens the form; after you save you return to the page you came from, the contract's own page when there is none. **Delete** opens **Delete {contract name}?**, which says that the contract's splits go with it and that tracks and items fall back to the next contract up the chain.
 
 A payee can appear in several splits of one contract, for example 40% worldwide plus 10% in one territory. On their statement the income then appears once, at the combined percentage.
 
 ## Where a contract can be set, and which one wins
 
-Contracts belong to tracks. A contract set on a release is the contract of every track on it that has none of its own: that is how one contract is put on a whole release. A track's own contract replaces it for that track; the two are never added up.
+Contracts belong to tracks. A release has no contract of its own. To put one contract on a whole release, use **Set contract on all tracks** on the release page: it writes the contract onto the tracks of the release. By default only the tracks without a contract get it; tick **Also replace the contracts tracks already have** to overwrite the others too. Leaving the contract empty with that box ticked removes the contract from all tracks. The release form has the same shortcut as **Contract for all tracks**, which fills the contract of every track row.
 
-A contract can be set in four places. For each transaction the most specific one wins:
+A contract can be set in three places. For each transaction the most specific one wins; the places are never added up:
 
-| Order | Set on                                | Where you set it                                                                                  |
-| ----- | ------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| 1     | The transaction                       | **Contract override** on the transaction form                                                     |
-| 2     | The item the transaction is booked on | **Contract override** under **Catalog → Items**                                                   |
-| 3     | The track                             | **Contract** on the track, or the track row of the release form (empty means **Same as release**) |
-| 4     | The release                           | **Contract** on the release form                                                                  |
+| Order | Set on                                | Where you set it                                                                         |
+| ----- | ------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 1     | The transaction                       | **Contract override** on the transaction form                                            |
+| 2     | The item the transaction is booked on | **Contract override** under **Catalog → Items**                                          |
+| 3     | The track                             | **Contract** on the track, or the track row of the release form (empty: **No contract**) |
 
 Typical uses:
 
-**What is booked on a release as a whole.** A sale of the album, or a cost for it, names no track. It is divided in equal parts between the tracks of the release, and each part is paid by that track's contract. Where no track has a contract of its own, that is the release contract for all of it, as before. A release needs no contract when every track on it has one. A part that falls on a track without any contract is paid to nobody, and the period lists the release under transactions without a contract.
+**What is booked on a release as a whole.** A sale of the album, or a cost for it, names no track. It is divided in equal parts between the tracks of the release, and each part is paid by that track's contract. A part that falls on a track without a contract is paid to nobody, and a release without tracks has no contract at all. In both cases the period lists the release under transactions without a contract.
 
-Example: an album of four tracks sells for 10.00 as a whole. Three tracks follow the release contract and one is a remix with its own. 7.50 is paid by the release contract and 2.50 by the remix contract.
+Example: an album of four tracks sells for 10.00 as a whole. Three tracks have the album contract and one is a remix with its own. 7.50 is paid by the album contract and 2.50 by the remix contract.
 
-- Release: the normal album or single deal.
-- Track: one track has a different deal, such as a remix.
+- Track: the normal album or single deal on every track of the release, or a different deal for one track, such as a remix.
 - Item: one product has its own deal, such as a licensed vinyl run. The mechanicals and PPD tools also rely on this, see [Mechanicals, PPD and reserves](34-mechanicals-ppd-and-reserves.md).
-- Transaction: a single transaction follows a different deal than its track or release.
+- Transaction: a single transaction follows a different deal than its track.
 
-**Catalog → Catalog manager** lists every release with its tracks and lets you assign release and track contracts in one place. Changes there save immediately.
+**Catalog → Catalog manager** lists every release with its tracks and lets you assign track contracts in one place. The contract chosen beside a release is written on the tracks of that release that have none. Changes there save immediately.
 
-The contract page lists the releases and tracks that use the contract.
+The contract page lists the tracks that use the contract and the releases they are on.
+
+## Why a release has no contract of its own
+
+A contract on a release cannot say "this payee, but only for that track". If a featured artist or remixer is written into the contract of a release, they are paid on every track that falls back to it, also on tracks they have nothing to do with. That is wrong, and it is the reason release contracts were removed.
+
+Leaving that person out of the release's contract was wrong the other way. A sale of the whole album was paid by the release's contract alone, so the featured artist got nothing from album sales unless someone worked out their share of the album by hand (10% of one track in four is 2.5%) and redid it whenever the track list changed.
+
+With contracts on tracks only, each deal sits on exactly the tracks it is for. A track's streams are paid by its contract. A sale of the whole release is divided in equal parts between the tracks, and each part is paid by that track's contract. Nothing has to be worked out by hand, and every amount on a statement traces back to one track and one contract.
+
+Example: Example Release has four tracks and sells once as a whole for 10.00. Tracks 1, 2 and 4 carry the contract of Example Artist (50%). Track 3 has its own contract because of a feature: Example Artist 40% and Example Feature 10%. Each track's part is 2.50.
+
+| Tracks     | Part of the sale | Example Artist | Example Feature | Label keeps |
+| ---------- | ---------------- | -------------- | --------------- | ----------- |
+| 1, 2 and 4 | 7.50             | 3.75           | 0.00            | 3.75        |
+| 3          | 2.50             | 1.00           | 0.25            | 1.25        |
+| Together   | 10.00            | 4.75           | 0.25            | 5.00        |
+
+One contract for a whole release is still one step: **Set contract on all tracks** on the release page writes it on every track, and a track with a different deal then gets its own contract in place of it. The division of a whole-release sale is always equal per track; contracts are percentages and nothing weights a track by its length or anything else.
 
 ## Income without a contract
 
-- A transaction on a release, with no contract at any of the four levels: the label keeps the full amount. The period page lists these releases under **1. Check the data**.
+- A transaction on a release, with no contract at any of the three levels (a release counts as having none when it has no tracks or a track without one): the label keeps the amount, or of a sale of the whole release the part that falls on the tracks without a contract. The period page lists these releases under **1. Check the data**.
 - A transaction with no release at all: it is "unassigned" and the period page reports it. It counts as income of the label, and no payee earns from it unless the transaction or its item has a contract of its own.
 
 Nothing is lost in either case. As soon as you assign the contract or the release, the figures of every period that is not yet frozen in a statement change accordingly. See [Periods, statements and payouts](32-periods-statements-and-payouts.md).
@@ -108,8 +124,8 @@ Three rules apply to every ledger:
 To recoup an advance on its own:
 
 1. Create a ledger, for example "EX001 advance".
-2. In the contract of that release, pick this ledger in the payee's split.
-3. Book the advance as a transfer for the payee with the release selected and **Ledger** left on **Automatic**. The transfer then lands on the ledger of the payee's split for that release. You can also pick the ledger by hand.
+2. In the contract of the release's tracks, pick this ledger in the payee's split.
+3. Book the advance as a transfer for the payee with the release selected and **Ledger** left on **Automatic**. The transfer then lands on the ledger of the payee's split in the contract of the release's tracks. You can also pick the ledger by hand.
 
 Deleting a ledger (**Delete {ledger name}?**) moves its splits and any payouts booked to it to the primary ledger, and a transfer booked to it by hand goes back to **Automatic**, so balances change.
 
@@ -134,7 +150,7 @@ A compilation or bundle earns as one product, but the money belongs to several d
 1. Create the contracts of the individual deals as usual.
 2. Create one more contract for the compilation.
 3. In the panel **Prorated across other contracts**, choose **Add contract** for each deal and give it a **Weight**. The form shows the resulting percentage next to each line. A good weight is the number of tracks each deal contributes.
-4. Assign the compilation contract to the release.
+4. Set the compilation contract on the tracks of the release.
 
 While a contract has contracts in this panel, its own splits are ignored.
 
@@ -173,7 +189,7 @@ Example Records accounts in EUR and has one release, Example Release (EX001).
 Setup:
 
 - Ledger "EX001 advance".
-- Contract "EX001 album deal", assigned to the release: Example Artist 50% on ledger "EX001 advance", Second Payee 10% on the primary ledger. The label keeps 40%.
+- Contract "EX001 album deal", set on all tracks of the release: Example Artist 50% on ledger "EX001 advance", Second Payee 10% on the primary ledger. The label keeps 40%.
 - Contract "EX001 remix deal", assigned to one track, the remix: Example Artist 25% and Second Payee 25%, both on the primary ledger. The label keeps 50%.
 
 Transactions paid in the period:
@@ -193,7 +209,7 @@ Album deal: net is 1,000 − 200 = 800.
 | Second Payee   | 10%   | 80    | Primary       |
 | Label keeps    | 40%   | 320   |               |
 
-Remix deal: net is 240. The track contract wins over the release contract.
+Remix deal: net is 240. The remix track's own contract is used for it, not the album deal.
 
 |                | Split | Share | Ledger  |
 | -------------- | ----- | ----- | ------- |
@@ -216,10 +232,10 @@ Check: net income is 1,000 − 200 + 240 = 1,040. Payees earn 400 + 80 + 60 + 60
 ## Good to know
 
 - Splits are stored with nine decimals and amounts are calculated with fifteen, so streaming lines worth fractions of a cent are not rounded away.
-- Deleting a contract removes its splits. Releases, tracks, items and transactions that used it fall back to the next contract in the order above, or to none. Statements already generated keep their figures.
+- Deleting a contract removes its splits. Tracks, items and transactions that used it fall back to the next contract in the order above, or to none. Statements already generated keep their figures.
 - A territory split is checked line by line against the **Country** of each transaction. Income without a country earns nothing for a territory split, and an expense without a country is not charged to it either. When you enter an expense by hand that a territory-limited payee should carry their share of, fill in its **Country**.
 - A recoupable expense is deducted from the release or track it is booked on. An expense booked on the whole release is divided between its tracks like a sale of the release, so a track with its own contract carries its part.
-- A transfer with **Ledger** on **Automatic** uses the first split the payee has in the contract of the selected release. Without a release, or when the payee has no split there, it lands on the primary ledger.
+- A transfer with **Ledger** on **Automatic** uses the first split the payee has in the contract of a track of the selected release. Without a release, or when the payee has no split there, it lands on the primary ledger.
 - Editing a contract changes the live figures of every period, including past ones. Only generated statements are frozen.
 - Prorated contracts can be nested, but only up to five levels below the top contract. Anything deeper pays nothing.
 - The **Email** field of a payee is never used to send anything.

@@ -485,7 +485,7 @@ export default function TransactionForm({
                                         onChange={(id) =>
                                             form.setData('contract_id', id)
                                         }
-                                        placeholder="Use track / release contract"
+                                        placeholder="Use track contract"
                                     />
                                 </Field>
                             </>

@@ -61,7 +61,6 @@ type Props = {
         cover_file_id: number | null;
         audio_file_id: number | null;
         contract: Named | null;
-        inherited_contract: Named | null;
         researched_at: string | null;
         research_state: 'queued' | 'running' | 'failed' | null;
         research_step: string | null;
@@ -130,7 +129,7 @@ export default function ShowTrack({
     const title = track.version
         ? `${track.name} (${track.version})`
         : track.name;
-    const contract = track.contract ?? track.inherited_contract;
+    const contract = track.contract;
     const { apply } = useFilters(showTrack.url(track.id), filters);
     const airplaySorter = serverSorter(filters, apply, 'airplays');
     const searchSorter = serverSorter(filters, apply, 'searches');
@@ -206,7 +205,6 @@ export default function ShowTrack({
                     <TrackDialog
                         track={track}
                         genreOptions={genreOptions}
-                        inheritedContract={track.inherited_contract}
                         trigger={
                             <Button variant="outline">
                                 <Pencil />
@@ -286,17 +284,9 @@ export default function ShowTrack({
                     </Fact>
                     <Fact label="Contract">
                         {contract ? (
-                            <>
-                                <RecordLink to="contract" id={contract.id}>
-                                    {contract.name}
-                                </RecordLink>
-                                {!track.contract && (
-                                    <span className="text-muted-foreground">
-                                        {' '}
-                                        (from the release)
-                                    </span>
-                                )}
-                            </>
+                            <RecordLink to="contract" id={contract.id}>
+                                {contract.name}
+                            </RecordLink>
                         ) : (
                             '–'
                         )}
