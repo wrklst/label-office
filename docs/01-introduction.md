@@ -62,6 +62,7 @@ This assumes the software is installed and you can sign in. If not, start with [
 
 ## Good to know
 
+- Dropdowns of releases, tracks, artists, payees and contracts are searched as you type, and load more as you scroll.
 - Amounts are stored at full precision. Streaming lines worth fractions of a cent are never rounded away; rounding happens only where a figure is shown.
 - Buyer names, emails and addresses in Bandcamp reports are never stored.
 - The handbook pages are Markdown files in the `docs` folder of the source code, so they can be read on GitHub as well.

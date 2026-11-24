@@ -2,6 +2,7 @@ import { AiField } from '@/components/ai-field';
 import { ArtistCreditRows } from '@/components/artist-credit-rows';
 import type { ArtistCredit } from '@/components/artist-credit-rows';
 import { Field, SelectInput } from '@/components/field';
+import { RecordSelect } from '@/components/record-select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { Option } from '@/types';
@@ -58,15 +59,11 @@ export const TRACK_FIELD = {
 
 export function TrackFields({
     track,
-    artistOptions,
-    contractOptions,
     inheritedContract,
     genreOptions = [],
     errors,
 }: {
     track: EditableTrack;
-    artistOptions: Option[];
-    contractOptions: Option[];
     /** The contract the release gives the track while it has none of its own. */
     inheritedContract?: Option | null;
     /** Genres to suggest: Zebralution's list while the label delivers there. */
@@ -109,11 +106,11 @@ export function TrackFields({
                     htmlFor="artist_id"
                     error={errors.artist_id}
                 >
-                    <SelectInput
+                    <RecordSelect
                         id="artist_id"
                         name="artist_id"
-                        defaultValue={track.artist_id ?? ''}
-                        options={artistOptions}
+                        records="artists"
+                        defaultValue={track.artist_id}
                         placeholder={TRACK_FIELD.artist_id.blank}
                     />
                 </Field>
@@ -122,11 +119,11 @@ export function TrackFields({
                     htmlFor="contract_id"
                     error={errors.contract_id}
                 >
-                    <SelectInput
+                    <RecordSelect
                         id="contract_id"
                         name="contract_id"
-                        defaultValue={track.contract_id ?? ''}
-                        options={contractOptions}
+                        records="contracts"
+                        defaultValue={track.contract_id}
                         placeholder={
                             inheritedContract
                                 ? `${TRACK_FIELD.contract_id.blank} (${inheritedContract.name})`
@@ -136,10 +133,7 @@ export function TrackFields({
                 </Field>
             </div>
             <Field label="Further artist credits" error={errors.artists}>
-                <ArtistCreditRows
-                    artistOptions={artistOptions}
-                    defaultValue={track.artists}
-                />
+                <ArtistCreditRows defaultValue={track.artists} />
             </Field>
             <div className="grid gap-4 sm:grid-cols-3">
                 <Field

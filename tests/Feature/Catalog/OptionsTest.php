@@ -108,3 +108,14 @@ test('a list is narrowed to what belongs to the payee or contract chosen beside 
         ->and($names('releases', ['contract_id' => $unused->id]))->toBe(['Other release', 'Paid release'])
         ->and($names('contracts', ['payee_id' => Payee::factory()->create(['label_id' => $label->id])->id]))->toHaveCount(3);
 });
+
+test('a record can be left out of its own dropdown, as a contract is not its own child', function () {
+    $label = Label::factory()->create();
+    $admin = labelAdmin($label);
+    $own = Contract::factory()->create(['label_id' => $label->id, 'name' => 'Own Deal']);
+    Contract::factory()->create(['label_id' => $label->id, 'name' => 'Other Deal']);
+
+    $names = $this->actingAs($admin)->getJson(route('options', ['records' => 'contracts', 'exclude' => $own->id]))->json('data.*.name');
+
+    expect($names)->toBe(['Other Deal']);
+});

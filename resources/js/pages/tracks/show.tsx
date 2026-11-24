@@ -30,7 +30,7 @@ import { serverSorter } from '@/hooks/use-table-sort';
 import { count, country, date, dateTime, duration, plural } from '@/lib/format';
 import { index as airplayIndex } from '@/routes/airplays';
 import { index, show as showTrack } from '@/routes/tracks';
-import type { Option, Paginated } from '@/types';
+import type { Paginated } from '@/types';
 import { index as transactions } from '@/routes/transactions';
 import { ORIGINS } from '@/lib/origins';
 
@@ -92,8 +92,6 @@ type Props = {
         created_at: string;
     }>;
     searchAvailable: boolean;
-    artistOptions: Option[];
-    contractOptions: Option[];
     genreOptions: string[];
 };
 
@@ -126,8 +124,6 @@ export default function ShowTrack({
     searches,
     searchAvailable,
     platformLinks,
-    artistOptions,
-    contractOptions,
     genreOptions,
 }: Props) {
     const title = track.version
@@ -208,8 +204,6 @@ export default function ShowTrack({
                     )}
                     <TrackDialog
                         track={track}
-                        artistOptions={artistOptions}
-                        contractOptions={contractOptions}
                         genreOptions={genreOptions}
                         inheritedContract={track.inherited_contract}
                         trigger={

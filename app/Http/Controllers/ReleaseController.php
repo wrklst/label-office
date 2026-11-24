@@ -89,7 +89,6 @@ class ReleaseController extends Controller
                 'status' => ReleaseStatus::tryFrom(Filters::text($request, 'status'))?->value,
                 ...$sorting->toArray(),
             ],
-            'artistOptions' => Options::artists(),
         ]);
     }
 
@@ -193,8 +192,6 @@ class ReleaseController extends Controller
             'movers' => IncomeReport::movers(Transaction::query()->where('release_id', $release->id), 'track_id', 30),
             'platformLinks' => PlatformLinkController::props($release),
             'genreOptions' => Options::genres(),
-            'artistOptions' => Options::artists(),
-            'contractOptions' => Options::contracts(),
             'fileKinds' => array_map(fn (ReleaseFileKind $kind): array => ['value' => $kind->value, 'label' => $kind->label()], ReleaseFileKind::cases()),
             'maxUploadMegabytes' => (int) floor(config('royalties.uploads.max_kilobytes') / 1024),
         ]);
@@ -314,8 +311,6 @@ class ReleaseController extends Controller
     private function options(): array
     {
         return [
-            'artistOptions' => Options::artists(),
-            'contractOptions' => Options::contracts(),
             'statusOptions' => array_map(fn (ReleaseStatus $status): array => ['value' => $status->value, 'label' => $status->label()], ReleaseStatus::cases()),
             'typeOptions' => array_map(fn (ReleaseType $type): array => ['value' => $type->value, 'label' => $type->label()], ReleaseType::cases()),
             // The genres a distributor takes are suggested; without one the field is free text.

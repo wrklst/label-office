@@ -9,7 +9,6 @@ use App\Models\Release;
 use App\Models\Track;
 use App\Support\Decimal;
 use App\Support\Filters;
-use App\Support\Options;
 use App\Support\PageSize;
 use App\Support\ReturnTo;
 use App\Support\Sorting;
@@ -62,7 +61,6 @@ class ContractController extends Controller
         return Inertia::render('contracts/form', [
             'contract' => null,
             'returnTo' => ReturnTo::path($request->query('return_to')),
-            ...$this->options(),
         ]);
     }
 
@@ -133,7 +131,6 @@ class ContractController extends Controller
                     'weight' => rtrim(rtrim((string) $child->pivot->weight, '0'), '.'),
                 ]),
             ],
-            ...$this->options($contract),
         ]);
     }
 
@@ -184,18 +181,5 @@ class ContractController extends Controller
         }
 
         $contract->children()->sync($children);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function options(?Contract $contract = null): array
-    {
-        return [
-            'payeeOptions' => Options::payees(),
-            'ledgerOptions' => Options::ledgers(),
-            'territoryOptions' => Options::territories(),
-            'contractOptions' => collect(Options::contracts())->reject(fn (array $option): bool => $option['id'] === $contract?->id)->values(),
-        ];
     }
 }

@@ -62,6 +62,8 @@ export function RecordSelect({
     disabled,
     params,
     className,
+    initial,
+    'aria-label': ariaLabel,
 }: {
     records: RecordKind;
     name?: string;
@@ -76,6 +78,9 @@ export function RecordSelect({
     /** Narrows the list, such as `{ release_id }` for the tracks of one release. */
     params?: Record<string, string | number | null | undefined>;
     className?: string;
+    /** The chosen record when the page already knows it, so a long list of dropdowns does not each ask the server for its name. */
+    initial?: RecordOption | null;
+    'aria-label'?: string;
 }) {
     const controlled = value !== undefined;
     const [inner, setInner] = useState<number | ''>(
@@ -92,7 +97,7 @@ export function RecordSelect({
     const [options, setOptions] = useState<RecordOption[]>([]);
     const [next, setNext] = useState<number | null>(1);
     const [loading, setLoading] = useState(false);
-    const [chosen, setChosen] = useState<RecordOption | null>(null);
+    const [chosen, setChosen] = useState<RecordOption | null>(initial ?? null);
 
     const root = useRef<HTMLDivElement>(null);
     const end = useRef<HTMLLIElement>(null);
@@ -231,6 +236,7 @@ export function RecordSelect({
                 type="button"
                 id={id}
                 disabled={disabled}
+                aria-label={ariaLabel}
                 aria-haspopup="listbox"
                 aria-expanded={open}
                 onClick={(event) => {

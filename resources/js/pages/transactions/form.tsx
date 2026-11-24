@@ -2,12 +2,12 @@ import { Link, setLayoutProps, useForm, usePage } from '@inertiajs/react';
 import TransactionController from '@/actions/App/Http/Controllers/TransactionController';
 import { CheckField, Field, SelectInput } from '@/components/field';
 import { Page, Panel } from '@/components/page';
+import { RecordSelect } from '@/components/record-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { today } from '@/lib/format';
 import { index } from '@/routes/transactions';
-import type { Option, TrackOption } from '@/types';
 
 type TransactionType = 'income' | 'expense' | 'transfer';
 
@@ -54,17 +54,10 @@ type Props = {
     } | null;
     /** The page the form was opened from, where saving returns to. */
     returnTo: string | null;
-    releaseOptions: Option[];
-    trackOptions: TrackOption[];
-    contractOptions: Option[];
-    payeeOptions: Option[];
-    ledgerOptions: Option[];
     categories: Record<TransactionType, string[]>;
     formats: Record<string, string[]>;
 };
 
-const numberOrBlank = (value: string): number | '' =>
-    value === '' ? '' : Number(value);
 const trim = (value: string | number | null | undefined): string =>
     value || value === 0
         ? String(value).replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1')
@@ -103,11 +96,6 @@ export default function TransactionForm({
     transaction,
     defaults,
     returnTo,
-    releaseOptions,
-    trackOptions,
-    contractOptions,
-    payeeOptions,
-    ledgerOptions,
     categories,
     formats,
 }: Props) {
@@ -154,9 +142,6 @@ export default function TransactionForm({
     const errors = form.errors;
     const type = form.data.type;
     const foreign = form.data.currency.toUpperCase() !== labelCurrency;
-    const tracks = trackOptions.filter(
-        (track) => track.release_id === form.data.release_id,
-    );
 
     const submit = (event: React.FormEvent) => {
         event.preventDefault();
@@ -379,18 +364,13 @@ export default function TransactionForm({
                                     error={errors.payee_id}
                                     required
                                 >
-                                    <SelectInput
+                                    <RecordSelect
                                         id="payee_id"
+                                        records="payees"
                                         value={form.data.payee_id}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'payee_id',
-                                                numberOrBlank(
-                                                    event.target.value,
-                                                ),
-                                            )
+                                        onChange={(id) =>
+                                            form.setData('payee_id', id)
                                         }
-                                        options={payeeOptions}
                                         placeholder="Choose payee…"
                                         required
                                     />
@@ -401,18 +381,13 @@ export default function TransactionForm({
                                     error={errors.ledger_id}
                                     hint="Leave empty to use the ledger of the payee's split on the release below, or the primary ledger."
                                 >
-                                    <SelectInput
+                                    <RecordSelect
                                         id="ledger_id"
+                                        records="ledgers"
                                         value={form.data.ledger_id}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'ledger_id',
-                                                numberOrBlank(
-                                                    event.target.value,
-                                                ),
-                                            )
+                                        onChange={(id) =>
+                                            form.setData('ledger_id', id)
                                         }
-                                        options={ledgerOptions}
                                         placeholder="Automatic"
                                     />
                                 </Field>
@@ -428,19 +403,17 @@ export default function TransactionForm({
                                     : 'Without a release the amount stays with the label.'
                             }
                         >
-                            <SelectInput
+                            <RecordSelect
                                 id="release_id"
+                                records="releases"
                                 value={form.data.release_id}
-                                onChange={(event) =>
+                                onChange={(id) =>
                                     form.setData((data) => ({
                                         ...data,
-                                        release_id: numberOrBlank(
-                                            event.target.value,
-                                        ),
+                                        release_id: id,
                                         track_id: '',
                                     }))
                                 }
-                                options={releaseOptions}
                                 placeholder="No release"
                             />
                         </Field>
@@ -452,18 +425,13 @@ export default function TransactionForm({
                                     error={errors.payee_id}
                                     hint="Optional. For your reference only, e.g. the remixer or designer who received a label cost."
                                 >
-                                    <SelectInput
+                                    <RecordSelect
                                         id="payee_id"
+                                        records="payees"
                                         value={form.data.payee_id}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'payee_id',
-                                                numberOrBlank(
-                                                    event.target.value,
-                                                ),
-                                            )
+                                        onChange={(id) =>
+                                            form.setData('payee_id', id)
                                         }
-                                        options={payeeOptions}
                                         placeholder="Nobody in particular"
                                     />
                                 </Field>
@@ -489,18 +457,16 @@ export default function TransactionForm({
                                     htmlFor="track_id"
                                     error={errors.track_id}
                                 >
-                                    <SelectInput
+                                    <RecordSelect
                                         id="track_id"
+                                        records="tracks"
                                         value={form.data.track_id}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'track_id',
-                                                numberOrBlank(
-                                                    event.target.value,
-                                                ),
-                                            )
+                                        onChange={(id) =>
+                                            form.setData('track_id', id)
                                         }
-                                        options={tracks}
+                                        params={{
+                                            release_id: form.data.release_id,
+                                        }}
                                         placeholder="Whole release"
                                         disabled={form.data.release_id === ''}
                                     />
@@ -512,18 +478,13 @@ export default function TransactionForm({
                                     hint="Only when this one transaction follows a different deal than its track or release."
                                     className="md:col-span-2"
                                 >
-                                    <SelectInput
+                                    <RecordSelect
                                         id="contract_id"
+                                        records="contracts"
                                         value={form.data.contract_id}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'contract_id',
-                                                numberOrBlank(
-                                                    event.target.value,
-                                                ),
-                                            )
+                                        onChange={(id) =>
+                                            form.setData('contract_id', id)
                                         }
-                                        options={contractOptions}
                                         placeholder="Use track / release contract"
                                     />
                                 </Field>

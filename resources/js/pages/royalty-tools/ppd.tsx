@@ -8,6 +8,7 @@ import { DateRange } from '@/components/date-range';
 import { Field, SelectInput } from '@/components/field';
 import { EmptyState, Notice, Page, Panel, Stat } from '@/components/page';
 import { RecordLink } from '@/components/record-link';
+import { RecordSelect } from '@/components/record-select';
 import { SortableHead } from '@/components/sortable-head';
 import {
     CreateTransactions,
@@ -32,7 +33,7 @@ import { date, quantity, today } from '@/lib/format';
 import { index as items } from '@/routes/items';
 import { edit as labelSettings } from '@/routes/label-settings';
 import { index } from '@/routes/royalty-tools/ppd';
-import type { Option, Paginated } from '@/types';
+import type { Paginated } from '@/types';
 
 type Row = {
     release_id: number;
@@ -92,8 +93,6 @@ type Props = {
     };
     settings: { ignore_negative_quantities: boolean };
     report: Report | null;
-    artistOptions: Option[];
-    releaseOptions: Option[];
     formatOptions: string[];
 };
 
@@ -105,8 +104,6 @@ export default function Ppd({
     filters,
     settings,
     report,
-    artistOptions,
-    releaseOptions,
     formatOptions,
 }: Props) {
     const { url } = usePage();
@@ -168,13 +165,11 @@ export default function Ppd({
                         htmlFor="rates_release"
                         className="w-full max-w-sm"
                     >
-                        <SelectInput
+                        <RecordSelect
                             id="rates_release"
+                            records="releases"
                             value={ratesRelease}
-                            onChange={(event) =>
-                                setRatesRelease(event.target.value)
-                            }
-                            options={releaseOptions}
+                            onChange={(id) => setRatesRelease(String(id))}
                             placeholder="Choose a release…"
                         />
                     </Field>
@@ -213,11 +208,11 @@ export default function Ppd({
                                     htmlFor="artist_id"
                                     error={errors.artist_id}
                                 >
-                                    <SelectInput
+                                    <RecordSelect
                                         id="artist_id"
                                         name="artist_id"
-                                        defaultValue={filters.artist_id ?? ''}
-                                        options={artistOptions}
+                                        records="artists"
+                                        defaultValue={filters.artist_id}
                                         placeholder="All artists"
                                     />
                                 </Field>
@@ -226,11 +221,11 @@ export default function Ppd({
                                     htmlFor="release_id"
                                     error={errors.release_id}
                                 >
-                                    <SelectInput
+                                    <RecordSelect
                                         id="release_id"
                                         name="release_id"
-                                        defaultValue={filters.release_id ?? ''}
-                                        options={releaseOptions}
+                                        records="releases"
+                                        defaultValue={filters.release_id}
                                         placeholder="All releases"
                                     />
                                 </Field>

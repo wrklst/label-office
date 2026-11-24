@@ -21,7 +21,7 @@ import { date } from '@/lib/format';
 import { index as portal } from '@/routes/portal';
 import { index as periods } from '@/routes/periods';
 import { index, show } from '@/routes/statements';
-import type { Option, Paginated } from '@/types';
+import type { Paginated } from '@/types';
 
 type Statement = {
     id: number;
@@ -39,8 +39,6 @@ type Statement = {
 export default function Statements({
     statements,
     filters,
-    periodOptions,
-    payeeOptions,
 }: {
     statements: Paginated<Statement>;
     filters: {
@@ -50,8 +48,6 @@ export default function Statements({
         sort: string | null;
         direction: SortDirection | null;
     };
-    periodOptions: Option[];
-    payeeOptions: Option[];
 }) {
     const filtered =
         filters.archived || filters.period !== null || filters.payee !== null;
@@ -76,13 +72,13 @@ export default function Statements({
                         name: 'period',
                         label: 'Period',
                         placeholder: 'All periods',
-                        options: periodOptions,
+                        records: 'periods',
                     },
                     {
                         name: 'payee',
                         label: 'Payee',
                         placeholder: 'All payees',
-                        options: payeeOptions,
+                        records: 'payees',
                     },
                 ]}
                 checks={[{ name: 'archived', label: 'Archived' }]}

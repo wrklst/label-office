@@ -1,8 +1,8 @@
 import { Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { SelectInput } from '@/components/field';
+import { RecordSelect } from '@/components/record-select';
 import { Button } from '@/components/ui/button';
-import type { Option } from '@/types';
 
 export type ArtistCredit = { artist_id: number | ''; role: string };
 
@@ -21,12 +21,10 @@ const ROLES = [
 export function ArtistCreditRows({
     value,
     onChange,
-    artistOptions,
     defaultValue = [],
 }: {
     value?: ArtistCredit[];
     onChange?: (rows: ArtistCredit[]) => void;
-    artistOptions: Option[];
     defaultValue?: ArtistCredit[];
 }) {
     const [own, setOwn] = useState<ArtistCredit[]>(defaultValue);
@@ -46,29 +44,24 @@ export function ArtistCreditRows({
                     key={position}
                     className="grid grid-cols-[1fr_9rem_2.25rem] gap-2"
                 >
-                    <SelectInput
+                    <RecordSelect
                         aria-label="Credited artist"
+                        records="artists"
                         name={
                             controlled
                                 ? undefined
                                 : `artists[${position}][artist_id]`
                         }
                         value={row.artist_id}
-                        onChange={(event) =>
+                        onChange={(id) =>
                             update(
                                 rows.map((current, index) =>
                                     index === position
-                                        ? {
-                                              ...current,
-                                              artist_id: event.target.value
-                                                  ? Number(event.target.value)
-                                                  : '',
-                                          }
+                                        ? { ...current, artist_id: id }
                                         : current,
                                 ),
                             )
                         }
-                        options={artistOptions}
                         placeholder="Choose artist…"
                         required
                     />

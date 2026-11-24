@@ -85,7 +85,8 @@ test('the transaction list shows the newest sale first with totals for the label
             ->where('summary.quantity', '5.000000000000000')
             ->where('platformOptions', [['id' => 'x-example-store', 'name' => 'Example Store'], ['id' => 'x-other-shop', 'name' => 'Other Shop'], ['id' => 'unknown', 'name' => 'Unknown']])
             ->has('importOptions', 1)
-            ->has('releaseOptions', 1));
+            ->missing('releaseOptions')
+            ->missing('trackOptions'));
 });
 
 test('the transaction list and its totals follow the filter', function (array $query, array $memos, string $total) {
@@ -147,9 +148,11 @@ test('the new transaction form defaults to an income and offers only records of 
         ->get(route('transactions.create'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('defaults', ['type' => 'income', 'release_id' => null, 'payee_id' => null, 'recoupable' => true])
-            ->has('releaseOptions', 1)
-            ->where('releaseOptions.0.name', 'Example Release [EX001]')
-            ->has('payeeOptions', 0)
+            ->missing('releaseOptions')
+            ->missing('trackOptions')
+            ->missing('payeeOptions')
+            ->missing('contractOptions')
+            ->missing('ledgerOptions')
             ->where('categories', config('royalties.categories'))
             ->where('formats', config('royalties.formats')));
 });
@@ -439,7 +442,7 @@ test('the edit form shows the stored transaction', function () {
             ->where('transaction.release_id', $release->id)
             ->where('transaction.category', 'Mastering')
             ->where('transaction.memo', 'Example memo')
-            ->has('releaseOptions', 1));
+            ->missing('releaseOptions'));
 });
 
 test('updating a transaction saves the new values and converts the total again', function () {

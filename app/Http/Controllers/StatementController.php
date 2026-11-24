@@ -6,7 +6,6 @@ use App\Models\Payee;
 use App\Models\Period;
 use App\Models\Statement;
 use App\Support\Decimal;
-use App\Support\Options;
 use App\Support\PageSize;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
@@ -52,8 +51,6 @@ class StatementController extends Controller
                 'payee' => $request->integer('payee') ?: null,
                 ...$sorting->toArray(),
             ],
-            'periodOptions' => Options::periods(),
-            'payeeOptions' => Options::payees(),
         ]);
     }
 

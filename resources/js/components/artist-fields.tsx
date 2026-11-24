@@ -1,7 +1,7 @@
-import { Field, SelectInput } from '@/components/field';
+import { Field } from '@/components/field';
+import { RecordSelect } from '@/components/record-select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import type { Option } from '@/types';
 
 /** What the artist form edits, on the list and on the artist's own page. */
 export type EditableArtist = {
@@ -15,11 +15,9 @@ export type EditableArtist = {
 
 export function ArtistFields({
     artist,
-    options,
     errors,
 }: {
     artist?: EditableArtist;
-    options: Option[];
     errors: Record<string, string>;
 }) {
     return (
@@ -38,14 +36,13 @@ export function ArtistFields({
                 error={errors.alias_of_id}
                 hint="Set this when the artist is another name of an artist already in the catalog."
             >
-                <SelectInput
+                <RecordSelect
                     id="alias_of_id"
                     name="alias_of_id"
-                    defaultValue={artist?.alias_of_id ?? ''}
+                    records="artists"
+                    params={{ exclude: artist?.id }}
+                    defaultValue={artist?.alias_of_id}
                     placeholder="Not an alias"
-                    options={options.filter(
-                        (option) => option.id !== artist?.id,
-                    )}
                 />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">

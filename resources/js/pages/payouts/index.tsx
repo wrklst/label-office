@@ -22,7 +22,7 @@ import { date, money } from '@/lib/format';
 import { show as showPayee } from '@/routes/payees';
 import { index } from '@/routes/payouts';
 import { index as periods, show as showPeriod } from '@/routes/periods';
-import type { Option, Paginated } from '@/types';
+import type { Paginated } from '@/types';
 import { recordLinkClass } from '@/components/record-link';
 
 type Payout = {
@@ -41,8 +41,6 @@ type Payout = {
 export default function Payouts({
     payouts,
     filters,
-    periodOptions,
-    payeeOptions,
 }: {
     payouts: Paginated<Payout>;
     filters: {
@@ -51,8 +49,6 @@ export default function Payouts({
         sort: string | null;
         direction: SortDirection | null;
     };
-    periodOptions: Option[];
-    payeeOptions: Option[];
 }) {
     const filtered = filters.period !== null || filters.payee !== null;
     const currency = usePage().props.label?.currency ?? 'EUR';
@@ -72,13 +68,13 @@ export default function Payouts({
                         name: 'period',
                         label: 'Period',
                         placeholder: 'All periods',
-                        options: periodOptions,
+                        records: 'periods',
                     },
                     {
                         name: 'payee',
                         label: 'Payee',
                         placeholder: 'All payees',
-                        options: payeeOptions,
+                        records: 'payees',
                     },
                 ]}
             />

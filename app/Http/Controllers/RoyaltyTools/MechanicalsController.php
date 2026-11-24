@@ -7,7 +7,6 @@ use App\Services\Royalties\Tools\MechanicalsTool;
 use App\Services\Royalties\Tools\ToolRuns;
 use App\Services\Royalties\Tools\ToolSettings;
 use App\Support\CurrentLabel;
-use App\Support\Options;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -48,7 +47,6 @@ class MechanicalsController extends ToolController
             ],
             'rateTables' => collect(MechanicalsTool::rateTables())->map(fn (array $rates, int|string $key): array => ['key' => (string) $key, ...$rates])->values(),
             'report' => $input === null ? null : $this->mechanicals->report($label, $input['from'], $input['to'], $table, $this->manufacturing($input)),
-            'releaseOptions' => Options::releases(),
         ]);
     }
 

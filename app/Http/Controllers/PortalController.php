@@ -10,7 +10,6 @@ use App\Models\Period;
 use App\Models\Statement;
 use App\Support\CurrentLabel;
 use App\Support\Decimal;
-use App\Support\Options;
 use App\Support\PageSize;
 use App\Support\PayeeAccess;
 use App\Support\Sorting;
@@ -76,8 +75,6 @@ class PortalController extends Controller
                 'groups' => [],
                 'statements' => $preview,
                 'filters' => $filters,
-                'periodOptions' => Options::periods(),
-                'payeeOptions' => Options::payees(),
             ]);
         }
 
@@ -126,8 +123,6 @@ class PortalController extends Controller
             'groups' => $payload,
             'statements' => $preview,
             'filters' => $filters,
-            'periodOptions' => $preview === null ? [] : Options::periods(),
-            'payeeOptions' => $preview === null ? [] : Options::payees(),
         ]);
     }
 

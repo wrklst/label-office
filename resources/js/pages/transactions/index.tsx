@@ -67,20 +67,16 @@ type Props = {
     transactions: Paginated<Transaction>;
     summary: { transactions: number; total: string; quantity: string };
     filters: Filters;
-    releaseOptions: Option[];
     platformOptions: { id: string; name: string }[];
     importOptions: Option[];
-    trackOptions: Option[];
 };
 
 export default function Transactions({
     transactions,
     summary,
     filters,
-    releaseOptions,
     platformOptions,
     importOptions,
-    trackOptions,
 }: Props) {
     const { url } = usePage();
     const { apply } = useFilters(index.url(), filters);
@@ -163,14 +159,14 @@ export default function Transactions({
                         name: 'release',
                         label: 'Release',
                         placeholder: 'All releases',
-                        options: releaseOptions,
+                        records: 'releases',
                         className: 'w-full sm:w-64',
                     },
                     {
                         name: 'track',
                         label: 'Track',
                         placeholder: 'All tracks',
-                        options: trackOptions,
+                        records: 'tracks',
                         className: 'w-full sm:w-64',
                     },
                     {

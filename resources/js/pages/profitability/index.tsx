@@ -20,7 +20,6 @@ import { percent, plural } from '@/lib/format';
 import { download, index } from '@/routes/profitability';
 import { show as showRelease } from '@/routes/releases';
 import { index as transactions } from '@/routes/transactions';
-import type { Option } from '@/types';
 
 type Figures = {
     income: string;
@@ -54,7 +53,6 @@ type Props = {
     totals: Figures;
     unconverted: number;
     filters: Filters;
-    artistOptions: Option[];
 };
 
 const COLUMNS: { key: keyof Figures; label: string; hint: string }[] = [
@@ -151,7 +149,6 @@ export default function Profitability({
     totals,
     unconverted,
     filters,
-    artistOptions,
 }: Props) {
     const filtered =
         filters.from !== null || filters.to !== null || filters.artist !== null;
@@ -192,7 +189,7 @@ export default function Profitability({
                         name: 'artist',
                         label: 'Artist',
                         placeholder: 'All artists',
-                        options: artistOptions,
+                        records: 'artists',
                     },
                 ]}
             />

@@ -105,8 +105,6 @@ type Props = {
     };
     report: Report;
     movers: Movers;
-    artistOptions: Option[];
-    contractOptions: Option[];
     genreOptions: string[];
     fileKinds: { value: string; label: string }[];
     maxUploadMegabytes: number;
@@ -162,8 +160,6 @@ export default function ShowRelease({
     totals,
     report,
     movers,
-    artistOptions,
-    contractOptions,
     genreOptions,
     fileKinds,
     maxUploadMegabytes,
@@ -473,8 +469,6 @@ export default function ShowRelease({
                                     <TableCell>
                                         <TrackDialog
                                             track={track}
-                                            artistOptions={artistOptions}
-                                            contractOptions={contractOptions}
                                             genreOptions={genreOptions}
                                         />
                                     </TableCell>

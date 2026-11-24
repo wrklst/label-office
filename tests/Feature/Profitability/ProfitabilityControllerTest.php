@@ -76,8 +76,7 @@ test('the profitability page shows every release of the label over all time', fu
             ->where('totals.label_result', '50.000000000000000')
             ->where('unconverted', 1)
             ->where('filters', ['from' => null, 'to' => null, 'date' => null, 'artist' => null])
-            ->has('artistOptions', 1)
-            ->where('artistOptions.0.name', 'Example Artist'));
+            ->missing('artistOptions'));
 });
 
 test('the profitability page follows the filters', function (array $query, array $filters, int $rows) {

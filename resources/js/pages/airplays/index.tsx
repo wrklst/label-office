@@ -21,6 +21,7 @@ import InputError from '@/components/input-error';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Pagination } from '@/components/pagination';
 import { RecordLink } from '@/components/record-link';
+import { RecordSelect } from '@/components/record-select';
 import { SortableHead } from '@/components/sortable-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -48,7 +49,7 @@ import { serverSorter } from '@/hooks/use-table-sort';
 import type { SortDirection } from '@/hooks/use-table-sort';
 import { country, date, dateTime, plural } from '@/lib/format';
 import { index } from '@/routes/airplays';
-import type { Option, Paginated } from '@/types';
+import type { Paginated } from '@/types';
 import { ORIGINS } from '@/lib/origins';
 import type { Origin } from '@/lib/origins';
 
@@ -158,11 +159,9 @@ function period(airplay: Airplay): string {
 
 function AirplayFields({
     airplay,
-    tracks,
     errors,
 }: {
     airplay?: Airplay;
-    tracks: Option[];
     errors: Record<string, string>;
 }) {
     return (
@@ -173,12 +172,12 @@ function AirplayFields({
                 error={errors.track_id}
                 hint="Pick a track from the catalog, or type the names below."
             >
-                <SelectInput
+                <RecordSelect
                     id="track_id"
                     name="track_id"
-                    options={tracks}
+                    records="tracks"
                     placeholder="Not in the catalog"
-                    defaultValue={airplay?.track_id ?? ''}
+                    defaultValue={airplay?.track_id}
                 />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -510,17 +509,16 @@ function LinksDialog({
  * Start the automatic research for a group of tracks.
  */
 function ResearchDialog({
-    tracks,
-    releases,
+    trackCount,
     staleCount,
     staleDays,
 }: {
-    tracks: Option[];
-    releases: Option[];
+    trackCount: number;
     staleCount: number;
     staleDays: number;
 }) {
     const [scope, setScope] = useState('stale');
+    const [pickedTracks, setPickedTracks] = useState<(number | '')[]>(['']);
 
     return (
         <FormDialog
@@ -551,7 +549,7 @@ function ResearchDialog({
                             <option value="release">One release</option>
                             <option value="tracks">Selected tracks</option>
                             <option value="all">
-                                Every track ({tracks.length})
+                                Every track ({trackCount})
                             </option>
                         </SelectInput>
                     </Field>
@@ -562,10 +560,11 @@ function ResearchDialog({
                             error={errors.release_id}
                             required
                         >
-                            <SelectInput
+                            <RecordSelect
                                 id="release_id"
                                 name="release_id"
-                                options={releases}
+                                records="releases"
+                                placeholder="Choose a release…"
                                 required
                             />
                         </Field>
@@ -573,25 +572,71 @@ function ResearchDialog({
                     {scope === 'tracks' && (
                         <Field
                             label="Tracks"
-                            htmlFor="track_ids"
+                            htmlFor="track_ids_0"
                             error={errors.track_ids}
-                            hint="Hold Cmd or Ctrl to pick several."
+                            hint="Add a row for every track."
                             required
                         >
-                            <select
-                                id="track_ids"
-                                name="track_ids[]"
-                                multiple
-                                required
-                                size={10}
-                                className="w-full rounded-md border border-input bg-transparent p-1 text-sm"
-                            >
-                                {tracks.map((track) => (
-                                    <option key={track.id} value={track.id}>
-                                        {track.name}
-                                    </option>
+                            <div className="grid gap-2">
+                                {pickedTracks.map((picked, position) => (
+                                    <div key={position} className="flex gap-2">
+                                        <RecordSelect
+                                            id={`track_ids_${position}`}
+                                            aria-label={`Track ${position + 1}`}
+                                            name="track_ids[]"
+                                            records="tracks"
+                                            value={picked}
+                                            onChange={(id) =>
+                                                setPickedTracks(
+                                                    pickedTracks.map(
+                                                        (current, at) =>
+                                                            at === position
+                                                                ? id
+                                                                : current,
+                                                    ),
+                                                )
+                                            }
+                                            placeholder="Choose track…"
+                                            required
+                                            className="flex-1"
+                                        />
+                                        {pickedTracks.length > 1 && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                aria-label={`Remove track ${position + 1}`}
+                                                onClick={() =>
+                                                    setPickedTracks(
+                                                        pickedTracks.filter(
+                                                            (_, at) =>
+                                                                at !== position,
+                                                        ),
+                                                    )
+                                                }
+                                            >
+                                                <X />
+                                            </Button>
+                                        )}
+                                    </div>
                                 ))}
-                            </select>
+                                <div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() =>
+                                            setPickedTracks([
+                                                ...pickedTracks,
+                                                '',
+                                            ])
+                                        }
+                                    >
+                                        <Plus />
+                                        Add track
+                                    </Button>
+                                </div>
+                            </div>
                         </Field>
                     )}
                 </>
@@ -899,8 +944,7 @@ export default function Airplays({
     filters,
     trackResearch,
     airplayResearch,
-    tracks,
-    releases,
+    trackCount,
     staleCount,
     staleDays,
     searchAvailable,
@@ -917,8 +961,7 @@ export default function Airplays({
     };
     trackResearch: TrackResearch[];
     airplayResearch: TrackResearch[];
-    tracks: Option[];
-    releases: Option[];
+    trackCount: number;
     staleCount: number;
     staleDays: number;
     searchAvailable: boolean;
@@ -966,8 +1009,7 @@ export default function Airplays({
                 <>
                     {searchAvailable && (
                         <ResearchDialog
-                            tracks={tracks}
-                            releases={releases}
+                            trackCount={trackCount}
                             staleCount={staleCount}
                             staleDays={staleDays}
                         />
@@ -983,9 +1025,7 @@ export default function Airplays({
                             </Button>
                         }
                     >
-                        {(errors) => (
-                            <AirplayFields tracks={tracks} errors={errors} />
-                        )}
+                        {(errors) => <AirplayFields errors={errors} />}
                     </FormDialog>
                 </>
             }
@@ -999,7 +1039,7 @@ export default function Airplays({
                         name: 'track',
                         label: 'Track',
                         placeholder: 'All tracks',
-                        options: tracks,
+                        records: 'tracks',
                         className: 'w-full sm:w-72',
                     },
                     {
@@ -1207,7 +1247,6 @@ export default function Airplays({
                                                 {(errors) => (
                                                     <AirplayFields
                                                         airplay={airplay}
-                                                        tracks={tracks}
                                                         errors={errors}
                                                     />
                                                 )}

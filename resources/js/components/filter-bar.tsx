@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { ComponentProps, ReactNode } from 'react';
 import { CheckField, SelectInput } from '@/components/field';
 import { DateRange } from '@/components/date-range';
+import { RecordSelect } from '@/components/record-select';
+import type { RecordKind } from '@/components/record-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useFilters } from '@/hooks/use-filters';
@@ -38,6 +40,8 @@ export function FilterBar({
         label: string;
         placeholder: string;
         options?: Choices;
+        /** Records of the label instead of fixed choices: a dropdown searched on the server. */
+        records?: RecordKind;
         className?: string;
         /** Fixed choices written as <option>s, for values that are not records. */
         children?: ReactNode;
@@ -92,21 +96,38 @@ export function FilterBar({
                     className="w-full sm:max-w-sm"
                 />
             )}
-            {selects.map((select) => (
-                <SelectInput
-                    key={select.name}
-                    aria-label={select.label}
-                    value={String(current[select.name] ?? '')}
-                    onChange={(event) =>
-                        apply({ [select.name]: event.target.value } as never)
-                    }
-                    placeholder={select.placeholder}
-                    options={select.options}
-                    className={select.className ?? 'w-full sm:w-52'}
-                >
-                    {select.children}
-                </SelectInput>
-            ))}
+            {selects.map((select) =>
+                select.records ? (
+                    <RecordSelect
+                        key={select.name}
+                        id={`filter-${select.name}`}
+                        aria-label={select.label}
+                        records={select.records}
+                        value={String(current[select.name] ?? '')}
+                        onChange={(id) =>
+                            apply({ [select.name]: String(id) } as never)
+                        }
+                        placeholder={select.placeholder}
+                        className={select.className ?? 'w-full sm:w-52'}
+                    />
+                ) : (
+                    <SelectInput
+                        key={select.name}
+                        aria-label={select.label}
+                        value={String(current[select.name] ?? '')}
+                        onChange={(event) =>
+                            apply({
+                                [select.name]: event.target.value,
+                            } as never)
+                        }
+                        placeholder={select.placeholder}
+                        options={select.options}
+                        className={select.className ?? 'w-full sm:w-52'}
+                    >
+                        {select.children}
+                    </SelectInput>
+                ),
+            )}
             {dates && <DateRange url={url} filters={filters} />}
             {checks.map((check) => (
                 <CheckField

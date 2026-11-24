@@ -57,11 +57,9 @@ type Filters = {
 export default function Releases({
     releases,
     filters,
-    artistOptions,
 }: {
     releases: Paginated<Release>;
     filters: Filters;
-    artistOptions: Option[];
 }) {
     const { url } = usePage();
     const { apply } = useFilters(index.url(), filters);
@@ -102,7 +100,7 @@ export default function Releases({
                         name: 'artist',
                         label: 'Artist',
                         placeholder: 'All artists',
-                        options: artistOptions,
+                        records: 'artists',
                     },
                     {
                         name: 'status',

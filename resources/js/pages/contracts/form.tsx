@@ -1,14 +1,14 @@
 import { Link, setLayoutProps, useForm } from '@inertiajs/react';
 import { Plus, X } from 'lucide-react';
 import ContractController from '@/actions/App/Http/Controllers/ContractController';
-import { Field, SelectInput } from '@/components/field';
+import { Field } from '@/components/field';
 import InputError from '@/components/input-error';
 import { Page, Panel } from '@/components/page';
+import { RecordSelect } from '@/components/record-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { index, show } from '@/routes/contracts';
-import type { Option } from '@/types';
 import { percent } from '@/lib/format';
 
 type Split = {
@@ -31,23 +31,9 @@ type Props = {
     contract: Contract | null;
     /** The page the form was opened from, where saving returns to. */
     returnTo: string | null;
-    payeeOptions: Option[];
-    ledgerOptions: Option[];
-    territoryOptions: Option[];
-    contractOptions: Option[];
 };
 
-const numberOrBlank = (value: string): number | '' =>
-    value === '' ? '' : Number(value);
-
-export default function ContractForm({
-    contract,
-    returnTo,
-    payeeOptions,
-    ledgerOptions,
-    territoryOptions,
-    contractOptions,
-}: Props) {
+export default function ContractForm({ contract, returnTo }: Props) {
     const form = useForm({
         return_to: returnTo ?? '',
         name: contract?.name ?? '',
@@ -196,17 +182,15 @@ export default function ContractForm({
                                     className="grid gap-2 md:grid-cols-[1fr_7rem_1fr_1fr_2.25rem]"
                                 >
                                     <div>
-                                        <SelectInput
+                                        <RecordSelect
                                             aria-label="Payee"
+                                            records="payees"
                                             value={split.payee_id}
-                                            onChange={(event) =>
+                                            onChange={(id) =>
                                                 setSplit(position, {
-                                                    payee_id: numberOrBlank(
-                                                        event.target.value,
-                                                    ),
+                                                    payee_id: id,
                                                 })
                                             }
-                                            options={payeeOptions}
                                             placeholder="Choose payee…"
                                             required
                                         />
@@ -243,30 +227,26 @@ export default function ContractForm({
                                             }
                                         />
                                     </div>
-                                    <SelectInput
+                                    <RecordSelect
                                         aria-label="Ledger"
+                                        records="ledgers"
                                         value={split.ledger_id}
-                                        onChange={(event) =>
+                                        onChange={(id) =>
                                             setSplit(position, {
-                                                ledger_id: numberOrBlank(
-                                                    event.target.value,
-                                                ),
+                                                ledger_id: id,
                                             })
                                         }
-                                        options={ledgerOptions}
                                         placeholder="Primary ledger"
                                     />
-                                    <SelectInput
+                                    <RecordSelect
                                         aria-label="Territory"
+                                        records="territories"
                                         value={split.territory_id}
-                                        onChange={(event) =>
+                                        onChange={(id) =>
                                             setSplit(position, {
-                                                territory_id: numberOrBlank(
-                                                    event.target.value,
-                                                ),
+                                                territory_id: id,
                                             })
                                         }
-                                        options={territoryOptions}
                                         placeholder="Worldwide"
                                     />
                                     <Button
@@ -333,17 +313,16 @@ export default function ContractForm({
                                     className="grid gap-2 md:grid-cols-[1fr_7rem_6rem_2.25rem] md:items-center"
                                 >
                                     <div>
-                                        <SelectInput
+                                        <RecordSelect
                                             aria-label="Contract"
+                                            records="contracts"
+                                            params={{ exclude: contract?.id }}
                                             value={child.contract_id}
-                                            onChange={(event) =>
+                                            onChange={(id) =>
                                                 setChild(position, {
-                                                    contract_id: numberOrBlank(
-                                                        event.target.value,
-                                                    ),
+                                                    contract_id: id,
                                                 })
                                             }
-                                            options={contractOptions}
                                             placeholder="Choose contract…"
                                             required
                                         />

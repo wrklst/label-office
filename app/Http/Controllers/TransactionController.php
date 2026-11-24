@@ -16,7 +16,6 @@ use App\Support\DateRange;
 use App\Support\Decimal;
 use App\Support\Filters;
 use App\Support\Formats;
-use App\Support\Options;
 use App\Support\PageSize;
 use App\Support\Platforms;
 use App\Support\ReturnTo;
@@ -83,8 +82,6 @@ class TransactionController extends Controller
                 ...$sorting->toArray(),
             ],
             // The choice lists are closures: filtering, sorting and paging leave them out (useChoiceLists), and then they are not read.
-            'releaseOptions' => fn (): array => Options::releases(),
-            'trackOptions' => fn (): array => Options::tracks(),
             'platformOptions' => fn () => Transaction::query()->distinct()->pluck('retailer')
                 ->map(fn (?string $retailer): array => Platforms::of($retailer))
                 ->unique('key')->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()
@@ -263,11 +260,6 @@ class TransactionController extends Controller
     private function options(): array
     {
         return [
-            'releaseOptions' => Options::releases(),
-            'trackOptions' => Options::tracks(),
-            'contractOptions' => Options::contracts(),
-            'payeeOptions' => Options::payees(),
-            'ledgerOptions' => Options::ledgers(),
             'categories' => config('royalties.categories'),
             'formats' => config('royalties.formats'),
         ];

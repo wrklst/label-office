@@ -6,7 +6,6 @@ use App\Services\Royalties\ProfitabilityReport;
 use App\Support\CurrentLabel;
 use App\Support\DateRange;
 use App\Support\Decimal;
-use App\Support\Options;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -27,7 +26,6 @@ class ProfitabilityController extends Controller
         return Inertia::render('profitability/index', [
             ...$this->report($filters),
             'filters' => $filters,
-            'artistOptions' => Options::artists(),
         ]);
     }
 

@@ -54,15 +54,11 @@ function LoadedTrackFields({
  */
 export function TrackDialog({
     track,
-    artistOptions,
-    contractOptions,
     inheritedContract,
     genreOptions,
     trigger,
 }: {
     track: ListedTrack;
-    artistOptions: Option[];
-    contractOptions: Option[];
     inheritedContract?: Option | null;
     genreOptions?: string[];
     trigger?: ReactNode;
@@ -87,8 +83,6 @@ export function TrackDialog({
             {(errors) => (
                 <LoadedTrackFields
                     track={track}
-                    artistOptions={artistOptions}
-                    contractOptions={contractOptions}
                     inheritedContract={inheritedContract}
                     genreOptions={genreOptions}
                     errors={errors}

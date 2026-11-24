@@ -4,12 +4,12 @@ import TeamController from '@/actions/App/Http/Controllers/Settings/TeamControll
 import { DeleteButton } from '@/components/delete-button';
 import { Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
+import { RecordSelect } from '@/components/record-select';
 import { Page, Panel } from '@/components/page';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { index } from '@/routes/team';
-import type { Option } from '@/types';
 
 type Member = {
     id: number;
@@ -22,11 +22,9 @@ type Member = {
 
 function RoleFields({
     member,
-    payeeOptions,
     errors,
 }: {
     member?: Member;
-    payeeOptions: Option[];
     errors: Record<string, string>;
 }) {
     const [role, setRole] = useState<'admin' | 'payee'>(
@@ -70,11 +68,11 @@ function RoleFields({
                         : 'Only for an admin who is also an artist of the label: they read their own share under My statements and sign their own agreements as this payee.'
                 }
             >
-                <SelectInput
+                <RecordSelect
                     id={`payee-${member?.id ?? 'new'}`}
                     name="payee_id"
-                    defaultValue={member?.payee_id ?? ''}
-                    options={payeeOptions}
+                    records="payees"
+                    defaultValue={member?.payee_id}
                     placeholder={role === 'payee' ? 'Choose payee…' : 'Nobody'}
                     required={role === 'payee'}
                 />
@@ -83,13 +81,7 @@ function RoleFields({
     );
 }
 
-export default function Team({
-    members,
-    payeeOptions,
-}: {
-    members: Member[];
-    payeeOptions: Option[];
-}) {
+export default function Team({ members }: { members: Member[] }) {
     const { auth, label } = usePage().props;
 
     return (
@@ -142,7 +134,6 @@ export default function Team({
                                     {(errors) => (
                                         <RoleFields
                                             member={member}
-                                            payeeOptions={payeeOptions}
                                             errors={errors}
                                         />
                                     )}
@@ -193,10 +184,7 @@ export default function Team({
                             >
                                 <Input id="member_name" name="name" />
                             </Field>
-                            <RoleFields
-                                payeeOptions={payeeOptions}
-                                errors={errors}
-                            />
+                            <RoleFields errors={errors} />
                             <div>
                                 <Button disabled={processing}>
                                     Add to label

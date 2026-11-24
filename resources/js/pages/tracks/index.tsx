@@ -45,20 +45,10 @@ type Props = {
         sort: string | null;
         direction: SortDirection | null;
     };
-    artistOptions: Option[];
-    contractOptions: Option[];
     genreOptions: string[];
-    releaseOptions: Option[];
 };
 
-export default function Tracks({
-    tracks,
-    filters,
-    artistOptions,
-    contractOptions,
-    genreOptions,
-    releaseOptions,
-}: Props) {
+export default function Tracks({ tracks, filters, genreOptions }: Props) {
     const { apply } = useFilters(index.url(), filters);
     const sorter = serverSorter(filters, apply);
     const filtered = filters.search !== '' || filters.release !== null;
@@ -77,7 +67,7 @@ export default function Tracks({
                         name: 'release',
                         label: 'Release',
                         placeholder: 'All releases',
-                        options: releaseOptions,
+                        records: 'releases',
                         className: 'w-full sm:w-72',
                     },
                 ]}
@@ -209,10 +199,6 @@ export default function Tracks({
                                         <div className="flex justify-end">
                                             <TrackDialog
                                                 track={track}
-                                                artistOptions={artistOptions}
-                                                contractOptions={
-                                                    contractOptions
-                                                }
                                                 genreOptions={genreOptions}
                                                 inheritedContract={
                                                     track.inherited_contract

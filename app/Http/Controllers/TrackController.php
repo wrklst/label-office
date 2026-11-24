@@ -103,9 +103,6 @@ class TrackController extends Controller
             'tracks' => $tracks,
             'filters' => ['search' => Filters::text($request, 'search'), 'release' => $request->integer('release') ?: null, ...$sorting->toArray()],
             'genreOptions' => Options::genres(),
-            'artistOptions' => Options::artists(),
-            'contractOptions' => Options::contracts(),
-            'releaseOptions' => Options::releases(),
         ]);
     }
 
@@ -193,8 +190,6 @@ class TrackController extends Controller
             'searchAvailable' => $search->isConfigured(),
             'platformLinks' => PlatformLinkController::props($track),
             'genreOptions' => Options::genres(),
-            'artistOptions' => Options::artists(),
-            'contractOptions' => Options::contracts(),
         ]);
     }
 

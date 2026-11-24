@@ -61,8 +61,10 @@ class OptionsController extends Controller
         $contractId = $filtered ? $request->integer('contract_id') : 0;
         $payeeId = $filtered ? $request->integer('payee_id') : 0;
         $releaseId = $filtered ? $request->integer('release_id') : 0;
+        // A record is not offered as its own parent or alias.
+        $excludedId = $filtered ? $request->integer('exclude') : 0;
 
-        return match ($records) {
+        $query = match ($records) {
             // The releases a contract pays for: those it is set on and those with a track it is set on.
             'releases' => $this->narrowed(
                 Release::query()->with(['cover:id,release_id', 'artist:id,name'])->orderBy('name')->orderBy('id'),
@@ -87,6 +89,8 @@ class OptionsController extends Controller
             'periods' => Period::query()->orderByDesc('ends_on')->orderByDesc('id'),
             default => AgreementTemplate::query()->orderBy('name')->orderBy('id'),
         };
+
+        return $excludedId ? $query->whereKeyNot($excludedId) : $query;
     }
 
     /**

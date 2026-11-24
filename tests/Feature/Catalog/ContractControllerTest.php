@@ -229,8 +229,8 @@ test('the contract form shows splits as percentages and its child contracts', fu
             ->where('contract.name', 'Example Deal')
             ->where('contract.splits', [['payee_id' => $payee->id, 'ledger_id' => null, 'territory_id' => null, 'percentage' => '12.5']])
             ->where('contract.children', [['contract_id' => $child->id, 'weight' => '2.5']])
-            ->has('contractOptions', 2)
-            ->where('contractOptions', fn ($options) => collect($options)->pluck('id')->doesntContain($contract->id)));
+            ->missing('contractOptions')
+            ->missing('payeeOptions'));
 });
 
 test('updating a contract replaces its splits and syncs its child contracts', function () {

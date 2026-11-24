@@ -8,6 +8,7 @@ import { DateRange } from '@/components/date-range';
 import { Field, SelectInput } from '@/components/field';
 import { EmptyState, Notice, Page, Panel, Stat } from '@/components/page';
 import { RecordLink } from '@/components/record-link';
+import { RecordSelect } from '@/components/record-select';
 import { SortableHead } from '@/components/sortable-head';
 import {
     CreateTransactions,
@@ -32,7 +33,7 @@ import { quantity, today } from '@/lib/format';
 import { index as items } from '@/routes/items';
 import { edit as labelSettings } from '@/routes/label-settings';
 import { index } from '@/routes/royalty-tools/mechanicals';
-import type { Option, Paginated } from '@/types';
+import type { Paginated } from '@/types';
 
 type Row = {
     release_id: number;
@@ -86,7 +87,6 @@ type Props = {
     };
     rateTables: { key: string; per_work: string; per_minute: string }[];
     report: Report | null;
-    releaseOptions: Option[];
 };
 
 const NO_ROWS: Row[] = [];
@@ -118,7 +118,6 @@ export default function Mechanicals({
     settings,
     rateTables,
     report,
-    releaseOptions,
 }: Props) {
     const [manufacturing, setManufacturing] = useState<Manufacturing[]>(
         filters.manufacturing,
@@ -219,13 +218,11 @@ export default function Mechanicals({
                         htmlFor="rates_release"
                         className="w-full max-w-sm"
                     >
-                        <SelectInput
+                        <RecordSelect
                             id="rates_release"
+                            records="releases"
                             value={ratesRelease}
-                            onChange={(event) =>
-                                setRatesRelease(event.target.value)
-                            }
-                            options={releaseOptions}
+                            onChange={(id) => setRatesRelease(String(id))}
                             placeholder="Choose a release…"
                         />
                     </Field>
@@ -288,25 +285,24 @@ export default function Mechanicals({
                                 key={position}
                                 className="grid gap-2 sm:grid-cols-[1fr_10rem_2.25rem]"
                             >
-                                <SelectInput
+                                <RecordSelect
                                     aria-label="Manufactured release"
                                     name={`manufacturing[${position}][release_id]`}
+                                    records="releases"
                                     value={run.release_id}
-                                    onChange={(event) =>
+                                    onChange={(id) =>
                                         setManufacturing(
                                             manufacturing.map((current, at) =>
                                                 at === position
                                                     ? {
                                                           ...current,
                                                           release_id:
-                                                              event.target
-                                                                  .value,
+                                                              String(id),
                                                       }
                                                     : current,
                                             ),
                                         )
                                     }
-                                    options={releaseOptions}
                                     placeholder="Release…"
                                     required
                                 />

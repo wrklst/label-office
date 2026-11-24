@@ -16,7 +16,6 @@ use App\Services\Reports\IncomeReport;
 use App\Support\CollectionPage;
 use App\Support\Decimal;
 use App\Support\Filters;
-use App\Support\Options;
 use App\Support\PageSize;
 use App\Support\ReturnTo;
 use App\Support\Sorting;
@@ -69,7 +68,6 @@ class ArtistController extends Controller
         return Inertia::render('artists/index', [
             'artists' => $artists,
             'filters' => ['search' => Filters::text($request, 'search'), 'aliases' => $request->boolean('aliases'), ...$sorting->toArray()],
-            'artistOptions' => Options::artists(),
         ]);
     }
 
@@ -127,7 +125,6 @@ class ArtistController extends Controller
         $trackPage = CollectionPage::of($trackRows, $request, ['name', 'release', 'isrc', 'airplays_count', 'income'], 'tracks');
 
         return Inertia::render('artists/show', [
-            'artistOptions' => Options::artists(),
             'artist' => [
                 ...$artist->only(['id', 'name', 'alias_of_id', 'spotify_id', 'discogs_search_name', 'notes']),
                 'image_url' => ArtistImageController::url($artist),

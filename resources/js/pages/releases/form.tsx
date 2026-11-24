@@ -6,11 +6,11 @@ import type { ArtistCredit } from '@/components/artist-credit-rows';
 import { CheckField, Field, SelectInput } from '@/components/field';
 import InputError from '@/components/input-error';
 import { Notice, Page, Panel } from '@/components/page';
+import { RecordSelect } from '@/components/record-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { index, show } from '@/routes/releases';
-import type { Option } from '@/types';
 import { AiField } from '@/components/ai-field';
 import { TRACK_FIELD } from '@/components/track-fields';
 
@@ -77,8 +77,6 @@ const numberOrBlank = (value: string): number | '' =>
 export default function ReleaseForm({
     release,
     returnTo,
-    artistOptions,
-    contractOptions,
     statusOptions,
     typeOptions,
     genreOptions,
@@ -86,8 +84,6 @@ export default function ReleaseForm({
     release: Release | null;
     /** The page the form was opened from, where saving returns to. */
     returnTo: string | null;
-    artistOptions: Option[];
-    contractOptions: Option[];
     statusOptions: { value: string; label: string }[];
     typeOptions: { value: string; label: string }[];
     genreOptions: string[];
@@ -200,16 +196,11 @@ export default function ReleaseForm({
                             htmlFor="artist_id"
                             error={errors.artist_id}
                         >
-                            <SelectInput
+                            <RecordSelect
                                 id="artist_id"
+                                records="artists"
                                 value={form.data.artist_id}
-                                onChange={(event) =>
-                                    form.setData(
-                                        'artist_id',
-                                        numberOrBlank(event.target.value),
-                                    )
-                                }
-                                options={artistOptions}
+                                onChange={(id) => form.setData('artist_id', id)}
                                 placeholder="No artist / various"
                             />
                         </Field>
@@ -219,16 +210,13 @@ export default function ReleaseForm({
                             error={errors.contract_id}
                             hint="Applies to every track that has no contract of its own. Without a contract the label keeps all income."
                         >
-                            <SelectInput
+                            <RecordSelect
                                 id="contract_id"
+                                records="contracts"
                                 value={form.data.contract_id}
-                                onChange={(event) =>
-                                    form.setData(
-                                        'contract_id',
-                                        numberOrBlank(event.target.value),
-                                    )
+                                onChange={(id) =>
+                                    form.setData('contract_id', id)
                                 }
-                                options={contractOptions}
                                 placeholder="No contract"
                             />
                         </Field>
@@ -609,7 +597,6 @@ export default function ReleaseForm({
                         <ArtistCreditRows
                             value={form.data.artists}
                             onChange={(rows) => form.setData('artists', rows)}
-                            artistOptions={artistOptions}
                         />
                         <InputError
                             message={
@@ -761,17 +748,15 @@ export default function ReleaseForm({
                                             }
                                         />
                                     </div>
-                                    <SelectInput
+                                    <RecordSelect
                                         aria-label={TRACK_FIELD.artist_id.label}
+                                        records="artists"
                                         value={track.artist_id}
-                                        onChange={(event) =>
+                                        onChange={(id) =>
                                             setTrack(position, {
-                                                artist_id: numberOrBlank(
-                                                    event.target.value,
-                                                ),
+                                                artist_id: id,
                                             })
                                         }
-                                        options={artistOptions}
                                         placeholder={
                                             TRACK_FIELD.artist_id.blank
                                         }
@@ -798,19 +783,17 @@ export default function ReleaseForm({
                                             }
                                         />
                                     </div>
-                                    <SelectInput
+                                    <RecordSelect
                                         aria-label={
                                             TRACK_FIELD.contract_id.label
                                         }
+                                        records="contracts"
                                         value={track.contract_id}
-                                        onChange={(event) =>
+                                        onChange={(id) =>
                                             setTrack(position, {
-                                                contract_id: numberOrBlank(
-                                                    event.target.value,
-                                                ),
+                                                contract_id: id,
                                             })
                                         }
-                                        options={contractOptions}
                                         placeholder={
                                             TRACK_FIELD.contract_id.blank
                                         }

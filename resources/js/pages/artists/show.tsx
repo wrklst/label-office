@@ -30,10 +30,9 @@ import { useFilters } from '@/hooks/use-filters';
 import { serverSorter } from '@/hooks/use-table-sort';
 import { count, date, percent, plural } from '@/lib/format';
 import { index, show } from '@/routes/artists';
-import type { Option, Paginated } from '@/types';
+import type { Paginated } from '@/types';
 
 type Props = {
-    artistOptions: Option[];
     artist: EditableArtist & {
         image_url: string | null;
         alias_of: { id: number; name: string } | null;
@@ -79,7 +78,6 @@ type Props = {
 
 export default function ShowArtist({
     artist,
-    artistOptions,
     totals,
     incomeByRelease,
     releases,
@@ -117,11 +115,7 @@ export default function ShowArtist({
                         }
                     >
                         {(errors) => (
-                            <ArtistFields
-                                artist={artist}
-                                options={artistOptions}
-                                errors={errors}
-                            />
+                            <ArtistFields artist={artist} errors={errors} />
                         )}
                     </FormDialog>
                     <DeleteButton

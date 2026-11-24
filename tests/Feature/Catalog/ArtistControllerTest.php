@@ -24,7 +24,7 @@ test('the artist list shows each artist with its aliases and usage counts, and a
             ->where('artists.data.0.releases_count', 1)
             ->where('artists.data.0.tracks_count', 2)
             ->where('filters.aliases', false)
-            ->has('artistOptions', 2));
+            ->missing('artistOptions'));
 
     $this->get(route('artists.index', ['search' => 'sample']))->assertInertia(fn (Assert $page) => $page
         ->has('artists.data', 1)

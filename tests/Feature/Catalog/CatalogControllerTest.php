@@ -35,7 +35,7 @@ test('the catalog manager lists every release with its tracks and their contract
             ->where('releases.data.0.tracks.1.contract_id', $trackContract->id)
             ->where('releases.data.1.name', 'Uncatalogued')
             ->has('releases.data.1.tracks', 0)
-            ->has('contractOptions', 2));
+            ->missing('contractOptions'));
 });
 
 test('a contract is assigned to a release', function () {

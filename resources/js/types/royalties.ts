@@ -1,7 +1,5 @@
 export type Option = { id: number; name: string };
 
-export type TrackOption = Option & { release_id: number };
-
 export type Paginated<T> = {
     data: T[];
     current_page: number;

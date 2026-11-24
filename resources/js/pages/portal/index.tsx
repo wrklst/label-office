@@ -17,7 +17,7 @@ import { serverSorter, useTableSort } from '@/hooks/use-table-sort';
 import type { Sorter } from '@/hooks/use-table-sort';
 import { date } from '@/lib/format';
 import { index, show } from '@/routes/portal';
-import type { Option, Paginated } from '@/types';
+import type { Paginated } from '@/types';
 
 type Statement = {
     id: number;
@@ -66,8 +66,6 @@ type Props = {
     groups: Group[];
     statements: Paginated<Statement> | null;
     filters: Record<string, string | number | null>;
-    periodOptions: Option[];
-    payeeOptions: Option[];
 };
 
 const LEDGER_COLUMNS = {
@@ -424,14 +422,10 @@ function LabelGroup({
 function Preview({
     statements,
     filters,
-    periodOptions,
-    payeeOptions,
     heading,
 }: {
     statements: Paginated<Statement>;
     filters: Props['filters'];
-    periodOptions: Option[];
-    payeeOptions: Option[];
     heading?: string;
 }) {
     const { apply } = useFilters(index.url(), filters);
@@ -453,13 +447,13 @@ function Preview({
                         name: 'period',
                         label: 'Period',
                         placeholder: 'All periods',
-                        options: periodOptions,
+                        records: 'periods',
                     },
                     {
                         name: 'payee',
                         label: 'Payee',
                         placeholder: 'All payees',
-                        options: payeeOptions,
+                        records: 'payees',
                     },
                 ]}
             />
@@ -483,14 +477,7 @@ function Preview({
     );
 }
 
-export default function Portal({
-    view,
-    groups,
-    statements,
-    filters,
-    periodOptions,
-    payeeOptions,
-}: Props) {
+export default function Portal({ view, groups, statements, filters }: Props) {
     const title = 'My statements';
     const { label } = usePage().props;
 
@@ -502,12 +489,7 @@ export default function Portal({
                 title={title}
                 description="What payees can see: every published statement of this label. Each payee only gets their own."
             >
-                <Preview
-                    statements={statements}
-                    filters={filters}
-                    periodOptions={periodOptions}
-                    payeeOptions={payeeOptions}
-                />
+                <Preview statements={statements} filters={filters} />
             </Page>
         );
     }
@@ -555,8 +537,6 @@ export default function Portal({
                     heading={`What the payees of ${label?.name ?? 'this label'} see`}
                     statements={statements}
                     filters={filters}
-                    periodOptions={periodOptions}
-                    payeeOptions={payeeOptions}
                 />
             )}
         </Page>

@@ -46,7 +46,9 @@ test('a contract is built from split rows and shows what the label keeps', funct
         ->assertSee('No splits: the label keeps everything booked on this contract.')
         ->fill('name', 'Example Deal')
         ->click('Add split')
-        ->select('select[aria-label="Payee"]', (string) $payee->id)
+        ->click('button[aria-label="Payee"]')
+        ->waitForText('Example Payee')
+        ->click('Example Payee')
         ->fill('input[aria-label="Split percent"]', '40')
         ->assertSee('Payees get 40% worldwide, the label keeps 60%.')
         ->press('Create contract')
@@ -80,7 +82,9 @@ test('choosing a contract in the catalog manager saves it straight away', functi
 
     visit('/catalog')
         ->assertSee('1 track without a contract')
-        ->select('select[aria-label="Contract for Example Release"]', (string) $contract->id)
+        ->click('button[aria-label="Contract for Example Release"]')
+        ->waitForText('Example Deal')
+        ->click('Example Deal')
         ->assertSee('Every track is covered by a contract.')
         ->assertNoJavaScriptErrors();
 

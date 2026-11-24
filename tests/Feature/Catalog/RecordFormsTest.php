@@ -31,9 +31,9 @@ test('the track page, the tracks list and the release page send what the track d
     $editable = fn (Assert $row) => $listed($row->where('credits', ['composers' => ['Example Composer']])->has('lyrics'));
 
     $this->actingAs($admin)->get(route('tracks.show', $track->id))
-        ->assertInertia(fn (Assert $page) => $page->has('track', $editable)->has('artistOptions', 2)->has('contractOptions'));
+        ->assertInertia(fn (Assert $page) => $page->has('track', $editable)->missing('artistOptions')->missing('contractOptions'));
     $this->actingAs($admin)->get(route('tracks.index'))
-        ->assertInertia(fn (Assert $page) => $page->has('tracks.data.0', $listed)->missing('tracks.data.0.credits')->has('artistOptions', 2));
+        ->assertInertia(fn (Assert $page) => $page->has('tracks.data.0', $listed)->missing('tracks.data.0.credits')->missing('artistOptions')->missing('releaseOptions'));
     $this->actingAs($admin)->get(route('releases.show', $release->id))
         ->assertInertia(fn (Assert $page) => $page->has('release.tracks.0', $editable));
 });

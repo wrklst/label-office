@@ -4,7 +4,8 @@ import ItemController from '@/actions/App/Http/Controllers/ItemController';
 import { FilterBar } from '@/components/filter-bar';
 import { Amount } from '@/components/amount';
 import { DeleteButton } from '@/components/delete-button';
-import { Field, SelectInput } from '@/components/field';
+import { Field } from '@/components/field';
+import { RecordSelect } from '@/components/record-select';
 import { FormDialog } from '@/components/form-dialog';
 import { RecordLink } from '@/components/record-link';
 import { EmptyState, Notice, Page, Panel } from '@/components/page';
@@ -24,7 +25,7 @@ import { useFilters } from '@/hooks/use-filters';
 import { serverSorter } from '@/hooks/use-table-sort';
 import type { SortDirection } from '@/hooks/use-table-sort';
 import { index } from '@/routes/items';
-import type { Option, Paginated, TrackOption } from '@/types';
+import type { Option, Paginated } from '@/types';
 import { count, plural } from '@/lib/format';
 
 type Item = {
@@ -57,27 +58,19 @@ type Props = {
         direction: SortDirection | null;
     };
     unassignedCount: number;
-    releaseOptions: Option[];
-    trackOptions: TrackOption[];
-    contractOptions: Option[];
 };
 
 function AssignFields({
     item,
-    releaseOptions,
-    trackOptions,
-    contractOptions,
     errors,
 }: {
     item: Item;
-    releaseOptions: Option[];
-    trackOptions: TrackOption[];
-    contractOptions: Option[];
     errors: Record<string, string>;
 }) {
     const [releaseId, setReleaseId] = useState<number | ''>(
         item.release_id ?? '',
     );
+    const [trackId, setTrackId] = useState<number | ''>(item.track_id ?? '');
 
     return (
         <>
@@ -98,18 +91,15 @@ function AssignFields({
                 htmlFor="release_id"
                 error={errors.release_id}
             >
-                <SelectInput
+                <RecordSelect
                     id="release_id"
                     name="release_id"
+                    records="releases"
                     value={releaseId}
-                    onChange={(event) =>
-                        setReleaseId(
-                            event.target.value
-                                ? Number(event.target.value)
-                                : '',
-                        )
-                    }
-                    options={releaseOptions}
+                    onChange={(id) => {
+                        setReleaseId(id);
+                        setTrackId('');
+                    }}
                     placeholder="Unassigned"
                 />
             </Field>
@@ -119,13 +109,13 @@ function AssignFields({
                 error={errors.track_id}
                 hint="Leave empty when the item is the whole release, e.g. an album download."
             >
-                <SelectInput
+                <RecordSelect
                     id="track_id"
                     name="track_id"
-                    defaultValue={item.track_id ?? ''}
-                    options={trackOptions.filter(
-                        (track) => track.release_id === releaseId,
-                    )}
+                    records="tracks"
+                    value={trackId}
+                    onChange={(id) => setTrackId(id)}
+                    params={{ release_id: releaseId }}
                     placeholder="Whole release"
                     disabled={releaseId === ''}
                 />
@@ -136,11 +126,11 @@ function AssignFields({
                 error={errors.contract_id}
                 hint="Only for items with their own deal, such as a licensed vinyl run. Otherwise the track or release contract applies."
             >
-                <SelectInput
+                <RecordSelect
                     id="contract_id"
                     name="contract_id"
-                    defaultValue={item.contract_id ?? ''}
-                    options={contractOptions}
+                    records="contracts"
+                    defaultValue={item.contract_id}
                     placeholder="Use track / release contract"
                 />
             </Field>
@@ -148,14 +138,7 @@ function AssignFields({
     );
 }
 
-export default function Items({
-    items,
-    filters,
-    unassignedCount,
-    releaseOptions,
-    trackOptions,
-    contractOptions,
-}: Props) {
+export default function Items({ items, filters, unassignedCount }: Props) {
     const { apply } = useFilters(index.url(), filters);
     const sorter = serverSorter(filters, apply);
     const filtered =
@@ -194,7 +177,7 @@ export default function Items({
                         name: 'release',
                         label: 'Release',
                         placeholder: 'All releases',
-                        options: releaseOptions,
+                        records: 'releases',
                         className: 'w-full sm:w-72',
                     },
                 ]}
@@ -337,15 +320,6 @@ export default function Items({
                                                     {(errors) => (
                                                         <AssignFields
                                                             item={item}
-                                                            releaseOptions={
-                                                                releaseOptions
-                                                            }
-                                                            trackOptions={
-                                                                trackOptions
-                                                            }
-                                                            contractOptions={
-                                                                contractOptions
-                                                            }
                                                             errors={errors}
                                                         />
                                                     )}

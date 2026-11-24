@@ -291,7 +291,7 @@ test('statements and payouts are narrowed by period and payee, and the filters s
     $admin = labelAdmin($label);
 
     $this->actingAs($admin)->get(route('statements.index', ['payee' => $other->id]))->assertInertia(fn (Assert $page) => $page
-        ->where('statements.total', 2)->where('filters.payee', $other->id)->has('payeeOptions', 2)->has('periodOptions', 2));
+        ->where('statements.total', 2)->where('filters.payee', $other->id)->missing('payeeOptions')->missing('periodOptions'));
     $this->actingAs($admin)->get(route('statements.index', ['payee' => $other->id, 'period' => $second->id]))->assertInertia(fn (Assert $page) => $page->where('statements.total', 1));
     $this->actingAs($admin)->get(route('payouts.index', ['period' => $second->id]))->assertInertia(fn (Assert $page) => $page
         ->where('payouts.total', 1)->where('filters.period', $second->id));
@@ -326,7 +326,7 @@ test('airplay is searched, and narrowed by track and by where it is known from',
     $this->actingAs($admin)->get(route('airplays.index', ['origin' => 'statement']))->assertInertia(fn (Assert $page) => $page
         ->where('airplays.total', 1)->where('filters.origin', 'statement'));
     $this->actingAs($admin)->get(route('airplays.index', ['track' => $track->id]))->assertInertia(fn (Assert $page) => $page
-        ->where('airplays.total', 1)->where('filters.track', $track->id)->has('tracks', 1));
+        ->where('airplays.total', 1)->where('filters.track', $track->id)->where('trackCount', 1)->missing('tracks')->missing('releases'));
     $this->actingAs($admin)->get(route('airplays.index', ['origin' => 'search']))->assertInertia(fn (Assert $page) => $page->where('airplays.total', 0));
 });
 
@@ -339,7 +339,7 @@ test('the transaction list can be narrowed to a track from its filter, every imp
     $admin = labelAdmin($label);
 
     $this->actingAs($admin)->get(route('transactions.index', ['track' => $track->id]))->assertInertia(fn (Assert $page) => $page
-        ->where('transactions.total', 2 - 1)->where('filters.track', (string) $track->id)->has('trackOptions', 1)->has('importOptions', 101));
+        ->where('transactions.total', 2 - 1)->where('filters.track', (string) $track->id)->missing('trackOptions')->has('importOptions', 101));
     // An inverted range matches nothing, and the fields show the range the figures are computed for.
     $this->actingAs($admin)->get(route('transactions.index', ['from' => '2026-02-01', 'to' => '2026-01-01']))->assertSessionHasNoErrors()
         ->assertInertia(fn (Assert $page) => $page->where('filters.from', '2026-02-01')->where('filters.to', '2026-01-01')->where('transactions.total', 0));
@@ -367,7 +367,7 @@ test('filtering, sorting and paging the transactions leave the choice lists out'
     Transaction::factory()->create(['label_id' => $label->id]);
 
     $this->actingAs(labelAdmin($label))->get(route('transactions.index'))->assertInertia(fn (Assert $page) => $page
-        ->has('releaseOptions')->has('importOptions')
-        ->reloadExcept(['releaseOptions', 'trackOptions', 'platformOptions', 'importOptions'], fn (Assert $reload) => $reload
-            ->has('transactions.data', 1)->missing('releaseOptions')->missing('trackOptions')->missing('platformOptions')->missing('importOptions')));
+        ->has('platformOptions')->has('importOptions')->missing('releaseOptions')
+        ->reloadExcept(['platformOptions', 'importOptions'], fn (Assert $reload) => $reload
+            ->has('transactions.data', 1)->missing('platformOptions')->missing('importOptions')));
 });

@@ -1,16 +1,16 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import CatalogController from '@/actions/App/Http/Controllers/CatalogController';
-import { SelectInput } from '@/components/field';
 import { FilterBar } from '@/components/filter-bar';
 import { Pagination } from '@/components/pagination';
 import { RecordLink } from '@/components/record-link';
+import { RecordSelect } from '@/components/record-select';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { index } from '@/routes/catalog';
 import { create as createContract } from '@/routes/contracts';
 import { create as createImport } from '@/routes/data-imports';
-import type { Option, Paginated } from '@/types';
+import type { Paginated } from '@/types';
 import { plural } from '@/lib/format';
 
 type Track = {
@@ -18,6 +18,7 @@ type Track = {
     name: string;
     isrc: string | null;
     contract_id: number | null;
+    contract: string | null;
     artist: string | null;
     artist_id: number | null;
 };
@@ -26,15 +27,19 @@ type Release = {
     name: string;
     catalog_number: string | null;
     contract_id: number | null;
+    contract: string | null;
     artist: string | null;
     artist_id: number | null;
     tracks: Track[];
 };
 
-function assign(type: 'release' | 'track', id: number, value: string) {
+const contractOption = (id: number | null, name: string | null) =>
+    id !== null && name !== null ? { id, name, hint: null, image: null } : null;
+
+function assign(type: 'release' | 'track', id: number, value: number | '') {
     router.patch(
         CatalogController.assign.url(),
-        { type, id, contract_id: value === '' ? null : Number(value) },
+        { type, id, contract_id: value === '' ? null : value },
         { preserveScroll: true, preserveState: true },
     );
 }
@@ -44,18 +49,13 @@ export default function CatalogManager({
     filters,
     uncovered,
     hasReleases,
-    contractOptions,
 }: {
     releases: Paginated<Release>;
     filters: { search: string; without_contract: boolean };
     uncovered: number;
     hasReleases: boolean;
-    contractOptions: Option[];
 }) {
     const { url } = usePage();
-    const contractName = (id: number | null) =>
-        contractOptions.find((option) => option.id === id)?.name;
-
     return (
         <Page
             title="Catalog manager"
@@ -132,17 +132,17 @@ export default function CatalogManager({
                                     </span>
                                 }
                                 actions={
-                                    <SelectInput
+                                    <RecordSelect
                                         aria-label={`Contract for ${release.name}`}
+                                        records="contracts"
                                         value={release.contract_id ?? ''}
-                                        onChange={(event) =>
-                                            assign(
-                                                'release',
-                                                release.id,
-                                                event.target.value,
-                                            )
+                                        initial={contractOption(
+                                            release.contract_id,
+                                            release.contract,
+                                        )}
+                                        onChange={(id) =>
+                                            assign('release', release.id, id)
                                         }
-                                        options={contractOptions}
                                         placeholder="No release contract"
                                         className="w-72"
                                     />
@@ -199,22 +199,26 @@ export default function CatalogManager({
                                                             No contract
                                                         </Badge>
                                                     )}
-                                                <SelectInput
+                                                <RecordSelect
                                                     aria-label={`Contract for ${track.name}`}
+                                                    records="contracts"
                                                     value={
                                                         track.contract_id ?? ''
                                                     }
-                                                    onChange={(event) =>
+                                                    initial={contractOption(
+                                                        track.contract_id,
+                                                        track.contract,
+                                                    )}
+                                                    onChange={(id) =>
                                                         assign(
                                                             'track',
                                                             track.id,
-                                                            event.target.value,
+                                                            id,
                                                         )
                                                     }
-                                                    options={contractOptions}
                                                     placeholder={
                                                         release.contract_id
-                                                            ? `Release: ${contractName(release.contract_id)}`
+                                                            ? `Release: ${release.contract}`
                                                             : 'No contract'
                                                     }
                                                     className="w-72"

@@ -9,7 +9,6 @@ use App\Models\Payee;
 use App\Models\User;
 use App\Notifications\LabelInvitation;
 use App\Support\CurrentLabel;
-use App\Support\Options;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -30,7 +29,6 @@ class TeamController extends Controller
                 'payee_id' => $user->pivot->payee_id,
                 'payee' => $payees[$user->pivot->payee_id] ?? null,
             ]),
-            'payeeOptions' => Options::payees(),
         ]);
     }
 

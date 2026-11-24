@@ -7,7 +7,6 @@ use App\Http\Requests\AirplayRequest;
 use App\Models\Airplay;
 use App\Models\AirplayFinding;
 use App\Models\AirplaySearch;
-use App\Models\Release;
 use App\Models\Track;
 use App\Services\Airplay\AirplayResearch;
 use App\Services\Airplay\ResearchState;
@@ -85,7 +84,6 @@ class AirplayController extends Controller
                     'state' => ResearchState::visible($airplay->research_state, $airplay->research_state_at),
                     'step' => $airplay->research_step,
                 ])->whereNotNull('state')->values(),
-            'releases' => Release::query()->orderBy('name')->get(['id', 'name']),
             'staleCount' => $research->stale(Track::query())->count(),
             'staleDays' => AirplayResearch::STALE_DAYS,
             'filters' => [
@@ -111,11 +109,7 @@ class AirplayController extends Controller
                     'research_state' => ResearchState::visible($airplay->research_state, $airplay->research_state_at),
                     'research_step' => $airplay->research_step,
                 ]),
-            'tracks' => Track::query()->with(['artist:id,name', 'artists:id,name'])->orderBy('name')->get()
-                ->map(fn (Track $track): array => [
-                    'id' => $track->id,
-                    'name' => collect([ArtistCredits::display($track), $track->name])->filter()->implode(' – '),
-                ]),
+            'trackCount' => Track::query()->count(),
             'searchAvailable' => $search->isConfigured(),
         ]);
     }

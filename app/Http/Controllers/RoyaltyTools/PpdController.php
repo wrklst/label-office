@@ -8,7 +8,6 @@ use App\Services\Royalties\Tools\ToolRuns;
 use App\Services\Royalties\Tools\ToolSettings;
 use App\Support\CurrentLabel;
 use App\Support\Formats;
-use App\Support\Options;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -41,8 +40,6 @@ class PpdController extends ToolController
             ],
             'settings' => ['ignore_negative_quantities' => ToolSettings::for($label)->ignoreNegativeQuantities],
             'report' => $input === null ? null : $this->ppd->report($label, $input['from'], $input['to'], $this->filters($input)),
-            'artistOptions' => Options::artists(),
-            'releaseOptions' => Options::releases(),
             'formatOptions' => Formats::all(),
         ]);
     }

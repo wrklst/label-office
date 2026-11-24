@@ -35,7 +35,7 @@ test('the team page lists the members of the label by name', function () {
                 ['id' => $member->id, 'name' => 'Adam Example', 'email' => 'adam@example.com', 'role' => 'payee', 'payee_id' => $payee->id, 'payee' => 'Example Artist'],
                 ['id' => $admin->id, 'name' => 'Zoe Example', 'email' => 'zoe@example.com', 'role' => 'admin', 'payee_id' => null, 'payee' => null],
             ])
-            ->where('payeeOptions', [['id' => $payee->id, 'name' => 'Example Artist']]));
+            ->missing('payeeOptions'));
 });
 
 test('an existing user can be added to the label', function () {

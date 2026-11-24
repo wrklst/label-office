@@ -9,7 +9,6 @@ use App\Models\Release;
 use App\Models\Track;
 use App\Models\Transaction;
 use App\Support\Filters;
-use App\Support\Options;
 use App\Support\PageSize;
 use App\Support\Sorting;
 use Illuminate\Database\Eloquent\Builder;
@@ -64,9 +63,6 @@ class ItemController extends Controller
                 ...$sorting->toArray(),
             ],
             'unassignedCount' => Item::query()->whereNull('release_id')->count(),
-            'releaseOptions' => Options::releases(),
-            'trackOptions' => Options::tracks(),
-            'contractOptions' => Options::contracts(),
         ]);
     }
 

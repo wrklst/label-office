@@ -223,7 +223,7 @@ test('someone who runs a label and is a payee elsewhere sees both: their own sta
         ->has('groups', 1)->where('groups.0.label.name', 'Example Other Label')
         ->has('statements.data', 2)
         ->where('statements.data.0.payee', fn (?string $name): bool => in_array($name, ['Example Payee One', 'Example Payee Two'], true))
-        ->has('payeeOptions', 2));
+        ->missing('payeeOptions'));
 
     $this->actingAs($user)->get(route('portal.index', ['payee' => $myPayee->id]))->assertInertia(fn (Assert $page) => $page
         ->has('statements.data', 1)->where('statements.data.0.id', $published->id)->where('filters.payee', $myPayee->id));

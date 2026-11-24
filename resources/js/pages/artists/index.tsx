@@ -23,7 +23,7 @@ import { serverSorter } from '@/hooks/use-table-sort';
 import type { SortDirection } from '@/hooks/use-table-sort';
 import { index } from '@/routes/artists';
 import { index as releases } from '@/routes/releases';
-import type { Option, Paginated } from '@/types';
+import type { Paginated } from '@/types';
 import { count } from '@/lib/format';
 import { ArtistFields } from '@/components/artist-fields';
 
@@ -44,7 +44,6 @@ type Artist = {
 export default function Artists({
     artists,
     filters,
-    artistOptions,
 }: {
     artists: Paginated<Artist>;
     filters: {
@@ -53,7 +52,6 @@ export default function Artists({
         sort: string | null;
         direction: SortDirection | null;
     };
-    artistOptions: Option[];
 }) {
     const { apply } = useFilters(index.url(), filters);
     const sorter = serverSorter(filters, apply);
@@ -74,9 +72,7 @@ export default function Artists({
                         </Button>
                     }
                 >
-                    {(errors) => (
-                        <ArtistFields options={artistOptions} errors={errors} />
-                    )}
+                    {(errors) => <ArtistFields errors={errors} />}
                 </FormDialog>
             }
         >
@@ -201,7 +197,6 @@ export default function Artists({
                                                 {(errors) => (
                                                     <ArtistFields
                                                         artist={artist}
-                                                        options={artistOptions}
                                                         errors={errors}
                                                     />
                                                 )}
