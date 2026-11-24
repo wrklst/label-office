@@ -329,9 +329,9 @@ class AgreementController extends Controller
 
             // The same recording on another release, such as a single beside the album, is paid the same way.
             if ($target instanceof Track && filled($target->isrc)) {
-                $this->sameRecording = Track::query()->where('isrc', $target->isrc)->whereKeyNot($target->id)->whereNull('contract_id')->with('release:id,name')->get()
+                $this->sameRecording = array_values(Track::query()->where('isrc', $target->isrc)->whereKeyNot($target->id)->whereNull('contract_id')->with('release:id,name')->get()
                     ->each(fn (Track $track) => $track->update(['contract_id' => $contract->id]))
-                    ->map(fn (Track $track): string => (string) ($track->release->name ?? $track->name))->all();
+                    ->map(fn (Track $track): string => (string) ($track->release->name ?? $track->name))->all());
             }
 
             return $contract;
