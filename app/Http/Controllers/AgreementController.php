@@ -285,12 +285,15 @@ class AgreementController extends Controller
      */
     public function release(Request $request, Release $release): JsonResponse
     {
-        // With a contract or payee chosen, the tracks their contracts are set on come ticked,
-        // unless the contract is on the release itself and so pays for all of it.
+        // With a contract or payee chosen, the tracks their contracts pay for come ticked: those the contract
+        // is set on and, where it is set on the release, those without a contract of their own.
         $contracts = $request->integer('contract_id')
             ? [$request->integer('contract_id')]
             : Contract::query()->whereHas('splits', fn ($splits) => $splits->where('payee_id', $request->integer('payee_id')))->pluck('id')->all();
-        $chosen = in_array($release->contract_id, $contracts, true) ? [] : array_values($release->tracks()->whereIn('tracks.contract_id', $contracts ?: [0])->pluck('tracks.id')->map(fn (mixed $id): int => (int) $id)->all());
+        $chosen = array_values($release->tracks()
+            ->where(fn ($paid) => $paid->whereIn('tracks.contract_id', $contracts ?: [0])
+                ->when(in_array($release->contract_id, $contracts, true), fn ($paid) => $paid->orWhereNull('tracks.contract_id')))
+            ->pluck('tracks.id')->map(fn (mixed $id): int => (int) $id)->all());
 
         return response()->json(Agreement::releaseRow($release, $chosen));
     }

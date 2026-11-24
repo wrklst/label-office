@@ -102,6 +102,13 @@ test('choosing a payee offers the releases their contracts pay for, with those t
     $tracks = $this->actingAs($admin)->getJson(route('agreements.release', ['release' => $release, 'payee_id' => $payee->id]))->json('tracks');
 
     expect(collect($tracks)->where('chosen', true)->pluck('id')->all())->toBe([$remix->id]);
+
+    // A single whose contract is on the release itself: its track comes ticked too.
+    $single = Release::factory()->create(['label_id' => $label->id, 'contract_id' => $contract->id]);
+    $only = Track::factory()->create(['label_id' => $label->id, 'release_id' => $single->id, 'contract_id' => null]);
+
+    expect($this->actingAs($admin)->getJson(route('agreements.release', ['release' => $single, 'contract_id' => $contract->id]))->json('tracks.0'))
+        ->toMatchArray(['id' => $only->id, 'chosen' => true]);
 });
 
 test('an agreement is listed on the pages of its contract, payee, release and track', function () {
