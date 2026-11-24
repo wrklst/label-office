@@ -4,6 +4,8 @@ use App\Models\Label;
 use App\Support\Backups;
 use App\Support\InstallationSettings;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -94,6 +96,76 @@ test('a backup that is no longer kept is deleted down to the files a kept one st
     $this->artisan('royalties:assemble-backup', ['--to' => "{$this->scratch}/newest"])->assertSuccessful();
 
     expect(File::get("{$this->scratch}/newest/files/local/releases/2/cover.jpg"))->toBe('cover');
+});
+
+describe('putting a backup back', function () {
+    // It replaces the database itself, so these run on one in a file instead of the suite's in memory.
+    beforeEach(function () {
+        DB::rollBack();
+        File::put("{$this->scratch}/database.sqlite", '');
+        DB::purge();
+        $this->artisan('migrate')->assertSuccessful();
+        $this->app->useStoragePath($this->scratch);
+    });
+
+    test('its files return and its database takes the place of the one there is, asked for on the settings page', function () {
+        $admin = labelAdmin(Label::factory()->create());
+        $admin->forceFill(['installation_admin' => true])->save();
+        Storage::disk('local')->put('releases/1/master.wav', 'master');
+        Storage::disk('s3')->put('receipts/1/invoice.pdf', 'invoice');
+        $this->artisan('royalties:backup')->assertSuccessful();
+
+        $madeAfter = Label::factory()->create();
+        Storage::disk('local')->delete('releases/1/master.wav');
+        Backups::remember(['hour' => 5]);
+
+        $this->actingAs($admin)->post(route('backups.restore'), ['backup' => '2026-01-01-000000-daily'])->assertSessionHasErrors('backup');
+        $this->actingAs($admin)->post(route('backups.restore'), ['backup' => '2026-11-24-021500-yearly'])->assertSessionHasNoErrors();
+        $this->artisan('royalties:backup --scheduled')->assertSuccessful();
+
+        expect(Storage::disk('local')->get('releases/1/master.wav'))->toBe('master')
+            ->and(Label::whereKey($madeAfter->id)->exists())->toBeFalse()
+            ->and($admin->fresh())->not->toBeNull()
+            ->and(Backups::settings())->toMatchArray(['hour' => 5, 'restore' => null])
+            ->and(Backups::settings()['last'])->toMatchArray(['status' => 'restored', 'name' => '2026-11-24-021500-yearly', 'files' => 2])
+            ->and(Backups::names())->toBe(['2026-11-24-021500-yearly']);
+    });
+
+    test('a backup made with another APP_KEY is refused and the database stays as it was', function () {
+        $this->artisan('royalties:backup')->assertSuccessful();
+        $madeAfter = Label::factory()->create();
+
+        config(['app.key' => 'base64:'.base64_encode(random_bytes(32))]);
+        app()->forgetInstance('encrypter');
+        Crypt::clearResolvedInstance('encrypter');
+
+        $this->artisan('royalties:restore-backup', ['--force' => true])->expectsOutputToContain('another APP_KEY')->assertFailed();
+
+        expect(Label::whereKey($madeAfter->id)->exists())->toBeTrue()
+            ->and(Backups::settings()['last']['status'])->toBe('failed');
+    });
+
+    test('files from a bucket are not put back while the installation has none for files, and nothing is changed', function () {
+        Storage::disk('s3')->put('receipts/1/invoice.pdf', 'invoice');
+        $this->artisan('royalties:backup')->assertSuccessful();
+        $madeAfter = Label::factory()->create();
+
+        config(['filesystems.disks.s3.bucket' => null]);
+        Backups::remember(['bucket' => ['bucket' => 'backups-only', 'key' => 'AKIAEXAMPLE', 'secret' => 'secret']]);
+
+        $this->artisan('royalties:restore-backup', ['--force' => true])->expectsOutputToContain('Connect a bucket for the files')->assertFailed();
+
+        expect(Label::whereKey($madeAfter->id)->exists())->toBeTrue();
+    });
+
+    test('it asks before it replaces the database', function () {
+        $this->artisan('royalties:backup')->assertSuccessful();
+        $madeAfter = Label::factory()->create();
+
+        $this->artisan('royalties:restore-backup')->expectsConfirmation('Replace the whole database of this installation with the one from 2026-11-24-021500-yearly, and put its files back?', 'no')->assertFailed();
+
+        expect(Label::whereKey($madeAfter->id)->exists())->toBeTrue();
+    });
 });
 
 test('a manifest that names a place outside the backup is refused', function () {
@@ -248,4 +320,4 @@ test('backups are for admins of the installation only', function (string $method
     $this->actingAs(labelAdmin(Label::factory()->create()))->{$method}(route($route), ['enabled' => '0', 'hour' => '5'])->assertForbidden();
 
     expect(InstallationSettings::get('backups'))->toBeNull();
-})->with([['get', 'backups.edit'], ['put', 'backups.update'], ['put', 'backups.bucket'], ['delete', 'backups.bucket.destroy'], ['post', 'backups.run']]);
+})->with([['get', 'backups.edit'], ['put', 'backups.update'], ['put', 'backups.bucket'], ['delete', 'backups.bucket.destroy'], ['post', 'backups.run'], ['post', 'backups.restore']]);

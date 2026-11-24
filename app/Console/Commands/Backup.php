@@ -19,6 +19,12 @@ class Backup extends Command
     {
         $settings = Backups::settings();
 
+        if ($this->option('scheduled') && $settings['restore'] !== null) {
+            Backups::remember(['restore' => null]);
+
+            return $this->call('royalties:restore-backup', ['backup' => $settings['restore'], '--force' => true]);
+        }
+
         if ($this->option('scheduled')) {
             $due = $settings['enabled'] && now()->hour === $settings['hour'] && $settings['ran_on'] !== now()->toDateString();
 

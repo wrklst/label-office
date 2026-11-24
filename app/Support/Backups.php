@@ -3,11 +3,16 @@
 namespace App\Support;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use League\Flysystem\FileAttributes;
 use RuntimeException;
+use Throwable;
 
 /**
  * Backups of the whole installation in an S3-compatible bucket: the
@@ -41,7 +46,7 @@ final class Backups
      * What an installation admin has set under Settings → Backups, and
      * what the last backup did. Nothing of this is in the environment file.
      *
-     * @return array{enabled: bool, hour: int, keep: array<string, int>, bucket: ?array{key?: ?string, secret?: ?string, region?: ?string, bucket?: ?string, endpoint?: ?string, path_style?: bool}, requested: bool, ran_on: ?string, last: ?array{status: string, at: string, name?: string, files?: int, copied?: int, message?: string}}
+     * @return array{enabled: bool, hour: int, keep: array<string, int>, bucket: ?array{key?: ?string, secret?: ?string, region?: ?string, bucket?: ?string, endpoint?: ?string, path_style?: bool}, requested: bool, restore: ?string, ran_on: ?string, last: ?array{status: string, at: string, name?: string, files?: int, copied?: int, message?: string}}
      */
     public static function settings(): array
     {
@@ -58,6 +63,7 @@ final class Backups
             'keep' => $keep,
             'bucket' => is_array($stored['bucket'] ?? null) ? $stored['bucket'] : null,
             'requested' => (bool) ($stored['requested'] ?? false),
+            'restore' => $stored['restore'] ?? null,
             'ran_on' => $stored['ran_on'] ?? null,
             'last' => $stored['last'] ?? null,
         ];
@@ -280,12 +286,7 @@ final class Backups
             throw new RuntimeException("The folder [{$to}] is not empty.");
         }
 
-        File::ensureDirectoryExists($to, 0700);
-
-        $packed = "{$to}/{$manifest['database']}";
-        self::download($disk, "{$name}/{$manifest['database']}", $packed);
-        self::copy('compress.zlib://'.$packed, substr($packed, 0, -3));
-        File::delete($packed);
+        self::unpackDatabase($manifest, $to);
 
         foreach ($manifest['files'] as $key => $file) {
             self::download($disk, "{$file['in']}/files/{$key}", "{$to}/files/{$key}");
@@ -294,6 +295,74 @@ final class Backups
                 throw new RuntimeException("The file [{$key}] did not arrive whole.");
             }
         }
+
+        return count($manifest['files']);
+    }
+
+    /**
+     * Put a backup back into this installation: its files where they
+     * were, then its database in place of the one there is. What this
+     * installation knows about its buckets stays, so it can still reach
+     * them afterwards. The database is only replaced when the backup can
+     * be read with this installation's APP_KEY; otherwise it is left as
+     * it was, for stored credentials and two-factor secrets would be lost.
+     *
+     * @return int The number of files the backup holds.
+     *
+     * @throws RuntimeException when the backup could not be put back
+     */
+    public static function restore(string $name): int
+    {
+        $disk = self::disk();
+        $manifest = self::manifest($name);
+        $storage = InstallationSettings::storage();
+        $settings = self::settings();
+
+        foreach (array_keys($manifest['files']) as $key) {
+            if (! in_array(strtok($key, '/'), self::sources(), true)) {
+                throw new RuntimeException('This backup holds files from a bucket. Connect a bucket for the files under Settings → Connections first.');
+            }
+        }
+
+        foreach ($manifest['files'] as $key => $file) {
+            [$source, $path] = explode('/', $key, 2);
+            $target = Storage::disk($source);
+
+            // Already there, as when the installation uses the bucket the files were in.
+            if ($target->exists($path) && $target->size($path) === $file['size']) {
+                continue;
+            }
+
+            $stream = $disk->readStream("{$file['in']}/files/{$key}");
+
+            if ($stream === null) {
+                throw new RuntimeException("The backup is missing [{$file['in']}/files/{$key}].");
+            }
+
+            $target->writeStream($path, $stream);
+            is_resource($stream) && fclose($stream);
+        }
+
+        $scratch = sys_get_temp_dir().'/restore-'.bin2hex(random_bytes(8));
+        $before = Updater::backup($name);
+
+        try {
+            Updater::load(self::unpackDatabase($manifest, $scratch));
+            $own = DB::table('installation_settings')->where('key', 'backups')->value('value');
+            is_string($own) && Crypt::decryptString($own);
+            Artisan::call('migrate', ['--force' => true]);
+        } catch (Throwable $exception) {
+            Updater::load($before);
+
+            throw $exception instanceof DecryptException
+                ? new RuntimeException('This backup was made with another APP_KEY. Put the APP_KEY of the installation it comes from into the environment file of this server, connect the bucket again and restore then. The database was left as it was.')
+                : $exception;
+        } finally {
+            File::deleteDirectory($scratch);
+        }
+
+        InstallationSettings::putStorage($storage);
+        InstallationSettings::put('backups', $settings);
 
         return count($manifest['files']);
     }
@@ -338,6 +407,24 @@ final class Backups
         } finally {
             File::delete([$scratch, $scratch.'.sql', $scratch.'.sqlite', $scratch.'.sql.gz', $scratch.'.sqlite.gz']);
         }
+    }
+
+    /**
+     * Fetch the database dump of a backup into a folder and unpack it there.
+     *
+     * @param  array{name: string, database: string}  $manifest
+     * @return string The path of the unpacked dump.
+     */
+    private static function unpackDatabase(array $manifest, string $to): string
+    {
+        File::ensureDirectoryExists($to, 0700);
+
+        $packed = "{$to}/{$manifest['database']}";
+        self::download(self::disk(), "{$manifest['name']}/{$manifest['database']}", $packed);
+        self::copy('compress.zlib://'.$packed, substr($packed, 0, -3));
+        File::delete($packed);
+
+        return substr($packed, 0, -3);
     }
 
     private static function download(FilesystemAdapter $disk, string $path, string $to): void

@@ -134,6 +134,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('settings/backups/bucket', [BackupsController::class, 'bucket'])->middleware('throttle:10,1')->name('backups.bucket');
             Route::delete('settings/backups/bucket', [BackupsController::class, 'destroyBucket'])->name('backups.bucket.destroy');
             Route::post('settings/backups/run', [BackupsController::class, 'run'])->middleware('throttle:10,1')->name('backups.run');
+            Route::post('settings/backups/restore', [BackupsController::class, 'restore'])->middleware('throttle:10,1')->name('backups.restore');
 
             Route::get('settings/team', [TeamController::class, 'index'])->name('team.index');
             Route::post('settings/team', [TeamController::class, 'store'])->middleware('throttle:30,60')->name('team.store');

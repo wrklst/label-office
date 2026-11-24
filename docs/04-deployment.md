@@ -176,7 +176,7 @@ A backup is a folder under `backups/` in the bucket, for example `backups/2026-1
 | **Last backup**               | What the last run did, or why it failed. **Back up now** has the scheduler make one within a minute.                            |
 | **Schedule and what is kept** | **Make a backup every night**, the hour **At** (server time, 02:00 unless changed), and how many backups of each tier are kept. |
 | **Where backups go**          | The bucket for files, or **Connect a bucket for backups**. The bucket is tested before it is used.                              |
-| **Backups in the bucket**     | Every backup with its number of files and how many of them were new or changed.                                                 |
+| **Backups in the bucket**     | Every backup with its number of files and how many of them were new or changed, and **Restore** to put one back.                |
 
 **Where it goes.** Into the bucket for files (the one from **Settings → Connections** or the `AWS_…` settings), unless the backups have their own. Their own bucket is not required, but it is the better choice: a backup beside the files is lost with them when the bucket or its access key is. Backups made before a change of bucket stay in the old one and are no longer listed or cleaned up.
 
@@ -191,18 +191,31 @@ A backup is a folder under `backups/` in the bucket, for example `backups/2026-1
 
 Deleting a backup removes its dump and its list. A file it holds stays for as long as a kept backup still needs it, so every kept backup remains complete.
 
-**Getting a backup back.** `royalties:assemble-backup` puts one together in an empty folder on the server: the dump, and under `files/` every file as it was that night.
+**Putting a backup back.** **Restore** beside a backup under **Settings → Backups** puts it back into the installation within a minute; on the server `royalties:restore-backup` does the same.
 
 ```sh
 php artisan royalties:backup --list
+php artisan royalties:restore-backup 2026-11-24-020000-daily
+```
+
+It puts every file of the backup back where it was, on the server or in the bucket for files, and leaves a file alone that is there already. Then it replaces the whole database with the one from the backup and brings it to the installed version. Everything entered since the backup is gone, and everyone signs in again with their account as it was then. What the installation knows about its buckets, and the settings of this page, stay as they are now. The database as it was before is kept in `storage/app/update-backups`.
+
+**On a new server.** A backup also brings an installation back on a server that never had it:
+
+1. Install the application in the same version or a newer one than the one that made the backup, see [Installation](02-installation.md).
+2. Put the `APP_KEY` of the old installation into `.env` before anything else. A backup made with another key is refused and the database is left as it was: stored credentials and two-factor secrets could not be read with a new key.
+3. Create a first account with `royalties:create-user`, sign in and connect the bucket that holds the backups: as the bucket for files under **Settings → Connections** if it was that, or under **Settings → Backups** if the backups have their own. If files were kept in a bucket, connect a bucket for files as well; the backup's files are put back into it.
+4. Choose the backup under **Settings → Backups** and **Restore** it.
+
+**Only looking into a backup.** `royalties:assemble-backup` puts one together in an empty folder on the server instead: the dump, and under `files/` every file as it was that night. It changes nothing of the installation. The folder needs room for all files.
+
+```sh
 php artisan royalties:assemble-backup 2026-11-24-020000-daily --to=/tmp/restore
 ```
 
-It only writes into that folder. To go back to that state, load `database.sql` into the database (`mysql label_royalties < database.sql`), copy `files/local/` into `storage/app/private/` and `files/s3/` into the bucket for files. The folder needs room for all files of the installation.
-
 Good to know:
 
-- The settings, with the keys of the backups' own bucket, are stored encrypted in the database. On a new server they are read from the restored database with the old `APP_KEY`; without that key, connect the bucket again.
+- The settings, with the keys of the backups' own bucket, are stored encrypted in the database. With another `APP_KEY` they count as not set, and the bucket has to be connected again.
 - A file counts as changed when its size or its time of last change differs. Stored files are never edited in place, so this is exact.
 - A backup needs `mysqldump` or `mariadb-dump` on the server for MySQL and MariaDB; other databases than these and SQLite are not backed up.
 - A run that fails leaves no backup behind and is not tried again that night; what it uploaded is removed by the next run that succeeds. The reason is on the settings page and in the log.

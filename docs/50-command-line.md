@@ -115,6 +115,22 @@ php artisan royalties:backup --list
 
 Without a bucket it stops with a message. Two runs at the same time are refused.
 
+### royalties:restore-backup
+
+Puts a backup back into this installation: its files where they were, and its database in place of the one there is. **Restore** under **Settings → Backups** does the same. See [Deployment](04-deployment.md#the-nightly-backup) for what stays and for restoring on a new server.
+
+```sh
+php artisan royalties:restore-backup
+php artisan royalties:restore-backup 2026-11-24-020000-daily --force
+```
+
+| Argument or option | Meaning                                                                  |
+| ------------------ | ------------------------------------------------------------------------ |
+| `backup`           | The backup as `royalties:backup --list` names it; the newest if left out |
+| `--force`          | Do not ask before the database is replaced                               |
+
+A backup made with another `APP_KEY` is refused, and the database stays as it was.
+
 ### royalties:assemble-backup
 
 Puts a backup together in an empty folder: the database dump, and under `files/` every file as it was when the backup was made.

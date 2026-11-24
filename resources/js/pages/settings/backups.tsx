@@ -20,7 +20,7 @@ import { edit } from '@/routes/backups';
 import { edit as editConnections } from '@/routes/connections';
 
 type Last = {
-    status: 'running' | 'ok' | 'failed';
+    status: 'running' | 'ok' | 'failed' | 'restoring' | 'restored';
     at: string;
     name?: string;
     files?: number;
@@ -37,6 +37,7 @@ type Props = {
         hour: number;
         keep: Record<Tier, number>;
         requested: boolean;
+        restore: string | null;
         last: Last | null;
     };
     bucket: {
@@ -69,6 +70,8 @@ const outcome: Record<Last['status'], string> = {
     running: 'Running',
     ok: 'Made',
     failed: 'Failed',
+    restoring: 'Being put back',
+    restored: 'Put back',
 };
 
 function LastBackup({ last }: { last: Last }) {
@@ -77,9 +80,10 @@ function LastBackup({ last }: { last: Last }) {
             <p className="flex flex-wrap items-center gap-2">
                 <Badge
                     variant={
-                        last.status === 'ok'
+                        last.status === 'ok' || last.status === 'restored'
                             ? 'success'
-                            : last.status === 'running'
+                            : last.status === 'running' ||
+                                last.status === 'restoring'
                               ? 'warning'
                               : 'destructive'
                     }
@@ -94,6 +98,12 @@ function LastBackup({ last }: { last: Last }) {
                 <p className="mt-2 text-muted-foreground">
                     The database and {count(last.files)} files,{' '}
                     {count(last.copied)} of them new or changed.
+                </p>
+            )}
+            {last.status === 'restored' && (
+                <p className="mt-2 text-muted-foreground">
+                    The database and {count(last.files)} files are as they were
+                    in this backup.
                 </p>
             )}
             {last.message && (
@@ -266,7 +276,11 @@ export default function Backups({
     backups,
     serverTime,
 }: Props) {
-    const waiting = settings.requested || settings.last?.status === 'running';
+    const waiting =
+        settings.requested ||
+        settings.restore !== null ||
+        settings.last?.status === 'running' ||
+        settings.last?.status === 'restoring';
 
     // While a backup is on its way the page finds out by itself when it is through.
     // Started and stopped as it changes: autoStart alone is only read when the page is first shown.
@@ -425,7 +439,7 @@ export default function Backups({
             {available && (
                 <Panel
                     title="Backups in the bucket"
-                    description="Newest first. To get one back, run php artisan royalties:assemble-backup on the server."
+                    description="Newest first. Restore puts a backup back into this installation: its files, and its database in place of the one there is now."
                     flush
                 >
                     {backups.error ? (
@@ -448,6 +462,7 @@ export default function Backups({
                                     <TableHead className="text-right">
                                         New or changed
                                     </TableHead>
+                                    <TableHead />
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -464,6 +479,44 @@ export default function Backups({
                                         </TableCell>
                                         <TableCell className="text-right tabular-nums">
                                             {count(backup.copied)}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Form
+                                                {...BackupsController.restore.form()}
+                                                options={{
+                                                    preserveScroll: true,
+                                                }}
+                                                onBefore={() =>
+                                                    window.confirm(
+                                                        `Put ${backup.name} back? The whole database of this installation is replaced by the one from this backup: everything entered since is gone, and you sign in again with an account as it was then. Its files are put back where they were.`,
+                                                    )
+                                                }
+                                            >
+                                                {({ errors, processing }) => (
+                                                    <>
+                                                        <input
+                                                            type="hidden"
+                                                            name="backup"
+                                                            value={backup.name}
+                                                        />
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            disabled={
+                                                                processing ||
+                                                                waiting
+                                                            }
+                                                        >
+                                                            Restore
+                                                        </Button>
+                                                        {errors.backup && (
+                                                            <p className="mt-1 text-xs text-destructive">
+                                                                {errors.backup}
+                                                            </p>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </Form>
                                         </TableCell>
                                     </TableRow>
                                 ))}

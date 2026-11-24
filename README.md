@@ -348,6 +348,7 @@ php artisan royalties:sync-bandcamp --label=example-records
 php artisan royalties:generate-previews
 php artisan royalties:move-files --to=s3 --dry-run
 php artisan royalties:backup --list
+php artisan royalties:restore-backup
 php artisan royalties:research-airplay --label=example-records
 php artisan royalties:update --check
 php artisan royalties:hand-over-installation new-admin@example.com

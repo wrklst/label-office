@@ -3,8 +3,10 @@
 namespace App\Support;
 
 use Illuminate\Contracts\Process\ProcessResult;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 use Symfony\Component\Process\ExecutableFinder;
 
@@ -209,6 +211,51 @@ final class Updater
         @chmod($path, 0600);
 
         return $path;
+    }
+
+    /**
+     * Replace the whole database with what dump() wrote to $path.
+     *
+     * @throws RuntimeException when the database could not be loaded
+     */
+    public static function load(string $path): void
+    {
+        $name = config('database.default');
+        $connection = config("database.connections.{$name}");
+
+        if ($connection['driver'] === 'sqlite') {
+            DB::disconnect($name);
+            File::delete([$connection['database'].'-wal', $connection['database'].'-shm']);
+
+            if ($connection['database'] === ':memory:' || ! File::copy($path, $connection['database'])) {
+                throw new RuntimeException('The database file could not be replaced.');
+            }
+
+            return;
+        }
+
+        $finder = new ExecutableFinder;
+        $program = in_array($connection['driver'], ['mysql', 'mariadb'], true) ? $finder->find('mysql') ?? $finder->find('mariadb') : null;
+        $stream = fopen($path, 'rb');
+
+        if ($program === null || $stream === false) {
+            throw new RuntimeException('The database cannot be loaded: it is neither MySQL, MariaDB nor SQLite, or neither mysql nor mariadb was found on this server.');
+        }
+
+        // Tables the dump does not know would stand in the way of the migrations that make them.
+        Schema::dropAllViews();
+        Schema::dropAllTables();
+
+        $load = Process::timeout(3600)->env(['MYSQL_PWD' => (string) $connection['password']])->input($stream)->run([
+            $program, '--host='.$connection['host'], '--port='.$connection['port'], '--user='.$connection['username'], $connection['database'],
+        ]);
+
+        fclose($stream);
+        DB::disconnect($name);
+
+        if ($load->failed()) {
+            throw new RuntimeException('The database could not be loaded: '.mb_substr(trim($load->errorOutput()), 0, 300));
+        }
     }
 
     private static function git(string ...$arguments): ProcessResult

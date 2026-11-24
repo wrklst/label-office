@@ -36,6 +36,7 @@ class BackupsController extends Controller
                 'hour' => $settings['hour'],
                 'keep' => $settings['keep'],
                 'requested' => $settings['requested'],
+                'restore' => $settings['restore'],
                 'last' => $settings['last'],
             ],
             // The secret never goes back to the page.
@@ -140,6 +141,25 @@ class BackupsController extends Controller
         Backups::remember(['requested' => true]);
 
         return $this->saved(__('The backup starts within a minute.'));
+    }
+
+    /**
+     * Have the scheduler put a backup back within the next minute: its
+     * files, and its database in place of the one there is.
+     */
+    public function restore(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->installation_admin, 403);
+
+        $validated = $request->validate(['backup' => ['required', 'string', 'max:255']]);
+
+        if (! Backups::available() || ! in_array($validated['backup'], Backups::names(), true)) {
+            throw ValidationException::withMessages(['backup' => __('There is no such backup in the bucket.')]);
+        }
+
+        Backups::remember(['restore' => $validated['backup']]);
+
+        return $this->saved(__('The backup is put back within a minute. Sign in again afterwards, with an account as it was then.'));
     }
 
     /**

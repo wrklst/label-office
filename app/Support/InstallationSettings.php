@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -30,7 +31,12 @@ class InstallationSettings
             return null;
         }
 
-        return is_string($value) ? json_decode(Crypt::decryptString($value), true) : null;
+        try {
+            return is_string($value) ? json_decode(Crypt::decryptString($value), true) : null;
+        } catch (DecryptException) {
+            // Written with another APP_KEY: as good as not set, and the environment decides again.
+            return null;
+        }
     }
 
     /**
