@@ -60,8 +60,6 @@ Effective date: {{ effective_date }}
 
 5.1 This agreement grants the Remixer no share in the musical work and lyrics underlying the Original Recording.
 
-5.2 Of the publishing income that arises from the Remix as a separate arrangement, if any, the Remixer is entitled to {{ publishing_share }} %. This is subject to the consent of the authors and publishers of the underlying work and to the rules of the collecting societies concerned. The Remixer registers no arrangement with a collecting society without that consent.
-
 6. Remuneration
 
 6.1 The Remixer receives {{ share }} % of the Net Receipts from the Remix.
