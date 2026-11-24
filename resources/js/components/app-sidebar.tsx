@@ -10,6 +10,7 @@ import {
     Disc3,
     FileSignature,
     FileText,
+    PenLine,
     LayoutGrid,
     LibraryBig,
     ListMusic,
@@ -42,6 +43,8 @@ import { index as airplays } from '@/routes/airplays';
 import { index as artists } from '@/routes/artists';
 import { index as catalog } from '@/routes/catalog';
 import { index as agreementTemplates } from '@/routes/agreement-templates';
+import { index as agreements } from '@/routes/agreements';
+import { index as myAgreements } from '@/routes/my-agreements';
 import { index as contracts } from '@/routes/contracts';
 import { index as dataImports } from '@/routes/data-imports';
 import { index as items } from '@/routes/items';
@@ -96,6 +99,7 @@ const adminGroups: NavGroup[] = [
         title: 'Deals',
         items: [
             { title: 'Contracts', href: contracts(), icon: FileSignature },
+            { title: 'Agreements', href: agreements(), icon: PenLine },
             { title: 'Payees', href: payees(), icon: Users },
             { title: 'Ledgers', href: ledgers(), icon: BookOpenText },
             {
@@ -131,7 +135,10 @@ const adminGroups: NavGroup[] = [
 
 const payeeGroups: NavGroup[] = [
     {
-        items: [{ title: 'My statements', href: portal(), icon: FileText }],
+        items: [
+            { title: 'My statements', href: portal(), icon: FileText },
+            { title: 'My agreements', href: myAgreements(), icon: PenLine },
+        ],
     },
 ];
 

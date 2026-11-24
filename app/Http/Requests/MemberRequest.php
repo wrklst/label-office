@@ -13,7 +13,7 @@ class MemberRequest extends LabelFormRequest
      */
     protected function prepareForValidation(): void
     {
-        $this->nullify(['payee_id', 'name']);
+        $this->nullify(['payee_id', 'signs_as_payee_id', 'name']);
     }
 
     /**
@@ -28,6 +28,7 @@ class MemberRequest extends LabelFormRequest
             'name' => ['nullable', 'string', 'max:255'],
             'role' => ['required', Rule::enum(LabelRole::class)],
             'payee_id' => ['nullable', 'required_if:role,payee', 'integer', $this->inLabel('payees')],
+            'signs_as_payee_id' => ['nullable', 'integer', $this->inLabel('payees')],
         ];
     }
 }

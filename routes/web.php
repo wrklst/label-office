@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AgreementController;
 use App\Http\Controllers\AgreementTemplateController;
 use App\Http\Controllers\AirplayController;
 use App\Http\Controllers\AirplayResearchController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\HandbookController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\LabelController;
 use App\Http\Controllers\LedgerController;
+use App\Http\Controllers\MyAgreementController;
 use App\Http\Controllers\PayeeController;
 use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\PeriodController;
@@ -48,6 +50,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('my-statements/{statement}', [PortalController::class, 'show'])->name('portal.show')->whereNumber('statement');
         Route::get('my-statements/{statement}/download', [PortalController::class, 'download'])->name('portal.download')->whereNumber('statement');
 
+        Route::get('my-agreements', [MyAgreementController::class, 'index'])->name('my-agreements.index');
+        Route::get('my-agreements/{agreement}', [MyAgreementController::class, 'show'])->name('my-agreements.show')->whereNumber('agreement');
+        Route::post('my-agreements/{agreement}/code', [MyAgreementController::class, 'code'])->middleware('throttle:5,1')->name('my-agreements.code')->whereNumber('agreement');
+        Route::post('my-agreements/{agreement}/sign', [MyAgreementController::class, 'sign'])->middleware('throttle:10,1')->name('my-agreements.sign')->whereNumber('agreement');
+
         Route::get('label-branding/{kind}', [LabelBrandingController::class, 'show'])->whereIn('kind', LabelBrandingController::KINDS)->name('label-branding.show');
 
         Route::middleware('label.admin')->group(function () {
@@ -77,6 +84,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::resource('contracts', ContractController::class);
             Route::resource('payees', PayeeController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
             Route::resource('ledgers', LedgerController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::resource('agreements', AgreementController::class);
+            Route::post('agreements/{agreement}/send', [AgreementController::class, 'send'])->name('agreements.send');
+            Route::post('agreements/{agreement}/void', [AgreementController::class, 'void'])->name('agreements.void');
             Route::resource('agreement-templates', AgreementTemplateController::class)->only(['index', 'store', 'update', 'destroy']);
 
             Route::resource('airplays', AirplayController::class)->only(['index', 'store', 'update', 'destroy']);

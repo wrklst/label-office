@@ -32,8 +32,8 @@ test('the team page lists the members of the label by name', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('settings/team')
             ->where('members', [
-                ['id' => $member->id, 'name' => 'Adam Example', 'email' => 'adam@example.com', 'role' => 'payee', 'payee_id' => $payee->id, 'payee' => 'Example Artist'],
-                ['id' => $admin->id, 'name' => 'Zoe Example', 'email' => 'zoe@example.com', 'role' => 'admin', 'payee_id' => null, 'payee' => null],
+                ['id' => $member->id, 'name' => 'Adam Example', 'email' => 'adam@example.com', 'role' => 'payee', 'payee_id' => $payee->id, 'signs_as_payee_id' => null, 'payee' => 'Example Artist'],
+                ['id' => $admin->id, 'name' => 'Zoe Example', 'email' => 'zoe@example.com', 'role' => 'admin', 'payee_id' => null, 'signs_as_payee_id' => null, 'payee' => null],
             ])
             ->where('payeeOptions', [['id' => $payee->id, 'name' => 'Example Artist']]));
 });

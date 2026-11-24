@@ -28,6 +28,7 @@ class TeamController extends Controller
                 'email' => $user->email,
                 'role' => $user->pivot->role,
                 'payee_id' => $user->pivot->payee_id,
+                'signs_as_payee_id' => $user->pivot->signs_as_payee_id,
                 'payee' => $payees[$user->pivot->payee_id] ?? null,
             ]),
             'payeeOptions' => Options::payees(),
@@ -115,7 +116,7 @@ class TeamController extends Controller
     }
 
     /**
-     * @return array{role: string, payee_id: int|null}
+     * @return array{role: string, payee_id: int|null, signs_as_payee_id: int|null}
      */
     private function pivot(MemberRequest $request): array
     {
@@ -124,6 +125,8 @@ class TeamController extends Controller
         return [
             'role' => $role,
             'payee_id' => $role === LabelRole::Payee->value ? $request->validated('payee_id') : null,
+            // An admin reads no statements as a payee, but can be a party to an agreement as one.
+            'signs_as_payee_id' => $role === LabelRole::Admin->value ? $request->validated('signs_as_payee_id') : null,
         ];
     }
 

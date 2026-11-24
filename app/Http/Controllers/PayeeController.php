@@ -146,6 +146,7 @@ class PayeeController extends Controller
 
         // A member linked to the payee goes back to being unlinked, not to an empty portal.
         DB::table('label_user')->where('payee_id', $payee->id)->update(['payee_id' => null]);
+        DB::table('label_user')->where('signs_as_payee_id', $payee->id)->update(['signs_as_payee_id' => null]);
         $payee->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Payee deleted.')]);

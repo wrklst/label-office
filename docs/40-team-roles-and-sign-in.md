@@ -57,22 +57,23 @@ Someone who is only a payee has no label switcher. The top of the sidebar shows 
 
 A role belongs to the combination of a person and a label. There are two.
 
-|                                                 | Admin                | Payee               |
-| ----------------------------------------------- | -------------------- | ------------------- |
-| Dashboard, catalog, releases, files             | Yes                  | No                  |
-| Imports, transactions, periods, payouts         | Yes                  | No                  |
-| Contracts, payees, ledgers                      | Yes                  | No                  |
-| Profitability, overheads, optional tools        | Yes                  | No                  |
-| All statements, drafts and live figures         | Yes                  | No                  |
-| **Settings → Label**, **Team**, **Connections** | Yes                  | No                  |
-| Handbook and the **?** button                   | Yes                  | No                  |
-| Own **published** statements and their download | Yes, for every payee | Yes, only their own |
-| Payouts recorded for them                       | Yes, for every payee | Yes, only their own |
-| Own **Profile**, **Security**, **Appearance**   | Yes                  | Yes                 |
+|                                                  | Admin                | Payee               |
+| ------------------------------------------------ | -------------------- | ------------------- |
+| Dashboard, catalog, releases, files              | Yes                  | No                  |
+| Imports, transactions, periods, payouts          | Yes                  | No                  |
+| Contracts, payees, ledgers                       | Yes                  | No                  |
+| Profitability, overheads, optional tools         | Yes                  | No                  |
+| All statements, drafts and live figures          | Yes                  | No                  |
+| **Settings → Label**, **Team**, **Connections**  | Yes                  | No                  |
+| Handbook and the **?** button                    | Yes                  | No                  |
+| Own **published** statements and their download  | Yes, for every payee | Yes, only their own |
+| Payouts recorded for them                        | Yes, for every payee | Yes, only their own |
+| Agreements they are a party to, and signing them | Yes, for every payee | Yes, only their own |
+| Own **Profile**, **Security**, **Appearance**    | Yes                  | Yes                 |
 
 **Admin** means full access to everything in that label. There are no finer permissions: every admin can see all contracts and balances, change settings and manage the team.
 
-**Payee** means access to **My statements** and nothing else. A payee who opens any other page of the label is sent back to **My statements**. In every label a payee user is linked to exactly one payee record, and that link decides whose statements they see in that label. A payee role without a linked payee gives access to nothing. Someone who runs one label and is a payee of another is a full admin of the first and sees nothing of the second beyond their own published statements.
+**Payee** means access to **My statements** and **My agreements** and nothing else. A payee who opens any other page of the label is sent back to **My statements**. In every label a payee user is linked to exactly one payee record, and that link decides whose statements they see in that label. A payee role without a linked payee gives access to nothing. Someone who runs one label and is a payee of another is a full admin of the first and sees nothing of the second beyond their own published statements.
 
 A label always keeps at least one admin: the last admin cannot be removed or turned into a payee.
 

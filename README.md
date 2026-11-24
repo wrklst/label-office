@@ -315,6 +315,7 @@ shows in its help panel, to label admins.
 **Deals**
 
 - [Contracts, payees and ledgers](docs/30-contracts-payees-and-ledgers.md)
+- [Agreements](docs/35-agreements.md)
 
 **Catalog**
 

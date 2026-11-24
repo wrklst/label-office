@@ -27,7 +27,7 @@ class Handbook
     private const array CHAPTER_BY_DIGIT = [0 => 'Setup', 1 => 'Importing', 2 => 'Catalog', 3 => 'Accounting', 4 => 'People and settings'];
 
     /** Articles whose chapter differs from their first digit. */
-    private const array CHAPTER_BY_NUMBER = [30 => 'Deals', 33 => 'Label'];
+    private const array CHAPTER_BY_NUMBER = [30 => 'Deals', 33 => 'Label', 35 => 'Deals'];
 
     /**
      * @return Collection<string, Article>

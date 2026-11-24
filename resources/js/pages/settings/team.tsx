@@ -17,6 +17,7 @@ type Member = {
     email: string;
     role: 'admin' | 'payee';
     payee_id: number | null;
+    signs_as_payee_id: number | null;
     payee: string | null;
 };
 
@@ -73,6 +74,22 @@ function RoleFields({
                         options={payeeOptions}
                         placeholder="Choose payee…"
                         required
+                    />
+                </Field>
+            )}
+            {role === 'admin' && (
+                <Field
+                    label="Signs agreements as"
+                    htmlFor={`signs-as-${member?.id ?? 'new'}`}
+                    error={errors.signs_as_payee_id}
+                    hint="Only when this admin is also an artist of the label: the payee they sign their own agreements as."
+                >
+                    <SelectInput
+                        id={`signs-as-${member?.id ?? 'new'}`}
+                        name="signs_as_payee_id"
+                        defaultValue={member?.signs_as_payee_id ?? ''}
+                        options={payeeOptions}
+                        placeholder="Nobody"
                     />
                 </Field>
             )}

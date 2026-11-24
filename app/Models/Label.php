@@ -78,7 +78,7 @@ class Label extends Model
      */
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class)->withPivot(['role', 'payee_id', 'signs_for_label', 'self_dealing_exempt'])->withTimestamps();
+        return $this->belongsToMany(User::class)->withPivot(['role', 'payee_id', 'signs_as_payee_id', 'signs_for_label', 'self_dealing_exempt'])->withTimestamps();
     }
 
     /**
