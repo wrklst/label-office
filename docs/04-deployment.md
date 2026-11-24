@@ -191,7 +191,7 @@ A backup is a folder under `backups/` in the bucket, for example `backups/2026-1
 
 Deleting a backup removes its dump and its list. A file it holds stays for as long as a kept backup still needs it, so every kept backup remains complete.
 
-**Putting a backup back.** **Restore** beside a backup under **Settings → Backups** puts it back into the installation within a minute; on the server `royalties:restore-backup` does the same.
+**Putting a backup back.** **Restore** beside a backup under **Settings → Backups** opens a dialog that says what will be replaced and asks you to type the name of the backup; only then is it put back, within a minute. On the server `royalties:restore-backup` does the same.
 
 ```sh
 php artisan royalties:backup --list

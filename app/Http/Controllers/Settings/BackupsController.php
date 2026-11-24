@@ -151,7 +151,11 @@ class BackupsController extends Controller
     {
         abort_unless($request->user()->installation_admin, 403);
 
-        $validated = $request->validate(['backup' => ['required', 'string', 'max:255']]);
+        // Typed out, so that no single click replaces the database.
+        $validated = $request->validate(
+            ['backup' => ['required', 'string', 'max:255'], 'confirmation' => ['required', 'same:backup']],
+            ['confirmation.*' => __('Type the name of the backup exactly as it is shown.')],
+        );
 
         if (! Backups::available() || ! in_array($validated['backup'], Backups::names(), true)) {
             throw ValidationException::withMessages(['backup' => __('There is no such backup in the bucket.')]);

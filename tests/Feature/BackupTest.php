@@ -119,8 +119,11 @@ describe('putting a backup back', function () {
         Storage::disk('local')->delete('releases/1/master.wav');
         Backups::remember(['hour' => 5]);
 
-        $this->actingAs($admin)->post(route('backups.restore'), ['backup' => '2026-01-01-000000-daily'])->assertSessionHasErrors('backup');
-        $this->actingAs($admin)->post(route('backups.restore'), ['backup' => '2026-11-24-021500-yearly'])->assertSessionHasNoErrors();
+        $this->actingAs($admin)->post(route('backups.restore'), ['backup' => '2026-01-01-000000-daily', 'confirmation' => '2026-01-01-000000-daily'])->assertSessionHasErrors('backup');
+        $this->actingAs($admin)->post(route('backups.restore'), ['backup' => '2026-11-24-021500-yearly'])->assertSessionHasErrors('confirmation');
+        $this->actingAs($admin)->post(route('backups.restore'), ['backup' => '2026-11-24-021500-yearly', 'confirmation' => 'yes'])->assertSessionHasErrors('confirmation');
+        expect(Backups::settings()['restore'])->toBeNull();
+        $this->actingAs($admin)->post(route('backups.restore'), ['backup' => '2026-11-24-021500-yearly', 'confirmation' => '2026-11-24-021500-yearly'])->assertSessionHasNoErrors();
         $this->artisan('royalties:backup --scheduled')->assertSuccessful();
 
         expect(Storage::disk('local')->get('releases/1/master.wav'))->toBe('master')

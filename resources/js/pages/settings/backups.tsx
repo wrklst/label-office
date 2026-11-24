@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import BackupsController from '@/actions/App/Http/Controllers/Settings/BackupsController';
 import AlertError from '@/components/alert-error';
 import { CheckField, Field, SelectInput } from '@/components/field';
+import { FormDialog } from '@/components/form-dialog';
 import { Notice, Page, Panel } from '@/components/page';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -481,42 +482,67 @@ export default function Backups({
                                             {count(backup.copied)}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Form
-                                                {...BackupsController.restore.form()}
-                                                options={{
-                                                    preserveScroll: true,
-                                                }}
-                                                onBefore={() =>
-                                                    window.confirm(
-                                                        `Put ${backup.name} back? The whole database of this installation is replaced by the one from this backup: everything entered since is gone, and you sign in again with an account as it was then. Its files are put back where they were.`,
-                                                    )
+                                            <FormDialog
+                                                trigger={
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={waiting}
+                                                    >
+                                                        Restore
+                                                    </Button>
                                                 }
+                                                title="Put this backup back?"
+                                                description={
+                                                    <>
+                                                        The whole database of
+                                                        this installation is
+                                                        replaced by the one from{' '}
+                                                        <strong>
+                                                            {dateTime(
+                                                                backup.made_at,
+                                                            )}
+                                                        </strong>
+                                                        . Everything entered
+                                                        since then is gone, and
+                                                        everyone signs in again
+                                                        with their account as it
+                                                        was then. The files of
+                                                        the backup are put back
+                                                        where they were. It
+                                                        starts within a minute
+                                                        and cannot be stopped.
+                                                    </>
+                                                }
+                                                form={BackupsController.restore.form()}
+                                                submitLabel="Replace the database with this backup"
                                             >
-                                                {({ errors, processing }) => (
+                                                {(errors) => (
                                                     <>
                                                         <input
                                                             type="hidden"
                                                             name="backup"
                                                             value={backup.name}
                                                         />
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            disabled={
-                                                                processing ||
-                                                                waiting
+                                                        <Field
+                                                            label={`Type ${backup.name} to confirm`}
+                                                            htmlFor={`confirm_${backup.name}`}
+                                                            error={
+                                                                errors.confirmation ??
+                                                                errors.backup
                                                             }
+                                                            required
                                                         >
-                                                            Restore
-                                                        </Button>
-                                                        {errors.backup && (
-                                                            <p className="mt-1 text-xs text-destructive">
-                                                                {errors.backup}
-                                                            </p>
-                                                        )}
+                                                            <Input
+                                                                id={`confirm_${backup.name}`}
+                                                                name="confirmation"
+                                                                autoComplete="off"
+                                                                required
+                                                            />
+                                                        </Field>
                                                     </>
                                                 )}
-                                            </Form>
+                                            </FormDialog>
                                         </TableCell>
                                     </TableRow>
                                 ))}
