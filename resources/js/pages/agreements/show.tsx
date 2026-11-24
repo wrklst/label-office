@@ -10,6 +10,8 @@ import {
 import type { AgreementLine } from '@/components/agreement-document';
 import { DeliverableList } from '@/components/agreement-deliverables';
 import type { Deliverable } from '@/components/agreement-deliverables';
+import { CoverageFields, CoverageList } from '@/components/agreement-coverage';
+import type { CoveredRelease } from '@/components/agreement-coverage';
 import { DeleteButton } from '@/components/delete-button';
 import { CheckField, Field } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
@@ -42,14 +44,14 @@ type Agreement = {
     signing_rule: string;
     disclaimer: string;
     deliverables: Deliverable[];
+    coverage: CoveredRelease[];
     planned_deliverables: string[];
     signed_copy: string | null;
+    delete_block: string | null;
     has_text: boolean;
     filed: {
         payee_id: number | null;
         contract_id: number | null;
-        release_id: number | null;
-        track_id: number | null;
         signed_on: string | null;
     } | null;
     can_sign: boolean;
@@ -62,8 +64,7 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
     const [matched, setMatched] = useState({
         payee: agreement.filed?.payee_id ?? '',
         contract: agreement.filed?.contract_id ?? '',
-        release: agreement.filed?.release_id ?? '',
-    } as Record<'payee' | 'contract' | 'release', number | ''>);
+    } as Record<'payee' | 'contract', number | ''>);
     const draft = agreement.status === 'draft';
 
     return (
@@ -87,15 +88,19 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
                                     Edit
                                 </Link>
                             </Button>
-                            <DeleteButton
-                                url={AgreementController.destroy.url(
-                                    agreement.id,
-                                )}
-                                label="Delete"
-                                title={`Delete ${agreement.name}?`}
-                                description="The draft is removed. Nothing was sent."
-                            />
                         </>
+                    )}
+                    {agreement.delete_block === null && (
+                        <DeleteButton
+                            url={AgreementController.destroy.url(agreement.id)}
+                            label="Delete"
+                            title={`Delete ${agreement.name}?`}
+                            description={
+                                agreement.filed
+                                    ? 'The agreement and its signed copy are deleted from the application. Keep your own copy of the file.'
+                                    : 'The agreement is removed. Nothing is in force under it.'
+                            }
+                        />
                     )}
                     {agreement.signed_copy && (
                         <Button variant="outline" asChild>
@@ -376,6 +381,12 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
                 </p>
             )}
 
+            {agreement.coverage.length > 0 && !agreement.filed && (
+                <Panel title="What it covers">
+                    <CoverageList coverage={agreement.coverage} />
+                </Panel>
+            )}
+
             {agreement.signed_copy && (
                 <FileViewer
                     src={AgreementController.downloadSignedCopy.url(
@@ -478,37 +489,15 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
                                     />
                                 </Field>
                                 <Field
-                                    label="Release"
-                                    htmlFor="match-release"
-                                    error={errors.release_id}
+                                    label="Releases and tracks"
+                                    className="sm:col-span-2"
+                                    error={
+                                        errors.release_ids ?? errors.track_ids
+                                    }
+                                    hint="Any number of releases. Of each, the whole release or only the tracks you tick."
                                 >
-                                    <RecordSelect
-                                        id="match-release"
-                                        records="releases"
-                                        name="release_id"
-                                        value={matched.release}
-                                        onChange={(release) =>
-                                            setMatched({ ...matched, release })
-                                        }
-                                        params={{
-                                            contract_id: matched.contract,
-                                        }}
-                                    />
-                                </Field>
-                                <Field
-                                    label="Track"
-                                    htmlFor="match-track"
-                                    error={errors.track_id}
-                                >
-                                    <RecordSelect
-                                        id="match-track"
-                                        records="tracks"
-                                        name="track_id"
-                                        defaultValue={agreement.filed?.track_id}
-                                        params={{
-                                            contract_id: matched.contract,
-                                            release_id: matched.release,
-                                        }}
+                                    <CoverageFields
+                                        initial={agreement.coverage}
                                     />
                                 </Field>
                                 <div className="sm:col-span-2">

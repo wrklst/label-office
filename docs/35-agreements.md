@@ -21,15 +21,15 @@ An agreement is the document the parties sign. A contract under **Deals → Cont
 
 Open **Deals → Agreements** and choose **New agreement**.
 
-| Field                     | Meaning                                                                                                                                         |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**                  | For your own lists. It is not part of the text.                                                                                                 |
-| **Template**              | The text the agreement is made from.                                                                                                            |
-| **Who grants the rights** | **The label**, or **An artist of the label, as a third party**. For a remix: who commissions it and holds the rights in the original recording. |
-| **Artist**                | Only for the second case: the payee who grants the rights. They sign too.                                                                       |
-| **Payee**                 | The other party: the remixer, or the artist of a release.                                                                                       |
-| **Release**, **Track**    | What the agreement is about. A release is needed when the agreement names deliverables: their files are filed with it.                          |
-| **Terms**                 | What the chosen template leaves open, such as the share, the titles and the deliverables. Only the fields the template uses are asked.          |
+| Field                     | Meaning                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**                  | For your own lists. It is not part of the text.                                                                                                                                                                                                                                                                                                                   |
+| **Template**              | The text the agreement is made from.                                                                                                                                                                                                                                                                                                                              |
+| **Who grants the rights** | **The label**, or **An artist of the label, as a third party**. For a remix: who commissions it and holds the rights in the original recording.                                                                                                                                                                                                                   |
+| **Artist**                | Only for the second case: the payee who grants the rights. They sign too.                                                                                                                                                                                                                                                                                         |
+| **Payee**                 | The other party: the remixer, or the artist of a release.                                                                                                                                                                                                                                                                                                         |
+| **What it is about**      | The releases the agreement covers: add as many as it is for. Of each release it covers everything, or only the tracks you tick, such as the one or two remixes of a remix release this deal is for. The tracks on offer are those of the releases you added. A release is needed when the agreement names deliverables: their files are filed with the first one. |
+| **Terms**                 | What the chosen template leaves open, such as the share, the titles and the deliverables. Only the fields the template uses are asked.                                                                                                                                                                                                                            |
 
 The label is a party to every agreement, also when an artist grants the rights: it releases the music and pays the share. Choose a template that is written for the case you pick.
 
@@ -113,11 +113,11 @@ The application does not check a copy: that it is complete, genuine and signed b
 
 ## The royalty contract
 
-On an agreement that everyone has signed, **Create the contract** under **Royalty contract** makes a contract named after the agreement with one split: the payee at the agreed share. It is set on the linked track, or else on the linked release.
+On an agreement that everyone has signed, **Create the contract** under **Royalty contract** makes a contract named after the agreement with one split: the payee at the agreed share. It is set on exactly what the agreement covers: on the ticked tracks of a release, or on the release itself where no track is ticked.
 
-The same recording often exists twice in a catalog, once on a single and once on the album or EP, as two tracks with one ISRC. When the agreement is linked to a track, the contract is also set on every other track of the label with the same ISRC that has no contract yet, and the message names their releases. In dropdowns such tracks appear once per release, each with its release beside it.
+The same recording often exists twice in a catalog, once on a single and once on the album or EP, as two tracks with one ISRC. For every track the agreement covers, the contract is also set on every other track of the label with the same ISRC that has no contract yet, and the message names them with their release.
 
-A track or release that already has a contract keeps it. The new contract is still created, and the message says that it was not set: decide yourself which one applies. Without a linked track or release the contract is created and set nowhere.
+A track or release that already has a contract keeps it. The new contract is still created, and the message lists what it was set on and what was left as it is: decide yourself which one applies there. An agreement that covers nothing gets its contract set nowhere.
 
 The contract is made once. After that the panel shows **Open the contract**. It is an ordinary contract: add further splits or change it under **Deals → Contracts**, see [Contracts, payees and ledgers](30-contracts-payees-and-ledgers.md).
 
@@ -128,6 +128,12 @@ For every signature: the typed name, the email address of the account, the role,
 The copy sent to every party holds the text, the list of signatures and the hash. Anyone can check the hash: it is the SHA-256 of the text above the line in the text file. The PDF shows the same text and signatures for reading and filing; it is made from the stored record each time and carries no cryptographic signature of its own.
 
 This is a simple electronic signature. It is not a qualified electronic signature and does not replace the written form where a law demands it. Whether this is enough for your agreements, in your country and in the country of the other party, is a question for your legal adviser: the application does not claim that it is.
+
+## Deleting an agreement
+
+**Delete**, at the top of an agreement, removes a draft, an agreement you withdrew, and a signed copy you filed, for example one you dropped twice. With a filed agreement its copy is deleted from the application too: keep your own.
+
+An agreement that is out for signature has to be withdrawn first. One that was signed here cannot be deleted: it is the record of what the parties agreed.
 
 ## Good to know
 

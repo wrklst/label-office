@@ -3,6 +3,8 @@
 use App\Models\Agreement;
 use App\Models\Label;
 use App\Models\Payee;
+use App\Models\Release;
+use App\Models\Track;
 use Illuminate\Support\Facades\Storage;
 
 test('a dropdown of records is searched, loads more as it is scrolled, and sends what is picked', function () {
@@ -35,4 +37,29 @@ test('a dropdown of records is searched, loads more as it is scrolled, and sends
         ->assertNoJavaScriptErrors();
 
     expect($agreement->refresh()->payee_id)->toBe($wanted->id);
+});
+
+test('an agreement is given a release and only one of its tracks', function () {
+    $label = Label::factory()->create();
+    $release = Release::factory()->create(['label_id' => $label->id, 'name' => 'Remix EP']);
+    $wanted = Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'First Remix']);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'name' => 'Second Remix']);
+    $agreement = Agreement::factory()->create(['label_id' => $label->id, 'name' => 'Remix deal']);
+    $this->actingAs(labelAdmin($label));
+
+    visit("/agreements/{$agreement->id}/edit")
+        ->click('#add-release')
+        ->waitForText('Remix EP')
+        ->click('Remix EP')
+        ->waitForText('Second Remix')
+        ->check('First Remix')
+        ->press('Save')
+        ->waitForText('Agreement saved.')
+        ->assertSee('What it covers')
+        ->assertSee('First Remix')
+        ->assertDontSee('Second Remix')
+        ->assertNoJavaScriptErrors();
+
+    expect($agreement->releases()->pluck('releases.id')->all())->toBe([$release->id])
+        ->and($agreement->tracks()->pluck('tracks.id')->all())->toBe([$wanted->id]);
 });

@@ -1,6 +1,8 @@
 import { Form, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import AgreementController from '@/actions/App/Http/Controllers/AgreementController';
+import { CoverageFields } from '@/components/agreement-coverage';
+import type { CoveredRelease } from '@/components/agreement-coverage';
 import { Field, SelectInput } from '@/components/field';
 import { Page, Panel } from '@/components/page';
 import { RecordSelect } from '@/components/record-select';
@@ -16,8 +18,7 @@ type Agreement = {
     licensor: string;
     payee_id: number;
     artist_payee_id: number | null;
-    release_id: number | null;
-    track_id: number | null;
+    coverage: CoveredRelease[];
     terms: Record<string, string | null> | null;
 };
 
@@ -78,9 +79,6 @@ export default function AgreementForm({
         String(agreement?.agreement_template_id ?? ''),
     );
     const [licensor, setLicensor] = useState(agreement?.licensor ?? 'label');
-    const [releaseId, setReleaseId] = useState<number | ''>(
-        agreement?.release_id ?? '',
-    );
     const template = templateOptions.find(
         (option) => String(option.id) === templateId,
     );
@@ -205,36 +203,16 @@ export default function AgreementForm({
 
                         <Panel
                             title="What it is about"
-                            description="Optional links to the catalog, for your own reference."
+                            description="The releases the agreement covers. Of each release it covers everything, or only the tracks you tick: on a remix release, the one or two remixes this deal is for."
                         >
-                            <div className="grid gap-6 sm:grid-cols-2">
-                                <Field
-                                    label="Release"
-                                    htmlFor="release_id"
-                                    error={errors.release_id}
-                                >
-                                    <RecordSelect
-                                        id="release_id"
-                                        records="releases"
-                                        name="release_id"
-                                        value={releaseId}
-                                        onChange={setReleaseId}
-                                    />
-                                </Field>
-                                <Field
-                                    label="Track"
-                                    htmlFor="track_id"
-                                    error={errors.track_id}
-                                >
-                                    <RecordSelect
-                                        id="track_id"
-                                        records="tracks"
-                                        name="track_id"
-                                        defaultValue={agreement?.track_id}
-                                        params={{ release_id: releaseId }}
-                                    />
-                                </Field>
-                            </div>
+                            <CoverageFields
+                                initial={agreement?.coverage ?? []}
+                            />
+                            {(errors.release_ids ?? errors.track_ids) && (
+                                <p className="mt-2 text-sm text-red-600">
+                                    {errors.release_ids ?? errors.track_ids}
+                                </p>
+                            )}
                         </Panel>
 
                         {asked.length > 0 && (

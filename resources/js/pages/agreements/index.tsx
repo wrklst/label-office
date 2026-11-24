@@ -27,6 +27,7 @@ type Row = {
     status: string;
     payee: string | null;
     unmatched: boolean;
+    covers: { release: string; tracks: string[] }[];
     sent_at: string | null;
     signed_at: string | null;
 };
@@ -89,6 +90,7 @@ export default function Agreements({
                             <TableRow>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Payee</TableHead>
+                                <TableHead>Releases and tracks</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Sent</TableHead>
                                 <TableHead>Signed</TableHead>
@@ -113,6 +115,23 @@ export default function Agreements({
                                         ) : (
                                             agreement.payee
                                         )}
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                        {agreement.covers.length === 0
+                                            ? '–'
+                                            : agreement.covers.map((cover) => (
+                                                  <span
+                                                      key={cover.release}
+                                                      className="block"
+                                                  >
+                                                      <span className="text-foreground">
+                                                          {cover.release}
+                                                      </span>
+                                                      {cover.tracks.length >
+                                                          0 &&
+                                                          `: ${cover.tracks.join(', ')}`}
+                                                  </span>
+                                              ))}
                                     </TableCell>
                                     <TableCell>
                                         <AgreementStatus

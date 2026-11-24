@@ -7,7 +7,6 @@ use App\Models\Agreement;
 use App\Models\AgreementDeliverable;
 use App\Models\Label;
 use App\Models\LoginCode;
-use App\Models\Release;
 use App\Notifications\AgreementSigned;
 use App\Notifications\AgreementSigningCode;
 use App\Services\Releases\ReleaseFileStore;
@@ -145,10 +144,12 @@ class MyAgreementController extends Controller
             throw ValidationException::withMessages(['file' => 'Files of this type cannot be stored here.']);
         }
 
-        $release = Release::query()->withoutGlobalScope('label')->where('label_id', $agreement->label_id)->findOrFail($agreement->release_id);
+        // Files go to the first release of the agreement, and to its track when the agreement is about just one there.
+        $release = $agreement->releases()->firstOrFail();
+        $tracks = $agreement->tracks()->where('release_id', $release->id)->pluck('tracks.id');
         // A payee's picture is never made the cover of the release: that is the label's choice.
         $kind = ReleaseFileKind::guess($upload->mimeType, $upload->extension());
-        $file = $files->store($release, $upload, $kind === ReleaseFileKind::Cover ? ReleaseFileKind::Artwork : $kind, $agreement->track_id, $request->user());
+        $file = $files->store($release, $upload, $kind === ReleaseFileKind::Cover ? ReleaseFileKind::Artwork : $kind, $tracks->count() === 1 ? $tracks->first() : null, $request->user());
 
         $deliverable->update(['status' => AgreementDeliverable::DELIVERED, 'release_file_id' => $file->id, 'delivered_at' => now(), 'returned_note' => null]);
 
@@ -247,7 +248,7 @@ class MyAgreementController extends Controller
     private function canDeliver(Agreement $agreement, Request $request): bool
     {
         return $agreement->status === Agreement::SIGNED
-            && $agreement->release_id !== null
+            && $agreement->releases()->exists()
             && in_array('payee', $agreement->capacitiesOf($request->user()));
     }
 

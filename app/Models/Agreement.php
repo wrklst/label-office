@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
@@ -38,8 +39,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * @property string $licensor "label" or "artist": who grants the rights.
  * @property int|null $payee_id Null only for a signed copy that was filed and is not matched yet.
  * @property int|null $artist_payee_id The original artist, when they are a party of their own.
- * @property int|null $release_id
- * @property int|null $track_id
  * @property int|null $contract_id The contract made from the signed terms.
  * @property string|null $signed_copy_path A copy signed outside the application, as "disk:path".
  * @property string|null $signed_copy_name
@@ -53,7 +52,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['label_id', 'agreement_template_id', 'name', 'licensor', 'payee_id', 'artist_payee_id', 'release_id', 'track_id', 'terms'])]
+#[Fillable(['label_id', 'agreement_template_id', 'name', 'licensor', 'payee_id', 'artist_payee_id', 'terms'])]
 class Agreement extends Model
 {
     /** @use HasFactory<AgreementFactory> */
@@ -140,6 +139,71 @@ class Agreement extends Model
     public function signatures(): HasMany
     {
         return $this->hasMany(AgreementSignature::class);
+    }
+
+    /**
+     * The releases the agreement is about, in whichever label the
+     * reader works: only releases of its own label are ever attached.
+     *
+     * @return BelongsToMany<Release, $this>
+     */
+    public function releases(): BelongsToMany
+    {
+        return $this->belongsToMany(Release::class)->withoutGlobalScope('label')->orderBy('agreement_release.id');
+    }
+
+    /**
+     * The tracks the agreement is about, where it is not about a whole
+     * release. Each is a track of one of its releases.
+     *
+     * @return BelongsToMany<Track, $this>
+     */
+    public function tracks(): BelongsToMany
+    {
+        return $this->belongsToMany(Track::class)->withoutGlobalScope('label');
+    }
+
+    /**
+     * What the agreement covers, release by release: every track of the
+     * release with whether it was chosen. A release with no chosen track
+     * is covered as a whole.
+     *
+     * @return list<array{id: int, name: string, catalog_number: string|null, tracks: list<array{id: int, name: string, chosen: bool}>}>
+     */
+    public function coverage(): array
+    {
+        $chosen = array_values($this->tracks()->get(['tracks.id'])->map(fn (Track $track): int => $track->id)->all());
+
+        return array_values($this->releases()->get()->map(fn (Release $release): array => self::releaseRow($release, $chosen))->all());
+    }
+
+    /**
+     * A release as the coverage lists it.
+     *
+     * @param  list<int>  $chosen
+     * @return array{id: int, name: string, catalog_number: string|null, tracks: list<array{id: int, name: string, chosen: bool}>}
+     */
+    public static function releaseRow(Release $release, array $chosen = []): array
+    {
+        return [
+            'id' => $release->id,
+            'name' => $release->name,
+            'catalog_number' => $release->catalog_number,
+            'tracks' => array_values(Track::query()->withoutGlobalScope('label')->where('release_id', $release->id)->orderBy('track_number')->orderBy('name')->get(['id', 'name'])
+                ->map(fn (Track $track): array => ['id' => $track->id, 'name' => $track->name, 'chosen' => in_array($track->id, $chosen)])->all()),
+        ];
+    }
+
+    /**
+     * Set what the agreement covers. A track only counts with its release.
+     *
+     * @param  list<int>  $releaseIds
+     * @param  list<int>  $trackIds
+     */
+    public function cover(array $releaseIds, array $trackIds): void
+    {
+        $this->releases()->sync($releaseIds);
+        $this->tracks()->sync(Track::query()->withoutGlobalScope('label')->whereIn('release_id', $releaseIds ?: [0])->whereIn('id', $trackIds ?: [0])->pluck('id')->all());
     }
 
     /**
@@ -293,7 +357,7 @@ class Agreement extends Model
             $this->template === null => 'The template of this agreement was deleted. Choose another one.',
             $this->currentParties()['signatories'] === [] => 'Nobody signs for the label yet. Choose who does under Settings → Label.',
             $this->missingFields() !== [] => 'These fields are still empty: '.implode(', ', $this->missingFields()).'.',
-            $this->deliverableLines() !== [] && $this->release_id === null => 'Choose the release this agreement belongs to: what is delivered is filed with it.',
+            $this->deliverableLines() !== [] && $this->releases()->doesntExist() => 'Choose the release this agreement belongs to: what is delivered is filed with it.',
             default => null,
         };
     }
@@ -555,6 +619,35 @@ class Agreement extends Model
     public function isFiled(): bool
     {
         return $this->body === null && $this->signed_copy_path !== null;
+    }
+
+    /**
+     * Why the agreement cannot be deleted, or null when it can. What
+     * was signed here stands as the record of it; a draft, a withdrawn
+     * agreement and a copy that was only filed here can go.
+     */
+    public function deleteBlock(): ?string
+    {
+        return match (true) {
+            $this->status === self::SENT => 'This agreement is out for signature. Withdraw it first.',
+            $this->status === self::SIGNED && ! $this->isFiled() => 'This agreement was signed here and is kept as the record of it.',
+            default => null,
+        };
+    }
+
+    /**
+     * Remove the agreement and, with it, the one copy that was filed for it.
+     */
+    public function remove(): void
+    {
+        $copy = $this->signed_copy_path;
+
+        $this->delete();
+
+        if ($copy !== null) {
+            [$disk, $path] = explode(':', $copy, 2);
+            Storage::disk($disk)->delete($path);
+        }
     }
 
     /**

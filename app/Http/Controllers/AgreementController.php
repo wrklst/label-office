@@ -16,6 +16,7 @@ use App\Support\AgreementExamples;
 use App\Support\CurrentLabel;
 use App\Support\IncomingFile;
 use App\Support\PageSize;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -29,17 +30,19 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AgreementController extends Controller
 {
-    /** @var list<string> The releases that hold the same recording and were given the new contract too. */
-    private array $sameRecording = [];
-
     public function index(): Response
     {
         return Inertia::render('agreements/index', [
-            'agreements' => Agreement::query()->with('payee:id,name')->latest('id')->paginate(PageSize::MAIN)
+            'agreements' => Agreement::query()->with(['payee:id,name', 'releases:id,name', 'tracks:id,name,release_id'])->latest('id')->paginate(PageSize::MAIN)
                 ->through(fn (Agreement $agreement): array => [
                     ...$agreement->only(['id', 'name', 'status']),
                     'payee' => $agreement->payee?->name,
                     'unmatched' => $agreement->isFiled() && $agreement->payee_id === null,
+                    // Each release with the tracks chosen from it; without any, the whole release.
+                    'covers' => $agreement->releases->map(fn (Release $release): array => [
+                        'release' => $release->name,
+                        'tracks' => $agreement->tracks->where('release_id', $release->id)->pluck('name')->values()->all(),
+                    ])->values()->all(),
                     'sent_at' => $agreement->sent_at?->toDateString(),
                     'signed_at' => $agreement->signed_at?->toDateString(),
                 ]),
@@ -55,7 +58,8 @@ class AgreementController extends Controller
 
     public function store(AgreementRequest $request): RedirectResponse
     {
-        $agreement = Agreement::query()->create($request->validated());
+        $agreement = Agreement::query()->create($request->safe()->except(['release_ids', 'track_ids']));
+        $agreement->cover($request->validated('release_ids', []), $request->validated('track_ids', []));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Agreement drafted.')]);
 
@@ -82,12 +86,14 @@ class AgreementController extends Controller
                 'signing_rule' => $parties['rule'] ?? 'all',
                 'disclaimer' => AgreementExamples::DISCLAIMER,
                 'lines' => $this->lines($agreement),
+                'coverage' => $agreement->coverage(),
                 'deliverables' => $agreement->deliverables->map->toRow()->all(),
                 'planned_deliverables' => $agreement->status === Agreement::DRAFT ? $agreement->deliverableLines() : [],
                 'signed_copy' => $agreement->signed_copy_name,
+                'delete_block' => $agreement->deleteBlock(),
                 'has_text' => ! $agreement->isFiled(),
                 'filed' => $agreement->isFiled() ? [
-                    ...$agreement->only(['payee_id', 'contract_id', 'release_id', 'track_id']),
+                    ...$agreement->only(['payee_id', 'contract_id']),
                     'signed_on' => $agreement->signed_at?->toDateString(),
                 ] : null,
                 'can_sign' => $agreement->status === Agreement::SENT && $agreement->capacitiesOf($request->user()) !== [],
@@ -103,7 +109,7 @@ class AgreementController extends Controller
         }
 
         return Inertia::render('agreements/form', [
-            'agreement' => $agreement->only(['id', 'name', 'agreement_template_id', 'licensor', 'payee_id', 'artist_payee_id', 'release_id', 'track_id', 'terms']),
+            'agreement' => [...$agreement->only(['id', 'name', 'agreement_template_id', 'licensor', 'payee_id', 'artist_payee_id', 'terms']), 'coverage' => $agreement->coverage()],
             ...$this->options(),
         ]);
     }
@@ -112,7 +118,8 @@ class AgreementController extends Controller
     {
         abort_unless($agreement->status === Agreement::DRAFT, 409, 'An agreement that was sent cannot be changed.');
 
-        $agreement->update($request->validated());
+        $agreement->update($request->safe()->except(['release_ids', 'track_ids']));
+        $agreement->cover($request->validated('release_ids', []), $request->validated('track_ids', []));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Agreement saved.')]);
 
@@ -178,8 +185,10 @@ class AgreementController extends Controller
             'new_payee' => ['nullable', 'string', 'max:255'],
             'contract_id' => ['nullable', 'integer', $inLabel('contracts')],
             'new_contract' => ['boolean'],
-            'release_id' => ['nullable', 'integer', $inLabel('releases')],
-            'track_id' => ['nullable', 'integer', $inLabel('tracks')],
+            'release_ids' => ['array'],
+            'release_ids.*' => ['integer', 'distinct', $inLabel('releases')],
+            'track_ids' => ['array'],
+            'track_ids.*' => ['integer', 'distinct', $inLabel('tracks')->whereIn('release_id', array_filter((array) $request->input('release_ids'), 'is_numeric') ?: [0])],
         ]);
 
         DB::transaction(function () use ($agreement, $input): void {
@@ -194,9 +203,8 @@ class AgreementController extends Controller
                 'signed_at' => $input['signed_on'] ?? null,
                 'payee_id' => $payeeId,
                 'contract_id' => $contractId,
-                'release_id' => $input['release_id'] ?? null,
-                'track_id' => $input['track_id'] ?? null,
             ])->save();
+            $agreement->cover($input['release_ids'] ?? [], $input['track_ids'] ?? []);
         });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Agreement matched.')]);
@@ -271,6 +279,15 @@ class AgreementController extends Controller
     }
 
     /**
+     * A release with its tracks, for the form that chooses what an
+     * agreement covers.
+     */
+    public function release(Release $release): JsonResponse
+    {
+        return response()->json(Agreement::releaseRow($release));
+    }
+
+    /**
      * The agreement as a PDF, once it was sent.
      */
     public function pdf(Request $request, Agreement $agreement): HttpResponse
@@ -313,9 +330,17 @@ class AgreementController extends Controller
             return back();
         }
 
-        $target = Track::query()->find($agreement->track_id) ?? Release::query()->find($agreement->release_id);
+        // What the contract goes on: the chosen tracks of each release, or the release itself when none is chosen.
+        $targets = collect($agreement->releases()->get())->flatMap(function (Release $release) use ($agreement) {
+            $tracks = $agreement->tracks()->where('release_id', $release->id)->get();
 
-        $contract = DB::transaction(function () use ($agreement, $share, $target): Contract {
+            return $tracks->isEmpty() ? [$release] : $tracks->all();
+        });
+        // The same recording on another release, such as a single beside the album, is paid the same way.
+        $isrcs = $targets->whereInstanceOf(Track::class)->pluck('isrc')->filter()->unique()->all();
+        $sameRecording = $isrcs === [] ? collect() : Track::query()->whereIn('isrc', $isrcs)->whereNotIn('id', $targets->whereInstanceOf(Track::class)->map->getKey()->all() ?: [0])->with('release:id,name')->get();
+
+        $contract = DB::transaction(function () use ($agreement, $share): Contract {
             $contract = Contract::query()->create([
                 'name' => $agreement->name,
                 'memo' => "From the agreement \"{$agreement->name}\", signed by everyone on {$agreement->signed_at?->toDateString()}.",
@@ -323,37 +348,41 @@ class AgreementController extends Controller
             $contract->splits()->create(['payee_id' => $agreement->payee_id, 'split_amount' => bcdiv((string) $share, '100', 9)]);
             $agreement->forceFill(['contract_id' => $contract->id])->save();
 
-            if ($target !== null && $target->contract_id === null) {
-                $target->update(['contract_id' => $contract->id]);
-            }
-
-            // The same recording on another release, such as a single beside the album, is paid the same way.
-            if ($target instanceof Track && filled($target->isrc)) {
-                $this->sameRecording = array_values(Track::query()->where('isrc', $target->isrc)->whereKeyNot($target->id)->whereNull('contract_id')->with('release:id,name')->get()
-                    ->each(fn (Track $track) => $track->update(['contract_id' => $contract->id]))
-                    ->map(fn (Track $track): string => (string) ($track->release->name ?? $track->name))->all());
-            }
-
             return $contract;
         });
-        $also = $this->sameRecording === [] ? '' : ' '.__('Also set on the same recording on: :releases.', ['releases' => implode(', ', $this->sameRecording)]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => match (true) {
-            $target === null => __('Contract created. Set it on the release or track it pays for.'),
-            $target->contract_id === $contract->id => __('Contract created and set on :name.', ['name' => $target->name]),
-            default => __('Contract created. :name already has a contract, which was left as it is.', ['name' => $target->name]),
-        }.$also]);
+        // Income that is accounted for one way is not silently accounted another: what has a contract keeps it.
+        $set = [];
+        $left = [];
+
+        foreach ([...$targets, ...$sameRecording] as $target) {
+            $name = $target instanceof Track && $sameRecording->contains($target) ? "{$target->name} ({$target->release?->name})" : $target->name;
+
+            if ($target->contract_id === null) {
+                $target->update(['contract_id' => $contract->id]);
+                $set[] = $name;
+            } else {
+                $left[] = $name;
+            }
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => implode(' ', array_filter([
+            __('Contract created.'),
+            $set === [] ? null : __('Set on: :names.', ['names' => implode(', ', $set)]),
+            $left === [] ? null : __('Left as they are, because they have a contract: :names.', ['names' => implode(', ', $left)]),
+            $set === [] && $left === [] ? __('Set it on the release or track it pays for.') : null,
+        ]))]);
 
         return to_route('contracts.show', $contract->id);
     }
 
     public function destroy(Agreement $agreement): RedirectResponse
     {
-        abort_unless($agreement->status === Agreement::DRAFT, 409, 'Only a draft can be deleted.');
+        abort_if($agreement->deleteBlock() !== null, 409, (string) $agreement->deleteBlock());
 
-        $agreement->delete();
+        $agreement->remove();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Draft deleted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Agreement deleted.')]);
 
         return to_route('agreements.index');
     }

@@ -13,7 +13,7 @@ class AgreementRequest extends LabelFormRequest
      */
     protected function prepareForValidation(): void
     {
-        $this->nullify(['artist_payee_id', 'release_id', 'track_id']);
+        $this->nullify(['artist_payee_id']);
 
         if ($this->input('licensor') !== 'artist') {
             $this->merge(['artist_payee_id' => null]);
@@ -33,8 +33,11 @@ class AgreementRequest extends LabelFormRequest
             'licensor' => ['required', Rule::in(['label', 'artist'])],
             'payee_id' => ['required', 'integer', $this->inLabel('payees')],
             'artist_payee_id' => ['nullable', 'required_if:licensor,artist', 'integer', 'different:payee_id', $this->inLabel('payees')],
-            'release_id' => ['nullable', 'integer', $this->inLabel('releases')],
-            'track_id' => ['nullable', 'integer', $this->inLabel('tracks')],
+            'release_ids' => ['array'],
+            'release_ids.*' => ['integer', 'distinct', $this->inLabel('releases')],
+            'track_ids' => ['array'],
+            // The tracks on offer are those of the chosen releases.
+            'track_ids.*' => ['integer', 'distinct', $this->inLabel('tracks')->whereIn('release_id', array_filter((array) $this->input('release_ids'), 'is_numeric') ?: [0])],
             'terms' => ['array:'.implode(',', array_keys(Agreement::TERMS))],
             'terms.*' => ['nullable', 'string', 'max:5000'],
             'terms.share' => ['nullable', 'numeric', 'between:0,100'],

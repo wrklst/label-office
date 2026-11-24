@@ -105,6 +105,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::middleware('terms')->group(function () {
                 Route::post('agreements/filed', [AgreementController::class, 'storeFiled'])->name('agreements.filed');
+                Route::get('agreements/releases/{release}', [AgreementController::class, 'release'])->name('agreements.release');
                 Route::resource('agreements', AgreementController::class);
                 Route::put('agreements/{agreement}/match', [AgreementController::class, 'match'])->name('agreements.match');
                 Route::post('agreements/{agreement}/signed-copy', [AgreementController::class, 'signedCopy'])->name('agreements.signed-copy.store');

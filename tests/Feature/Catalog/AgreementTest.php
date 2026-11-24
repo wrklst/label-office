@@ -343,8 +343,9 @@ test('an admin who is also a payee of the label reads their own statements and a
 
 test('a signed agreement makes the contract that pays its share, once, and leaves an existing contract alone', function () {
     ['label' => $label, 'signatory' => $admin, 'payee' => $payee, 'payeeUser' => $payeeUser, 'agreement' => $agreement] = agreementBetweenLabelAndPayee();
-    $track = Track::factory()->create(['label_id' => $label->id, 'contract_id' => null]);
-    $agreement->update(['track_id' => $track->id, 'terms' => [...$agreement->terms, 'share' => '37.5']]);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => Release::factory()->create(['label_id' => $label->id])->id, 'isrc' => null, 'contract_id' => null]);
+    $agreement->update(['terms' => [...$agreement->terms, 'share' => '37.5']]);
+    $agreement->cover([$track->release_id], [$track->id]);
     $agreement->send();
 
     $this->actingAs($admin)->post(route('agreements.contract', $agreement->id))->assertStatus(409);
@@ -367,14 +368,14 @@ test('a signed agreement makes the contract that pays its share, once, and leave
     // A track that is already accounted for keeps its contract.
     ['label' => $label, 'signatory' => $admin, 'payeeUser' => $payeeUser, 'agreement' => $second] = agreementBetweenLabelAndPayee();
     $existing = Contract::factory()->create(['label_id' => $label->id]);
-    $taken = Track::factory()->create(['label_id' => $label->id, 'contract_id' => $existing->id]);
-    $second->update(['track_id' => $taken->id]);
+    $taken = Track::factory()->create(['label_id' => $label->id, 'release_id' => Release::factory()->create(['label_id' => $label->id])->id, 'isrc' => null, 'contract_id' => $existing->id]);
+    $second->cover([$taken->release_id], [$taken->id]);
     $second->send();
     signAgreement($second, $payeeUser, 'payee');
     signAgreement($second, $admin, 'label');
 
     $this->actingAs($admin)->post(route('agreements.contract', $second->id))
-        ->assertInertiaFlash('toast.message', "Contract created. {$taken->name} already has a contract, which was left as it is.");
+        ->assertInertiaFlash('toast.message', "Contract created. Left as they are, because they have a contract: {$taken->name}.");
 
     expect($taken->refresh()->contract_id)->toBe($existing->id)
         ->and($second->refresh()->contract_id)->not->toBeNull();
@@ -416,7 +417,8 @@ function signedAgreementWithDeliverables(): array
 {
     $setup = agreementBetweenLabelAndPayee();
     $release = Release::factory()->create(['label_id' => $setup['label']->id]);
-    $setup['agreement']->update(['release_id' => $release->id, 'terms' => [...$setup['agreement']->terms, 'deliverables' => "- Master as WAV\n\n2. Artwork 3000 px"]]);
+    $setup['agreement']->cover([$release->id], []);
+    $setup['agreement']->update(['terms' => [...$setup['agreement']->terms, 'deliverables' => "- Master as WAV\n\n2. Artwork 3000 px"]]);
     $setup['agreement']->send();
     signAgreement($setup['agreement'], $setup['payeeUser'], 'payee');
     signAgreement($setup['agreement'], $setup['signatory'], 'label');
@@ -430,7 +432,7 @@ test('what is to be delivered needs a release, and sending makes one item of eve
 
     expect($agreement->sendBlock())->toBe('Choose the release this agreement belongs to: what is delivered is filed with it.');
 
-    $agreement->update(['release_id' => Release::factory()->create(['label_id' => $label->id])->id]);
+    $agreement->cover([Release::factory()->create(['label_id' => $label->id])->id], []);
     $this->actingAs($admin)->post(route('agreements.send', $agreement->id))->assertSessionHasNoErrors();
 
     expect($agreement->deliverables()->pluck('status', 'title')->all())->toBe(['Master as WAV' => 'open', 'Artwork 3000 px' => 'open']);
@@ -481,7 +483,8 @@ test('nobody but the payee delivers, nothing is delivered before all have signed
     $this->actingAs($payeeUser)->post(route('my-agreements.deliver', [$agreement->id, $other->deliverables()->firstOrFail()->id]), $file)->assertNotFound();
 
     ['label' => $label, 'payeeUser' => $early, 'agreement' => $unsigned] = agreementBetweenLabelAndPayee();
-    $unsigned->update(['release_id' => Release::factory()->create(['label_id' => $label->id])->id, 'terms' => [...$unsigned->terms, 'deliverables' => 'Master']]);
+    $unsigned->cover([Release::factory()->create(['label_id' => $label->id])->id], []);
+    $unsigned->update(['terms' => [...$unsigned->terms, 'deliverables' => 'Master']]);
     $unsigned->send();
     $this->actingAs($early)->post(route('my-agreements.deliver', [$unsigned->id, $unsigned->deliverables()->firstOrFail()->id]), $file)->assertForbidden();
 
@@ -552,16 +555,17 @@ test('a filed copy is matched to what exists or to a payee and a contract made o
     $this->actingAs($admin)->post(route('agreements.filed'), ['file' => UploadedFile::fake()->create('scan.pdf', 100, 'application/pdf')]);
     $agreement = Agreement::query()->where('name', 'scan')->sole();
     $contract = Contract::factory()->create(['label_id' => $label->id]);
-    $track = Track::factory()->create(['label_id' => $label->id]);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => Release::factory()->create(['label_id' => $label->id])->id]);
 
     $this->actingAs($admin)->put(route('agreements.match', $agreement->id), ['name' => 'Old remix deal', 'payee_id' => Payee::factory()->create()->id])->assertSessionHasErrors('payee_id');
     $this->actingAs($admin)->put(route('agreements.match', $made->id), ['name' => 'Taken over'])->assertStatus(409);
 
     $this->actingAs($admin)
-        ->put(route('agreements.match', $agreement->id), ['name' => 'Old remix deal', 'signed_on' => '2023-11-07', 'payee_id' => $payee->id, 'contract_id' => $contract->id, 'track_id' => $track->id])
+        ->put(route('agreements.match', $agreement->id), ['name' => 'Old remix deal', 'signed_on' => '2023-11-07', 'payee_id' => $payee->id, 'contract_id' => $contract->id, 'release_ids' => [$track->release_id], 'track_ids' => [$track->id]])
         ->assertSessionHasNoErrors();
 
-    expect($agreement->refresh()->only(['name', 'payee_id', 'contract_id', 'track_id']))->toBe(['name' => 'Old remix deal', 'payee_id' => $payee->id, 'contract_id' => $contract->id, 'track_id' => $track->id])
+    expect($agreement->refresh()->only(['name', 'payee_id', 'contract_id']))->toBe(['name' => 'Old remix deal', 'payee_id' => $payee->id, 'contract_id' => $contract->id])
+        ->and($agreement->tracks()->pluck('tracks.id')->all())->toBe([$track->id])
         ->and($agreement->signed_at->toDateString())->toBe('2023-11-07');
 
     $this->actingAs($admin)
@@ -571,7 +575,8 @@ test('a filed copy is matched to what exists or to a payee and a contract made o
     $newPayee = Payee::query()->where('name', 'New Remixer')->sole();
     $newContract = Contract::query()->where('name', 'Old remix deal')->sole();
 
-    expect($agreement->refresh()->only(['payee_id', 'contract_id', 'track_id']))->toBe(['payee_id' => $newPayee->id, 'contract_id' => $newContract->id, 'track_id' => null])
+    expect($agreement->refresh()->only(['payee_id', 'contract_id']))->toBe(['payee_id' => $newPayee->id, 'contract_id' => $newContract->id])
+        ->and($agreement->releases()->count())->toBe(0)
         ->and($newPayee->label_id)->toBe($label->id)
         ->and($newContract->splits()->count())->toBe(0);
 });
@@ -597,19 +602,19 @@ test('a copy signed elsewhere closes an agreement that is out for signature', fu
 test('the contract of a signed agreement is also set on the same recording on another release', function () {
     ['label' => $label, 'signatory' => $admin, 'payeeUser' => $payeeUser, 'agreement' => $agreement] = agreementBetweenLabelAndPayee();
     $single = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Single']);
-    $onAlbum = Track::factory()->create(['label_id' => $label->id, 'isrc' => 'DEEX12600001', 'contract_id' => null]);
+    $onAlbum = Track::factory()->create(['label_id' => $label->id, 'release_id' => Release::factory()->create(['label_id' => $label->id])->id, 'isrc' => 'DEEX12600001', 'contract_id' => null]);
     $onSingle = Track::factory()->create(['label_id' => $label->id, 'release_id' => $single->id, 'isrc' => 'DEEX12600001', 'contract_id' => null]);
-    $taken = Track::factory()->create(['label_id' => $label->id, 'isrc' => 'DEEX12600001', 'contract_id' => Contract::factory()->create(['label_id' => $label->id])->id]);
-    $otherRecording = Track::factory()->create(['label_id' => $label->id, 'isrc' => 'DEEX12600002', 'contract_id' => null]);
+    $taken = Track::factory()->create(['label_id' => $label->id, 'release_id' => Release::factory()->create(['label_id' => $label->id])->id, 'isrc' => 'DEEX12600001', 'contract_id' => Contract::factory()->create(['label_id' => $label->id])->id]);
+    $otherRecording = Track::factory()->create(['label_id' => $label->id, 'release_id' => Release::factory()->create(['label_id' => $label->id])->id, 'isrc' => 'DEEX12600002', 'contract_id' => null]);
     $otherLabel = Track::factory()->create(['isrc' => 'DEEX12600001', 'contract_id' => null]);
-    $agreement->update(['track_id' => $onAlbum->id]);
+    $agreement->cover([$onAlbum->release_id], [$onAlbum->id]);
     $agreement->send();
     signAgreement($agreement, $payeeUser, 'payee');
     signAgreement($agreement, $admin, 'label');
     $before = $taken->contract_id;
 
     $this->actingAs($admin)->post(route('agreements.contract', $agreement->id))
-        ->assertInertiaFlash('toast.message', "Contract created and set on {$onAlbum->name}. Also set on the same recording on: Example Single.");
+        ->assertInertiaFlash('toast.message', "Contract created. Set on: {$onAlbum->name}, {$onSingle->name} (Example Single). Left as they are, because they have a contract: {$taken->name} ({$taken->release->name}).");
 
     $contractId = $agreement->refresh()->contract_id;
 
@@ -618,4 +623,87 @@ test('the contract of a signed agreement is also set on the same recording on an
         ->and($taken->refresh()->contract_id)->toBe($before)
         ->and($otherRecording->refresh()->contract_id)->toBeNull()
         ->and(Track::query()->withoutGlobalScope('label')->find($otherLabel->id)->contract_id)->toBeNull();
+});
+
+test('an agreement covers several releases, a whole release or only some of its tracks, and the contract goes on exactly that', function () {
+    ['label' => $label, 'signatory' => $admin, 'payee' => $payee, 'payeeUser' => $payeeUser, 'agreement' => $draft] = agreementBetweenLabelAndPayee();
+    $whole = Release::factory()->create(['label_id' => $label->id, 'name' => 'Whole Release', 'contract_id' => null]);
+    $partly = Release::factory()->create(['label_id' => $label->id, 'name' => 'Remix EP', 'contract_id' => null]);
+    $remixOne = Track::factory()->create(['label_id' => $label->id, 'release_id' => $partly->id, 'name' => 'Remix One', 'track_number' => 1, 'isrc' => null, 'contract_id' => null]);
+    $remixTwo = Track::factory()->create(['label_id' => $label->id, 'release_id' => $partly->id, 'name' => 'Remix Two', 'track_number' => 2, 'isrc' => null, 'contract_id' => null]);
+    $elsewhere = Track::factory()->create(['label_id' => $label->id, 'name' => 'Elsewhere', 'contract_id' => null]);
+    $input = ['name' => 'Two releases', 'agreement_template_id' => $draft->agreement_template_id, 'licensor' => 'label', 'payee_id' => $payee->id, 'terms' => ['work_title' => 'Remixes', 'share' => '50']];
+
+    // A track is only on offer with its release, and nothing of another label is.
+    $this->actingAs($admin)->post(route('agreements.store'), [...$input, 'release_ids' => [$whole->id], 'track_ids' => [$remixOne->id]])->assertSessionHasErrors('track_ids.0');
+    $this->actingAs($admin)->post(route('agreements.store'), [...$input, 'release_ids' => [Release::factory()->create()->id]])->assertSessionHasErrors('release_ids.0');
+    $this->actingAs($admin)->post(route('agreements.store'), [...$input, 'release_ids' => [$whole->id, $partly->id], 'track_ids' => [$remixOne->id]])->assertSessionHasNoErrors();
+
+    $agreement = Agreement::query()->where('name', 'Two releases')->sole();
+
+    expect($agreement->coverage())->toBe([
+        ['id' => $whole->id, 'name' => 'Whole Release', 'catalog_number' => $whole->catalog_number, 'tracks' => []],
+        ['id' => $partly->id, 'name' => 'Remix EP', 'catalog_number' => $partly->catalog_number, 'tracks' => [
+            ['id' => $remixOne->id, 'name' => 'Remix One', 'chosen' => true],
+            ['id' => $remixTwo->id, 'name' => 'Remix Two', 'chosen' => false],
+        ]],
+    ]);
+
+    $this->actingAs($admin)->getJson(route('agreements.release', $partly->id))->assertOk()->assertJsonPath('tracks.1.name', 'Remix Two')->assertJsonPath('tracks.0.chosen', false);
+    $this->actingAs($admin)->getJson(route('agreements.release', Release::factory()->create()->id))->assertNotFound();
+
+    // Taking a release away takes its tracks with it.
+    $this->actingAs($admin)->put(route('agreements.update', $agreement->id), [...$input, 'release_ids' => [$whole->id], 'track_ids' => []])->assertSessionHasNoErrors();
+    expect($agreement->tracks()->count())->toBe(0);
+    $this->actingAs($admin)->put(route('agreements.update', $agreement->id), [...$input, 'release_ids' => [$whole->id, $partly->id], 'track_ids' => [$remixOne->id]])->assertSessionHasNoErrors();
+
+    $this->actingAs($admin)->get(route('agreements.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('agreements.data.0.covers', [
+            ['release' => 'Whole Release', 'tracks' => []],
+            ['release' => 'Remix EP', 'tracks' => ['Remix One']],
+        ]));
+
+    $agreement->send();
+    signAgreement($agreement, $payeeUser, 'payee');
+    signAgreement($agreement, $admin, 'label');
+
+    $this->actingAs($admin)->post(route('agreements.contract', $agreement->id))
+        ->assertInertiaFlash('toast.message', 'Contract created. Set on: Whole Release, Remix One.');
+
+    $contractId = $agreement->refresh()->contract_id;
+
+    expect($whole->refresh()->contract_id)->toBe($contractId)
+        ->and($remixOne->refresh()->contract_id)->toBe($contractId)
+        ->and($partly->refresh()->contract_id)->toBeNull()
+        ->and($remixTwo->refresh()->contract_id)->toBeNull()
+        ->and($elsewhere->refresh()->contract_id)->toBeNull();
+});
+
+test('a draft, a withdrawn agreement and a filed copy can be deleted, an agreement signed here cannot', function () {
+    ['signatory' => $admin, 'payeeUser' => $payeeUser, 'agreement' => $signed] = agreementBetweenLabelAndPayee();
+    $signed->send();
+    $this->actingAs($admin)->delete(route('agreements.destroy', $signed->id))->assertStatus(409);
+    signAgreement($signed, $payeeUser, 'payee');
+    signAgreement($signed, $admin, 'label');
+    $this->actingAs($admin)->delete(route('agreements.destroy', $signed->id))->assertStatus(409);
+
+    $withdrawn = Agreement::factory()->create(['label_id' => $signed->label_id, 'agreement_template_id' => $signed->agreement_template_id, 'payee_id' => $signed->payee_id]);
+    $withdrawn->send();
+    $this->actingAs($admin)->post(route('agreements.void', $withdrawn->id));
+    $this->actingAs($admin)->delete(route('agreements.destroy', $withdrawn->id))->assertRedirect(route('agreements.index'));
+
+    $this->actingAs($admin)->post(route('agreements.filed'), ['file' => UploadedFile::fake()->create('duplicate.pdf', 100, 'application/pdf')]);
+    $this->actingAs($admin)->post(route('agreements.filed'), ['file' => UploadedFile::fake()->create('kept.pdf', 100, 'application/pdf')]);
+    $duplicate = Agreement::query()->where('name', 'duplicate')->sole();
+    $kept = Agreement::query()->where('name', 'kept')->sole();
+    [$disk, $path] = explode(':', $duplicate->signed_copy_path, 2);
+    [, $keptPath] = explode(':', $kept->signed_copy_path, 2);
+
+    $this->actingAs($admin)->get(route('agreements.show', $duplicate->id))->assertInertia(fn (Assert $page) => $page->where('agreement.delete_block', null));
+    $this->actingAs($admin)->get(route('agreements.show', $signed->id))->assertInertia(fn (Assert $page) => $page->where('agreement.delete_block', 'This agreement was signed here and is kept as the record of it.'));
+    $this->actingAs($admin)->delete(route('agreements.destroy', $duplicate->id))->assertInertiaFlash('toast.message', 'Agreement deleted.');
+
+    expect(Agreement::query()->pluck('id')->all())->toEqualCanonicalizing([$signed->id, $kept->id]);
+    Storage::disk($disk)->assertMissing($path);
+    Storage::disk($disk)->assertExists($keptPath);
 });
