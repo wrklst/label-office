@@ -323,6 +323,7 @@ shows in its help panel, to label admins.
 **Setup**
 
 - [Introduction](docs/01-introduction.md): the concepts and a first session
+- [Terms of use](docs/05-terms-of-use.md): what the software does not promise
 - [Installation](docs/02-installation.md)
 - [Configuration](docs/03-configuration.md)
 - [Deployment](docs/04-deployment.md)
@@ -398,7 +399,18 @@ All commands and options: [docs/50-command-line.md](docs/50-command-line.md).
 
 ## No legal guarantee
 
-Label Office can draft agreements from templates and have them signed online. This application gives no legal advice and guarantees no legal compliance: not for the tool, not for signing electronically, and not for any text, example or template in it. Whether an agreement signed here is valid and enforceable depends on the law that applies to you. Electronic signatures are not accepted for every kind of agreement or in every country. Clear the use of this tool and of your texts with your legal adviser before you rely on them. The example agreement texts that ship with it are illustrations for German law and a German GmbH, not written or reviewed by a lawyer, and must not be used without legal review. See [Agreements](docs/35-agreements.md).
+Label Office gives no legal, tax or accounting advice and guarantees no legal
+compliance: not for the tool, not for signing agreements electronically, not
+for its figures and not for any text, example or template in it. You cannot
+assume that it delivers what you need in your country. Clear its use with a
+qualified legal adviser before you use any of its tools, and decide on that
+advice. As far as the law allows, its makers are not liable for damage from
+its use. The example agreement texts that ship with it are illustrations for
+German law and a German GmbH, not written or reviewed by a lawyer.
+
+The full text is in [Terms of use](docs/05-terms-of-use.md). An admin has to
+accept it for the label before the agreement tools open. See also
+[Agreements](docs/35-agreements.md).
 
 ## Development
 

@@ -26,6 +26,7 @@ use App\Http\Controllers\Settings\ConnectionsController;
 use App\Http\Controllers\Settings\LabelBrandingController;
 use App\Http\Controllers\Settings\LabelSettingsController;
 use App\Http\Controllers\Settings\TeamController;
+use App\Http\Controllers\Settings\TermsController;
 use App\Http\Controllers\Settings\UpdatesController;
 use App\Http\Controllers\StatementController;
 use App\Http\Controllers\TrackController;
@@ -88,17 +89,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::resource('contracts', ContractController::class);
             Route::resource('payees', PayeeController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
             Route::resource('ledgers', LedgerController::class)->only(['index', 'store', 'update', 'destroy']);
-            Route::post('agreements/filed', [AgreementController::class, 'storeFiled'])->name('agreements.filed');
-            Route::resource('agreements', AgreementController::class);
-            Route::post('agreements/{agreement}/signed-copy', [AgreementController::class, 'signedCopy'])->name('agreements.signed-copy.store');
-            Route::get('agreements/{agreement}/signed-copy', [AgreementController::class, 'downloadSignedCopy'])->name('agreements.signed-copy');
-            Route::post('agreements/{agreement}/deliverables/{deliverable}/accept', [AgreementController::class, 'accept'])->name('agreements.deliverables.accept');
-            Route::post('agreements/{agreement}/deliverables/{deliverable}/return', [AgreementController::class, 'return'])->name('agreements.deliverables.return');
-            Route::get('agreements/{agreement}/pdf', [AgreementController::class, 'pdf'])->name('agreements.pdf');
-            Route::post('agreements/{agreement}/send', [AgreementController::class, 'send'])->name('agreements.send');
-            Route::post('agreements/{agreement}/void', [AgreementController::class, 'void'])->name('agreements.void');
-            Route::post('agreements/{agreement}/contract', [AgreementController::class, 'contract'])->name('agreements.contract');
-            Route::resource('agreement-templates', AgreementTemplateController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::get('settings/terms', [TermsController::class, 'show'])->name('terms.show');
+            Route::post('settings/terms', [TermsController::class, 'store'])->name('terms.store');
+
+            Route::middleware('terms')->group(function () {
+                Route::post('agreements/filed', [AgreementController::class, 'storeFiled'])->name('agreements.filed');
+                Route::resource('agreements', AgreementController::class);
+                Route::post('agreements/{agreement}/signed-copy', [AgreementController::class, 'signedCopy'])->name('agreements.signed-copy.store');
+                Route::get('agreements/{agreement}/signed-copy', [AgreementController::class, 'downloadSignedCopy'])->name('agreements.signed-copy');
+                Route::post('agreements/{agreement}/deliverables/{deliverable}/accept', [AgreementController::class, 'accept'])->name('agreements.deliverables.accept');
+                Route::post('agreements/{agreement}/deliverables/{deliverable}/return', [AgreementController::class, 'return'])->name('agreements.deliverables.return');
+                Route::get('agreements/{agreement}/pdf', [AgreementController::class, 'pdf'])->name('agreements.pdf');
+                Route::post('agreements/{agreement}/send', [AgreementController::class, 'send'])->name('agreements.send');
+                Route::post('agreements/{agreement}/void', [AgreementController::class, 'void'])->name('agreements.void');
+                Route::post('agreements/{agreement}/contract', [AgreementController::class, 'contract'])->name('agreements.contract');
+                Route::resource('agreement-templates', AgreementTemplateController::class)->only(['index', 'store', 'update', 'destroy']);
+            });
 
             Route::resource('airplays', AirplayController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::post('airplays/{airplay}/links', [AirplayController::class, 'storeLink'])->name('airplays.links.store');

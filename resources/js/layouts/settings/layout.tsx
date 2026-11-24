@@ -13,6 +13,7 @@ import { edit as editLabel } from '@/routes/label-settings';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import { index as team } from '@/routes/team';
+import { show as terms } from '@/routes/terms';
 import { edit as editUpdates } from '@/routes/updates';
 import type { NavItem } from '@/types';
 
@@ -48,6 +49,11 @@ const labelNavItems: NavItem[] = [
     {
         title: 'Connections',
         href: editConnections(),
+        icon: null,
+    },
+    {
+        title: 'Terms of use',
+        href: terms(),
         icon: null,
     },
 ];

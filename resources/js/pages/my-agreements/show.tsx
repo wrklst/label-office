@@ -135,7 +135,7 @@ export default function MyAgreement({ agreement }: { agreement: Agreement }) {
                 <div className="print:hidden">
                     <Panel
                         title="Sign"
-                        description="Your typed name, your confirmation and the code we email you are together your signature. It is recorded with the time and your internet address. The text is the label's; this application gives no legal advice and does not guarantee that the agreement or signing it electronically is valid where you live. If you are unsure, get advice before you sign."
+                        description="Your typed name, your confirmation and the code we email you are together your signature. It is recorded with the time and your internet address."
                     >
                         <Form
                             {...MyAgreementController.sign.form(agreement.id)}

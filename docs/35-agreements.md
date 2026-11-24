@@ -2,7 +2,7 @@
 
 This page covers written agreements with payees: drafting one from a template, sending it for signature, how it is signed online, what the payee delivers afterwards, agreements signed outside the application, and what is kept as proof.
 
-**No legal guarantee.** This application gives no legal advice and guarantees no legal compliance: not for the tool, not for signing electronically, and not for any text, example or template in it. Whether an agreement signed here is valid and enforceable depends on the law that applies to you. Electronic signatures are not accepted for every kind of agreement or in every country. Clear the use of this tool and of your texts with your legal adviser before you rely on them.
+**No legal guarantee.** This application gives no legal advice and guarantees no legal compliance: not for the tool, not for signing electronically, and not for any text, example or template in it. Whether an agreement signed here is valid and enforceable depends on the law that applies to you. Electronic signatures are not accepted for every kind of agreement or in every country. Clear the use of this tool and of your texts with your legal adviser before you rely on them. The full terms, which an admin accepts for the label before the agreement tools open, are in [Terms of use](05-terms-of-use.md).
 
 The text of an agreement is yours: see [Agreement templates](30-contracts-payees-and-ledgers.md#agreement-templates). The application records who agreed to which text and when, and nothing more.
 
@@ -12,9 +12,10 @@ An agreement is the document the parties sign. A contract under **Deals → Cont
 
 ## Before the first agreement
 
-1. Under **Settings → Label**, fill in **Legal entity and signatories**: tick who has the right to sign for the label and choose whether all of them are needed or one is enough. See [Label settings](41-label-settings.md#legal-entity-and-signatories).
-2. Under **Deals → Agreement templates**, have at least one template of your own.
-3. Give the payee a **Legal name** and **Address** under **Deals → Payees**, and access under **Settings → Team**, so they have an account to sign with.
+1. Accept the [Terms of use](05-terms-of-use.md) for the label. The application shows them the first time you open **Deals → Agreements**, and nothing else there opens before.
+2. Under **Settings → Label**, fill in **Legal entity and signatories**: tick who has the right to sign for the label and choose whether all of them are needed or one is enough. See [Label settings](41-label-settings.md#legal-entity-and-signatories).
+3. Under **Deals → Agreement templates**, have at least one template of your own.
+4. Give the payee a **Legal name** and **Address** under **Deals → Payees**, and access under **Settings → Team**, so they have an account to sign with.
 
 ## Drafting
 
@@ -117,7 +118,6 @@ This is a simple electronic signature. It is not a qualified electronic signatur
 
 ## Good to know
 
-- The page where a payee signs says that the text is the label's and that the application guarantees nothing about its validity where they live.
 - An agreement is only sent to people who have an account. A payee without access under **Settings → Team** cannot sign.
 - Asking for a signing code replaces an unused sign-in code of the same account.
 - A payee who is linked to payees of several labels sees the agreements of all of them under **My agreements**.

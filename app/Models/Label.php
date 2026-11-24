@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property string|null $legal_form One of LEGAL_FORMS.
  * @property string|null $legal_address
  * @property string|null $legal_register Court and number of the register entry, when there is one.
+ * @property array{version: string, user_id: int, name: string, email: string, at: string}|null $terms_accepted Who accepted the terms of use for the label.
  * @property string $signing_rule "all": every signatory signs; "any": one of them is enough.
  * @property bool $accounts_mechanicals
  * @property bool $accounts_ppd
@@ -44,12 +45,18 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property CarbonImmutable|null $updated_at
  * @property-read Pivot&object{role: string, payee_id: int|null} $pivot Membership of the user when loaded through User::labels().
  */
-#[Fillable(['name', 'slug', 'currency', 'contact_email', 'logo_path', 'signet_path', 'legal_name', 'legal_form', 'legal_address', 'legal_register', 'signing_rule', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves', 'importer_settings', 'royalty_tool_settings', 'airplay_markets', 'delivery_settings', 'dataforseo_login', 'dataforseo_password', 'ai_provider', 'ai_key', 'ai_endpoint', 'ai_model', 'ai_trial'])]
+#[Fillable(['name', 'slug', 'currency', 'contact_email', 'logo_path', 'signet_path', 'legal_name', 'legal_form', 'legal_address', 'legal_register', 'signing_rule', 'terms_accepted', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves', 'importer_settings', 'royalty_tool_settings', 'airplay_markets', 'delivery_settings', 'dataforseo_login', 'dataforseo_password', 'ai_provider', 'ai_key', 'ai_endpoint', 'ai_model', 'ai_trial'])]
 #[Hidden(['dataforseo_login', 'dataforseo_password', 'ai_key'])]
 class Label extends Model
 {
     /** @use HasFactory<LabelFactory> */
     use HasFactory;
+
+    /** The handbook article that holds the terms of use. */
+    public const string TERMS_ARTICLE = '05-terms-of-use';
+
+    /** The version of the terms a label has to have accepted, as the article states it. */
+    public const string TERMS_VERSION = '2026-11-24';
 
     /** @var list<string> What the label can be as a party to an agreement. */
     public const array LEGAL_FORMS = ['gmbh', 'gbr', 'other'];
@@ -60,6 +67,7 @@ class Label extends Model
     protected function casts(): array
     {
         return [
+            'terms_accepted' => 'array',
             'accounts_mechanicals' => 'boolean',
             'accounts_ppd' => 'boolean',
             'accounts_reserves' => 'boolean',
@@ -92,6 +100,14 @@ class Label extends Model
     public function signatories(): BelongsToMany
     {
         return $this->users()->wherePivot('role', LabelRole::Admin->value)->wherePivot('signs_for_label', true);
+    }
+
+    /**
+     * Whether an admin accepted the terms of use as they stand now.
+     */
+    public function hasAcceptedTerms(): bool
+    {
+        return ($this->terms_accepted['version'] ?? null) === self::TERMS_VERSION;
     }
 
     /**
