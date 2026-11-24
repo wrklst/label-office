@@ -56,6 +56,8 @@ A payee can appear in several splits of one contract, for example 40% worldwide 
 
 ## Where a contract can be set, and which one wins
 
+Contracts belong to tracks. A contract set on a release is the contract of every track on it that has none of its own: that is how one contract is put on a whole release. A track's own contract replaces it for that track; the two are never added up.
+
 A contract can be set in four places. For each transaction the most specific one wins:
 
 | Order | Set on                                | Where you set it                                                                                  |
@@ -66,6 +68,10 @@ A contract can be set in four places. For each transaction the most specific one
 | 4     | The release                           | **Contract** on the release form                                                                  |
 
 Typical uses:
+
+**What is booked on a release as a whole.** A sale of the album, or a cost for it, names no track. It is divided in equal parts between the tracks of the release, and each part is paid by that track's contract. Where no track has a contract of its own, that is the release contract for all of it, as before. A release needs no contract when every track on it has one. A part that falls on a track without any contract is paid to nobody, and the period lists the release under transactions without a contract.
+
+Example: an album of four tracks sells for 10.00 as a whole. Three tracks follow the release contract and one is a remix with its own. 7.50 is paid by the release contract and 2.50 by the remix contract.
 
 - Release: the normal album or single deal.
 - Track: one track has a different deal, such as a remix.
@@ -212,7 +218,7 @@ Check: net income is 1,000 − 200 + 240 = 1,040. Payees earn 400 + 80 + 60 + 60
 - Splits are stored with nine decimals and amounts are calculated with fifteen, so streaming lines worth fractions of a cent are not rounded away.
 - Deleting a contract removes its splits. Releases, tracks, items and transactions that used it fall back to the next contract in the order above, or to none. Statements already generated keep their figures.
 - A territory split is checked line by line against the **Country** of each transaction. Income without a country earns nothing for a territory split, and an expense without a country is not charged to it either. When you enter an expense by hand that a territory-limited payee should carry their share of, fill in its **Country**.
-- A recoupable expense is deducted from the release or track it is booked on. An expense booked on the whole release is shared under the release contract only; it does not reduce what a track with its own contract earns.
+- A recoupable expense is deducted from the release or track it is booked on. An expense booked on the whole release is divided between its tracks like a sale of the release, so a track with its own contract carries its part.
 - A transfer with **Ledger** on **Automatic** uses the first split the payee has in the contract of the selected release. Without a release, or when the payee has no split there, it lands on the primary ledger.
 - Editing a contract changes the live figures of every period, including past ones. Only generated statements are frozen.
 - Prorated contracts can be nested, but only up to five levels below the top contract. Anything deeper pays nothing.

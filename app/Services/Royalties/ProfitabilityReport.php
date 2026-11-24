@@ -100,7 +100,7 @@ class ProfitabilityReport
 
         $releases = [];
 
-        foreach ($this->activity($scope(), $usesTerritories) as $row) {
+        foreach ($this->activity($scope(), $usesTerritories, $label->id) as $row) {
             $isLabelCost = $row['type'] === 'expense' && ! $row['recoupable'];
             $key = $row['release_id'] ?? ($isLabelCost ? self::OVERHEAD_KEY : 0);
             $releases[$key] ??= $this->emptySums();
@@ -244,26 +244,30 @@ class ProfitabilityReport
      *
      * @return iterable<ActivityRow>
      */
-    private function activity(Builder $scope, bool $withRegion): iterable
+    private function activity(Builder $scope, bool $withRegion, int $labelId): iterable
     {
         $region = $withRegion ? 't.region' : 'NULL';
 
         $rows = $scope
             ->whereIn('t.type', ['income', 'expense'])
             ->whereNotNull('t.converted_total')
-            ->selectRaw(self::RESOLVED_CONTRACT." as contract_id, t.release_id, t.type, t.recoupable, {$region} as region, SUM(t.converted_total) as total")
-            ->groupByRaw('1, 2, 3, 4, 5')
+            ->selectRaw(self::RESOLVED_CONTRACT." as contract_id, t.release_id, t.type, t.recoupable, {$region} as region, ".ReleaseSales::BOOKED_ON_RELEASE.' as booked_on_release, SUM(t.converted_total) as total')
+            ->groupByRaw('1, 2, 3, 4, 5, 6')
             ->cursor();
+        $releaseSales = new ReleaseSales($labelId);
 
         foreach ($rows as $row) {
-            yield [
-                'contract_id' => $row->contract_id,
-                'release_id' => $row->release_id,
-                'type' => $row->type,
-                'recoupable' => $row->recoupable,
-                'region' => $row->region,
-                'total' => $row->total,
-            ];
+            // As on the statements: what is booked on a release as a whole is paid through the contracts of its tracks.
+            foreach ($releaseSales->parts($row->contract_id, $row->release_id, (bool) $row->booked_on_release) as [$contractId, $fraction]) {
+                yield [
+                    'contract_id' => $contractId,
+                    'release_id' => $row->release_id,
+                    'type' => $row->type,
+                    'recoupable' => $row->recoupable,
+                    'region' => $row->region,
+                    'total' => ReleaseSales::part($row->total, $fraction),
+                ];
+            }
         }
     }
 

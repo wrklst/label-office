@@ -79,17 +79,35 @@ test('a transaction counts in the period it was paid in', function () {
         ->and(payeeReport($next)['totals']['payee_share'])->toBe('50.000000000000000');
 });
 
-test('the most specific contract wins', function () {
+test('a track\'s own contract pays for the track, and a sale of the release is divided between the contracts of its tracks', function () {
     $remixer = Payee::factory()->create(['label_id' => $this->label->id]);
     $remixContract = Contract::factory()->create(['label_id' => $this->label->id]);
     ContractSplit::factory()->create(['contract_id' => $remixContract->id, 'payee_id' => $remixer->id, 'split_amount' => '0.25']);
     $track = Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $this->release->id, 'contract_id' => $remixContract->id]);
 
+    // A second track without a contract of its own: the contract of the release is its contract.
+    Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $this->release->id, 'contract_id' => null]);
+
     transaction(['total' => '100', 'track_id' => $track->id]);
     transaction(['total' => '100']);
 
-    expect(payeeReport(payee: $remixer)['totals']['payee_share'])->toBe('25.000000000000000')
-        ->and(payeeReport()['totals']['payee_share'])->toBe('50.000000000000000');
+    // The remixer: a quarter of the track's 100 and of the remix's half of the release sale.
+    expect(payeeReport(payee: $remixer)['totals']['payee_share'])->toBe('37.500000000000000')
+        ->and(payeeReport()['totals']['payee_share'])->toBe('25.000000000000000');
+});
+
+test('a sale of a release whose tracks all have one contract goes to that contract whole, also when the release has none', function () {
+    $contract = Contract::factory()->create(['label_id' => $this->label->id]);
+    ContractSplit::factory()->create(['contract_id' => $contract->id, 'payee_id' => $this->payee->id, 'split_amount' => '0.4']);
+    $single = Release::factory()->create(['label_id' => $this->label->id, 'contract_id' => null]);
+    Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $single->id, 'contract_id' => $contract->id]);
+
+    transaction(['total' => '100', 'release_id' => $single->id]);
+
+    $report = app(RoyaltyCalculator::class)->forPeriod($this->period);
+
+    expect($report['totals']['payee_share'])->toBe('40.000000000000000')
+        ->and($report['audit']['missing_contract'])->toBe(0);
 });
 
 test('a contract set on the transaction overrides the catalog', function () {

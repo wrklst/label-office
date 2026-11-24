@@ -208,7 +208,7 @@ export default function ReleaseForm({
                             label="Contract"
                             htmlFor="contract_id"
                             error={errors.contract_id}
-                            hint="Applies to every track that has no contract of its own. Without a contract the label keeps all income."
+                            hint="The contract of every track on the release that has none of its own. A sale of the release as a whole is divided equally between its tracks and paid by each track's contract."
                         >
                             <RecordSelect
                                 id="contract_id"

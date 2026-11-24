@@ -99,6 +99,9 @@ test('each transaction is split by its most specific contract', function () {
     ContractSplit::factory()->create(['contract_id' => $override->id, 'payee_id' => $this->payee->id, 'split_amount' => '1']);
     $track = Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $this->release->id, 'contract_id' => $remixContract->id]);
 
+    // A second track without a contract of its own shares the sale of the release with the remix.
+    Track::factory()->create(['label_id' => $this->label->id, 'release_id' => $this->release->id, 'contract_id' => null]);
+
     booked(['total' => '100']);
     booked(['total' => '100', 'track_id' => $track->id]);
     booked(['total' => '10', 'track_id' => $track->id, 'contract_id' => $override->id]);
@@ -106,8 +109,8 @@ test('each transaction is split by its most specific contract', function () {
     $row = profitabilityRow();
 
     expect($row['income'])->toBe('210.000000000000000')
-        ->and($row['payee_share'])->toBe('85.000000000000000')
-        ->and($row['label_result'])->toBe('125.000000000000000');
+        ->and($row['payee_share'])->toBe('72.500000000000000')
+        ->and($row['label_result'])->toBe('137.500000000000000');
 });
 
 test('a prorated contract pays the splits of its child contracts by weight', function () {

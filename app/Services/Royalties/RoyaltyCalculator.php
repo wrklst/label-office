@@ -73,6 +73,9 @@ class RoyaltyCalculator
 {
     private const string RESOLVED_CONTRACT = 'COALESCE(t.contract_id, i.contract_id, tr.contract_id, r.contract_id)';
 
+    /** Nothing pays for the transaction: no contract of its own, and booked on a release whose tracks do not all have one. */
+    private const string WITHOUT_CONTRACT = self::RESOLVED_CONTRACT.' IS NULL AND ('.ReleaseSales::BOOKED_ON_RELEASE.' = 0 OR '.ReleaseSales::WITHOUT_CONTRACT.')';
+
     public function __construct(private readonly SplitResolver $splitResolver) {}
 
     /**
@@ -420,25 +423,30 @@ class RoyaltyCalculator
             ->whereNotNull('t.converted_total')
             ->selectRaw(
                 self::RESOLVED_CONTRACT." as contract_id, t.release_id, t.track_id, t.type, t.format, t.category, {$region} as region, "
-                .'CASE WHEN t.paid_timestamp < ? THEN 1 ELSE 0 END as is_prev, SUM(t.converted_total) as total, SUM(t.quantity) as quantity',
+                .'CASE WHEN t.paid_timestamp < ? THEN 1 ELSE 0 END as is_prev, '.ReleaseSales::BOOKED_ON_RELEASE.' as booked_on_release, '
+                .'SUM(t.converted_total) as total, SUM(t.quantity) as quantity',
                 [$start],
             )
-            ->groupByRaw('1, 2, 3, 4, 5, 6, 7, 8')
+            ->groupByRaw('1, 2, 3, 4, 5, 6, 7, 8, 9')
             ->cursor();
+        $releaseSales = new ReleaseSales($labelId);
 
         foreach ($rows as $row) {
-            yield [
-                'contract_id' => $row->contract_id,
-                'release_id' => $row->release_id,
-                'track_id' => $row->track_id,
-                'type' => $row->type,
-                'format' => $row->format,
-                'category' => $row->category,
-                'region' => $row->region,
-                'is_prev' => $row->is_prev,
-                'total' => $row->total,
-                'quantity' => $row->quantity,
-            ];
+            // What is booked on a release as a whole is paid through the contracts of its tracks.
+            foreach ($releaseSales->parts($row->contract_id, $row->release_id, (bool) $row->booked_on_release) as [$contractId, $fraction]) {
+                yield [
+                    'contract_id' => $contractId,
+                    'release_id' => $row->release_id,
+                    'track_id' => $row->track_id,
+                    'type' => $row->type,
+                    'format' => $row->format,
+                    'category' => $row->category,
+                    'region' => $row->region,
+                    'is_prev' => $row->is_prev,
+                    'total' => ReleaseSales::part($row->total, $fraction),
+                    'quantity' => ReleaseSales::part($row->quantity, $fraction),
+                ];
+            }
         }
     }
 
@@ -532,7 +540,7 @@ class RoyaltyCalculator
             ->selectRaw(
                 'COUNT(*) as transactions, '
                 ."SUM(CASE WHEN t.type <> 'transfer' AND t.release_id IS NULL AND (t.type <> 'expense' OR t.recoupable = 1) THEN 1 ELSE 0 END) as unassigned, "
-                ."SUM(CASE WHEN t.type <> 'transfer' AND t.release_id IS NOT NULL AND ".self::RESOLVED_CONTRACT.' IS NULL THEN 1 ELSE 0 END) as missing_contract, '
+                ."SUM(CASE WHEN t.type <> 'transfer' AND t.release_id IS NOT NULL AND ".self::WITHOUT_CONTRACT.' THEN 1 ELSE 0 END) as missing_contract, '
                 .'SUM(CASE WHEN t.converted_total IS NULL THEN 1 ELSE 0 END) as unconverted',
             )
             ->first();
@@ -541,7 +549,7 @@ class RoyaltyCalculator
             ->whereBetween('t.paid_timestamp', [$start, $end])
             ->where('t.type', '<>', 'transfer')
             ->whereNotNull('t.release_id')
-            ->whereRaw(self::RESOLVED_CONTRACT.' IS NULL')
+            ->whereRaw(self::WITHOUT_CONTRACT)
             ->selectRaw('t.release_id, COUNT(*) as transactions, SUM(t.converted_total) as total')
             ->groupBy('t.release_id')
             ->get()
