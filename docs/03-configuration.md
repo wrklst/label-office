@@ -78,14 +78,15 @@ One cron entry runs everything that happens on its own:
 * * * * * cd /path/to/label-office && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-| When            | What                                                                                                                          |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Every minute    | Checks whether an update was asked for under **Settings → Updates**, or automatic updates are due, and does nothing otherwise |
-| Every 5 minutes | Records queue metrics for the Horizon dashboard                                                                               |
-| Daily, 03:30    | Cleans up direct uploads of files that were never reported as finished                                                        |
-| Daily, 04:00    | Books recurring label costs that have come due                                                                                |
-| Monday, 05:00   | Fetches new Bandcamp sales for labels that work with Bandcamp and have **Sync automatically every week** ticked               |
-| Daily, 06:30    | Queues the airplay research for the ten tracks researched longest ago                                                         |
+| When            | What                                                                                                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Every minute    | Checks whether an update was asked for under **Settings → Updates**, or automatic updates are due, and does nothing otherwise                                            |
+| Every 5 minutes | Records queue metrics for the Horizon dashboard                                                                                                                          |
+| Every minute    | Checks whether the nightly backup is due at the hour set under **Settings → Backups**, or one was asked for there; see [Deployment](04-deployment.md#the-nightly-backup) |
+| Daily, 03:30    | Cleans up direct uploads of files that were never reported as finished                                                                                                   |
+| Daily, 04:00    | Books recurring label costs that have come due                                                                                                                           |
+| Monday, 05:00   | Fetches new Bandcamp sales for labels that work with Bandcamp and have **Sync automatically every week** ticked                                                          |
+| Daily, 06:30    | Queues the airplay research for the ten tracks researched longest ago                                                                                                    |
 
 Times are in the server's time zone.
 
@@ -101,7 +102,7 @@ Release files (covers, masters, documents) and uploaded statement files are stor
 ROYALTIES_FILES_DISK=local
 ```
 
-Files are in `storage/app/private`. Include that folder in your backups.
+Files are in `storage/app/private`. Include that folder in your backups; the [nightly backup](04-deployment.md#the-nightly-backup) does, once a bucket is connected.
 
 **In an S3-compatible bucket** (Amazon S3, Hetzner Object Storage, Backblaze B2, MinIO …):
 

@@ -150,6 +150,7 @@ What an operator needs to know in one place.
 One account in the installation looks after the installation itself. It is the account that `royalties:create-user` made first, when no installation admin existed; on an installation that is older than this setting it is the account with the lowest id. Only the installation admin may:
 
 - choose where files are stored, on the **File storage** card under **Settings → Connections**,
+- see **Settings → Backups**, and set the nightly backup and its bucket there,
 - see **Settings → Updates**, and install or schedule an update there,
 - enter a **Base URL** for receipt reading that is `http://` or that points to this server or its network, for a model you host yourself. Everyone else has to give an `https://` address on the internet, see [Connections](42-connections.md#receipt-reading).
 

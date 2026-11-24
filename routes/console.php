@@ -19,6 +19,9 @@ Schedule::command('royalties:book-recurring-expenses')->dailyAt('04:00')->withou
 // Ten tracks a day keep a catalog of a few hundred tracks researched about once a month.
 Schedule::command('royalties:research-airplay')->dailyAt('06:30')->withoutOverlapping(60)->onOneServer();
 
+// Does nothing unless a backup is due at the hour set under Settings → Backups, or one was asked for there.
+Schedule::command('royalties:backup --scheduled')->everyMinute()->withoutOverlapping(720)->onOneServer()->runInBackground();
+
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
 
 Schedule::call(fn () => DirectUploads::prune())->name('prune-unreported-uploads')->dailyAt('03:30')->onOneServer();

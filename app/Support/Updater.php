@@ -154,11 +154,28 @@ final class Updater
      */
     public static function backup(string $tag): string
     {
-        $connection = config('database.connections.'.config('database.default'));
         $directory = storage_path('app/update-backups');
-        $path = $directory.'/'.now()->format('Y-m-d-His').'-before-'.preg_replace('/[^A-Za-z0-9.]/', '', $tag);
 
         File::ensureDirectoryExists($directory, 0700);
+
+        $path = self::dump($directory.'/'.now()->format('Y-m-d-His').'-before-'.preg_replace('/[^A-Za-z0-9.]/', '', $tag));
+
+        $backups = File::files($directory);
+        usort($backups, fn ($a, $b): int => $b->getMTime() <=> $a->getMTime());
+        File::delete(array_map(fn ($file): string => $file->getPathname(), array_slice($backups, self::BACKUPS_KEPT)));
+
+        return $path;
+    }
+
+    /**
+     * Write the whole database to one file and return its path: $path
+     * with ".sql" for MySQL and MariaDB, with ".sqlite" for SQLite.
+     *
+     * @throws RuntimeException when no copy could be made
+     */
+    public static function dump(string $path): string
+    {
+        $connection = config('database.connections.'.config('database.default'));
 
         if ($connection['driver'] === 'sqlite') {
             $path .= '.sqlite';
@@ -186,14 +203,10 @@ final class Updater
                 throw new RuntimeException('The database could not be backed up: '.mb_substr(trim($dump->errorOutput()), 0, 300));
             }
         } else {
-            throw new RuntimeException("The updater cannot back up a {$connection['driver']} database. Back it up yourself and run “php artisan royalties:update --without-backup”.");
+            throw new RuntimeException("A {$connection['driver']} database cannot be backed up from here. Back it up yourself; for an update, then run “php artisan royalties:update --without-backup”.");
         }
 
         @chmod($path, 0600);
-
-        $backups = File::files($directory);
-        usort($backups, fn ($a, $b): int => $b->getMTime() <=> $a->getMTime());
-        File::delete(array_map(fn ($file): string => $file->getPathname(), array_slice($backups, self::BACKUPS_KEPT)));
 
         return $path;
     }

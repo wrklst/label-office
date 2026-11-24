@@ -18,6 +18,7 @@ use App\Http\Controllers\PlatformLinkController;
 use App\Http\Controllers\PlayCountController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ReleaseController;
+use App\Http\Controllers\Settings\BackupsController;
 use App\Http\Controllers\Settings\ConnectionsController;
 use App\Http\Controllers\Settings\LabelBrandingController;
 use App\Http\Controllers\Settings\LabelSettingsController;
@@ -127,6 +128,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('settings/updates', [UpdatesController::class, 'update'])->name('updates.update');
             Route::post('settings/updates/check', [UpdatesController::class, 'check'])->name('updates.check');
             Route::post('settings/updates/install', [UpdatesController::class, 'install'])->name('updates.install');
+
+            Route::get('settings/backups', [BackupsController::class, 'edit'])->name('backups.edit');
+            Route::put('settings/backups', [BackupsController::class, 'update'])->name('backups.update');
+            Route::put('settings/backups/bucket', [BackupsController::class, 'bucket'])->middleware('throttle:10,1')->name('backups.bucket');
+            Route::delete('settings/backups/bucket', [BackupsController::class, 'destroyBucket'])->name('backups.bucket.destroy');
+            Route::post('settings/backups/run', [BackupsController::class, 'run'])->middleware('throttle:10,1')->name('backups.run');
 
             Route::get('settings/team', [TeamController::class, 'index'])->name('team.index');
             Route::post('settings/team', [TeamController::class, 'store'])->middleware('throttle:30,60')->name('team.store');

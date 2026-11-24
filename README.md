@@ -244,7 +244,9 @@ A production server needs, beyond the above:
 3. **The scheduler**: `* * * * * php artisan schedule:run` in cron.
 4. **Mail** that actually delivers.
 5. **Backups** of the database, the files and `.env` (it holds `APP_KEY`,
-   which encrypts stored credentials).
+   which encrypts stored credentials). With an S3-compatible bucket
+   connected, the database and the files are backed up there every night,
+   set up under Settings → Backups; `.env` is yours to keep.
 
 Ready-to-use configurations for nginx, Supervisor and Laravel Forge, a deploy
 script, and how to move an installation to another server:
@@ -345,6 +347,7 @@ php artisan royalties:import statement.csv --label=example-records --paid=2026-1
 php artisan royalties:sync-bandcamp --label=example-records
 php artisan royalties:generate-previews
 php artisan royalties:move-files --to=s3 --dry-run
+php artisan royalties:backup --list
 php artisan royalties:research-airplay --label=example-records
 php artisan royalties:update --check
 php artisan royalties:hand-over-installation new-admin@example.com

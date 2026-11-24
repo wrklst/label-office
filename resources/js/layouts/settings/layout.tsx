@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
+import { edit as editBackups } from '@/routes/backups';
 import { edit as editBandcamp } from '@/routes/bandcamp';
 import { edit as editConnections } from '@/routes/connections';
 import { edit as editLabel } from '@/routes/label-settings';
@@ -59,9 +60,20 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
             ? [
                   ...accountNavItems,
                   ...labelNavItems,
-                  // The installation's own admins look after its version.
+                  // The installation's own admins look after its backups and its version.
                   ...(auth.user.installation_admin
-                      ? [{ title: 'Updates', href: editUpdates(), icon: null }]
+                      ? [
+                            {
+                                title: 'Backups',
+                                href: editBackups(),
+                                icon: null,
+                            },
+                            {
+                                title: 'Updates',
+                                href: editUpdates(),
+                                icon: null,
+                            },
+                        ]
                       : []),
               ]
             : accountNavItems;

@@ -1,4 +1,5 @@
 import { Form, usePoll } from '@inertiajs/react';
+import { useEffect } from 'react';
 import UpdatesController from '@/actions/App/Http/Controllers/Settings/UpdatesController';
 import AlertError from '@/components/alert-error';
 import { CheckField, Field, SelectInput } from '@/components/field';
@@ -81,7 +82,16 @@ export default function Updates({
     const waiting = settings.requested || settings.last?.status === 'running';
 
     // While an update is on its way the page finds out by itself when it is through.
-    usePoll(5000, {}, { autoStart: waiting });
+    // Started and stopped as it changes: autoStart alone is only read when the page is first shown.
+    const { start, stop } = usePoll(5000, {}, { autoStart: false });
+
+    useEffect(() => {
+        if (waiting) {
+            start();
+        } else {
+            stop();
+        }
+    }, [waiting, start, stop]);
 
     return (
         <Page

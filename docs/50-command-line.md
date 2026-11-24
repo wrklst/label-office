@@ -99,6 +99,38 @@ php artisan royalties:move-files --to=s3
 
 Every copy is checked by size. Originals are never deleted. Running it again continues where it stopped.
 
+### royalties:backup
+
+Backs up the database and the files to the bucket, then deletes the backups that are no longer kept. The scheduler runs it at the hour set under **Settings → Backups**. See [Deployment](04-deployment.md#the-nightly-backup) for what a backup holds and how many are kept.
+
+```sh
+php artisan royalties:backup
+php artisan royalties:backup --list
+```
+
+| Option        | Meaning                                                                                            |
+| ------------- | -------------------------------------------------------------------------------------------------- |
+| `--list`      | Only list the backups there are, with their number of files                                        |
+| `--scheduled` | Run only when a backup is due at the hour set under **Settings → Backups**, or was asked for there |
+
+Without a bucket it stops with a message. Two runs at the same time are refused.
+
+### royalties:assemble-backup
+
+Puts a backup together in an empty folder: the database dump, and under `files/` every file as it was when the backup was made.
+
+```sh
+php artisan royalties:assemble-backup --to=/tmp/restore
+php artisan royalties:assemble-backup 2026-11-24-020000-daily --to=/tmp/restore
+```
+
+| Argument or option | Meaning                                                                  |
+| ------------------ | ------------------------------------------------------------------------ |
+| `backup`           | The backup as `royalties:backup --list` names it; the newest if left out |
+| `--to=`            | The folder to write to. It must be empty or not exist yet.               |
+
+Nothing of the running installation is changed.
+
 ### royalties:research-airplay
 
 Queues a web research for tracks that have not been researched lately.
@@ -220,6 +252,7 @@ php artisan royalties:credit-remixers
 | Command                             | When                                                                |
 | ----------------------------------- | ------------------------------------------------------------------- |
 | `royalties:update --scheduled`      | Every minute; does nothing unless an update was asked for or is due |
+| `royalties:backup --scheduled`      | Every minute; does nothing unless a backup is due or was asked for  |
 | `royalties:book-recurring-expenses` | Daily at 04:00                                                      |
 | `royalties:research-airplay`        | Daily at 06:30                                                      |
 | `royalties:sync-bandcamp`           | Mondays at 05:00                                                    |

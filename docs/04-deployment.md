@@ -151,13 +151,62 @@ mysql new_db < data.sql
 
 Back up three things, and test restoring them:
 
-| What     | How                                                                                         |
-| -------- | ------------------------------------------------------------------------------------------- |
-| Database | A daily dump (`mysqldump`), kept off the server                                             |
-| Files    | `storage/app/private`, or the bucket: turn on versioning or replicate it to a second bucket |
-| `.env`   | Once, and after every change. It holds `APP_KEY`.                                           |
+| What     | How                                                                                            |
+| -------- | ---------------------------------------------------------------------------------------------- |
+| Database | The nightly backup below, or a daily dump (`mysqldump`) kept off the server                    |
+| Files    | The nightly backup below, or copy `storage/app/private` and the bucket somewhere else yourself |
+| `.env`   | Yourself, once and after every change. It holds `APP_KEY`, and it is never part of a backup.   |
 
 Audio masters are the one thing that cannot be recreated from anywhere else. If the files are on the server's own disk, a disk failure without a backup loses them.
+
+### The nightly backup
+
+With an S3-compatible bucket connected, the application backs itself up every night. Everything about it is set by the installation's admin under **Settings → Backups**; nothing of it is in the environment file. Without a bucket there is no backup, and the page says so.
+
+A backup is a folder under `backups/` in the bucket, for example `backups/2026-11-24-020000-daily`. It holds:
+
+- the database as a packed dump (`database.sql.gz`; for SQLite a copy of the file, `database.sqlite.gz`),
+- the files that are new or changed since the backup before it, from `storage/app/private` and from the bucket for files. The first backup holds all of them.
+- `manifest.json`, the list of every file there was that night and which backup holds it.
+
+**Settings → Backups** has four parts:
+
+| Part                          | What it does                                                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Last backup**               | What the last run did, or why it failed. **Back up now** has the scheduler make one within a minute.                            |
+| **Schedule and what is kept** | **Make a backup every night**, the hour **At** (server time, 02:00 unless changed), and how many backups of each tier are kept. |
+| **Where backups go**          | The bucket for files, or **Connect a bucket for backups**. The bucket is tested before it is used.                              |
+| **Backups in the bucket**     | Every backup with its number of files and how many of them were new or changed.                                                 |
+
+**Where it goes.** Into the bucket for files (the one from **Settings → Connections** or the `AWS_…` settings), unless the backups have their own. Their own bucket is not required, but it is the better choice: a backup beside the files is lost with them when the bucket or its access key is. Backups made before a change of bucket stay in the old one and are no longer listed or cleaned up.
+
+**What is kept.** Each backup has a tier: the first of a year is yearly, the first of a month monthly, the first of a week (from Monday) weekly, every other one daily. After each backup the older ones of each tier are deleted:
+
+| Tier    | Kept unless changed |
+| ------- | ------------------- |
+| Daily   | 6                   |
+| Weekly  | 3                   |
+| Monthly | 11                  |
+| Yearly  | 7                   |
+
+Deleting a backup removes its dump and its list. A file it holds stays for as long as a kept backup still needs it, so every kept backup remains complete.
+
+**Getting a backup back.** `royalties:assemble-backup` puts one together in an empty folder on the server: the dump, and under `files/` every file as it was that night.
+
+```sh
+php artisan royalties:backup --list
+php artisan royalties:assemble-backup 2026-11-24-020000-daily --to=/tmp/restore
+```
+
+It only writes into that folder. To go back to that state, load `database.sql` into the database (`mysql label_royalties < database.sql`), copy `files/local/` into `storage/app/private/` and `files/s3/` into the bucket for files. The folder needs room for all files of the installation.
+
+Good to know:
+
+- The settings, with the keys of the backups' own bucket, are stored encrypted in the database. On a new server they are read from the restored database with the old `APP_KEY`; without that key, connect the bucket again.
+- A file counts as changed when its size or its time of last change differs. Stored files are never edited in place, so this is exact.
+- A backup needs `mysqldump` or `mariadb-dump` on the server for MySQL and MariaDB; other databases than these and SQLite are not backed up.
+- A run that fails leaves no backup behind and is not tried again that night; what it uploaded is removed by the next run that succeeds. The reason is on the settings page and in the log.
+- Outside production the folder is `<APP_ENV>/backups`, as for files.
 
 ## When an update leaves the site in maintenance mode
 
