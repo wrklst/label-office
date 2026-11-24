@@ -62,7 +62,7 @@ test('a release, its tracks and an artist show a picture: the cover, or the arti
     $thumb = route('release-files.show', ['release_file' => $cover->id, 'size' => 'thumb']);
     $row = fn (string $records, string $search) => $this->actingAs($admin)->getJson(route('options', ['records' => $records, 'search' => $search]))->json('data.0');
 
-    expect($row('releases', 'Night'))->toBe(['id' => $release->id, 'name' => 'Night Drive', 'hint' => 'EX042 · Example Artist', 'image' => $thumb])
+    expect($row('releases', 'Night'))->toBe(['id' => $release->id, 'name' => 'Night Drive', 'related' => null, 'hint' => 'EX042 · Example Artist', 'image' => $thumb])
         ->and($row('tracks', 'Head'))->toMatchArray(['hint' => 'Night Drive', 'image' => $thumb])
         ->and($row('artists', 'Example'))->toMatchArray(['image' => $thumb])
         ->and($row('artists', 'Unseen'))->toMatchArray(['image' => null]);
@@ -83,7 +83,7 @@ test('a release, its tracks and an artist show a picture: the cover, or the arti
     expect($artist->refresh()->image_path)->toBeNull();
 });
 
-test('a list is narrowed to what belongs to the payee or contract chosen beside it, unless that leaves nothing', function () {
+test('a list puts what belongs to the payee or contract chosen beside it first', function () {
     $label = Label::factory()->create();
     $admin = labelAdmin($label);
     $payee = Payee::factory()->create(['label_id' => $label->id]);
@@ -99,14 +99,14 @@ test('a list is narrowed to what belongs to the payee or contract chosen beside 
 
     $names = fn (string $records, array $params) => $this->actingAs($admin)->getJson(route('options', ['records' => $records, ...$params]))->json('data.*.name');
 
-    expect($names('contracts', ['payee_id' => $payee->id]))->toBe(['Remix deal'])
+    // What belongs to the choice comes first; nothing is hidden.
+    expect($names('contracts', ['payee_id' => $payee->id]))->toBe(['Remix deal', 'Other deal', 'Unused deal'])
         ->and($names('releases', ['contract_id' => $contract->id]))->toBe(['Other release', 'Paid release'])
-        ->and($names('tracks', ['contract_id' => $contract->id]))->toBe(['Paid by its release', 'Remix'])
-        ->and($names('tracks', ['contract_id' => $contract->id, 'release_id' => $other->id]))->toBe(['Remix'])
+        ->and($names('tracks', ['contract_id' => $contract->id]))->toBe(['Paid by its release', 'Remix', 'Original'])
+        ->and($names('tracks', ['contract_id' => $contract->id, 'release_id' => $other->id]))->toBe(['Remix', 'Original'])
         ->and($names('tracks', ['release_id' => $other->id]))->toBe(['Original', 'Remix'])
-        // A contract that pays for nothing yet does not empty the list it is to be set from.
-        ->and($names('releases', ['contract_id' => $unused->id]))->toBe(['Other release', 'Paid release'])
-        ->and($names('contracts', ['payee_id' => Payee::factory()->create(['label_id' => $label->id])->id]))->toHaveCount(3);
+        ->and($this->actingAs($admin)->getJson(route('options', ['records' => 'tracks', 'contract_id' => $contract->id]))->json('data.*.related'))->toBe([true, true, false])
+        ->and($names('releases', ['contract_id' => $unused->id]))->toBe(['Other release', 'Paid release']);
 });
 
 test('a record can be left out of its own dropdown, as a contract is not its own child', function () {
@@ -120,7 +120,7 @@ test('a record can be left out of its own dropdown, as a contract is not its own
     expect($names)->toBe(['Other Deal']);
 });
 
-test('what is chosen already is not offered again, and when that uses up what a contract pays for the rest is offered', function () {
+test('what is chosen already is not offered again, and the album of a track comes first beside its single', function () {
     $label = Label::factory()->create();
     $admin = labelAdmin($label);
     $contract = Contract::factory()->create(['label_id' => $label->id]);
@@ -129,6 +129,10 @@ test('what is chosen already is not offered again, and when that uses up what a 
     Release::factory()->create(['label_id' => $label->id, 'name' => 'Unrelated']);
     $names = fn (array $chosen) => $this->actingAs($admin)->getJson(route('options', ['records' => 'releases', 'contract_id' => $contract->id, 'exclude' => implode(',', $chosen)]))->json('data.*.name');
 
-    expect($names([$paid->id]))->toBe(['Also paid'])
-        ->and($names([$paid->id, $alsoPaid->id]))->toBe(['Unrelated']);
+    // The track of a paid single has a contract of its own and is on an album too: the album belongs as well.
+    $album = Release::factory()->create(['label_id' => $label->id, 'name' => 'The album']);
+    Track::factory()->create(['label_id' => $label->id, 'release_id' => $paid->id, 'contract_id' => Contract::factory()->create(['label_id' => $label->id])->id])->putOn($album->id, 6);
+
+    expect($names([$paid->id]))->toBe(['Also paid', 'The album', 'Unrelated'])
+        ->and($names([$paid->id, $alsoPaid->id]))->toBe(['The album', 'Unrelated']);
 });

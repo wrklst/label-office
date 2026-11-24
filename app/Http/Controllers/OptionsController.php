@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * What a dropdown of records offers: searched on the server and handed
@@ -72,13 +73,16 @@ class OptionsController extends Controller
         };
 
         $query = match ($records) {
-            // The releases a contract pays for: those it is set on and those with a track it is set on.
+            // First the releases a contract pays for: those it is set on and those with a track it is set on.
             'releases' => $this->narrowed(
                 Release::query()->with(['cover:id,release_id', 'artist:id,name'])->orderBy('name')->orderBy('id'),
-                $contracts ? fn (Builder $releases) => $releases->where(fn (Builder $paid) => $paid->whereIn('contract_id', $contracts)->orWhereHas('tracks', fn (Builder $tracks) => $tracks->whereIn('tracks.contract_id', $contracts))) : null,
+                $contracts ? fn (Builder $releases) => $releases->where(fn (Builder $paid) => $paid->whereIn('contract_id', $contracts)->orWhereHas('tracks', fn (Builder $tracks) => $tracks->where(fn (Builder $track) => $track
+                    ->whereIn('tracks.contract_id', $contracts)
+                    // Also the other releases of a track that is on a release the contract is set on, such as the album beside the single.
+                    ->orWhereIn('tracks.id', DB::table('release_track')->join('releases as paid_releases', 'paid_releases.id', '=', 'release_track.release_id')->whereIn('paid_releases.contract_id', $contracts)->select('release_track.track_id'))))) : null,
                 $excluded,
             ),
-            // A dropdown of tracks can be narrowed to the release chosen beside it, and to what a contract pays for.
+            // A dropdown of tracks is narrowed to the release chosen beside it, and lists what a contract pays for first.
             'tracks' => $this->narrowed(
                 Track::query()->with(['release:id,name', 'release.cover:id,release_id'])
                     ->when($releaseId, fn (Builder $tracks) => $tracks->onRelease($releaseId))
@@ -88,7 +92,7 @@ class OptionsController extends Controller
             ),
             'artists' => Artist::query()->orderBy('name')->orderBy('id'),
             'payees' => Payee::query()->orderBy('name')->orderBy('id'),
-            // The contracts a payee has a split on.
+            // First the contracts a payee has a split on.
             'contracts' => $this->narrowed(
                 Contract::query()->orderBy('name')->orderBy('id'),
                 $payeeId ? fn (Builder $contracts) => $contracts->whereHas('splits', fn (Builder $splits) => $splits->where('payee_id', $payeeId)) : null,
@@ -104,27 +108,31 @@ class OptionsController extends Controller
     }
 
     /**
-     * Narrow a list to what belongs to something chosen beside it, but
-     * only while that leaves anything: a contract that pays for nothing
-     * yet must not empty the list it is about to be set from.
+     * Put what belongs to something chosen beside it first, and everything
+     * else after it. Nothing is hidden: what a contract pays for today need
+     * not be all it is meant for, so the rest stays within reach.
      *
      * @template TModel of Model
      *
      * @param  Builder<TModel>  $query
-     * @param  (\Closure(Builder<TModel>): mixed)|null  $narrow
+     * @param  (\Closure(Builder<TModel>): mixed)|null  $related
      * @param  list<int>  $excluded
      * @return Builder<TModel>
      */
-    private function narrowed(Builder $query, ?\Closure $narrow, array $excluded = []): Builder
+    private function narrowed(Builder $query, ?\Closure $related, array $excluded = []): Builder
     {
-        // What is chosen already does not count as something left to offer.
         $query = $excluded ? $query->whereKeyNot($excluded) : $query;
 
-        if ($narrow === null || ! $query->clone()->tap($narrow)->exists()) {
+        if ($related === null) {
             return $query;
         }
 
-        return $query->tap($narrow);
+        $table = $query->getModel()->getTable();
+        $ids = $query->getModel()->newQuery()->tap($related)->select("{$table}.id");
+
+        return $query->reorder()->select("{$table}.*")
+            ->addSelect(['related' => DB::query()->selectRaw('count(*)')->fromSub($ids, 'related_records')->whereColumn('related_records.id', "{$table}.id")])
+            ->orderByDesc('related')->orderBy('name')->orderBy('id');
     }
 
     /**
@@ -153,6 +161,8 @@ class OptionsController extends Controller
         return array_values($models->map(fn (Model $model): array => [
             'id' => (int) $model->getKey(),
             'name' => (string) $model->getAttribute('name'),
+            // Whether it belongs to what is chosen beside the dropdown; null when nothing is.
+            'related' => $model->getAttribute('related') === null ? null : (bool) $model->getAttribute('related'),
             'hint' => match (true) {
                 $model instanceof Release => implode(' · ', array_filter([$model->catalog_number, $model->artist?->name])) ?: null,
                 $model instanceof Track => implode(' · ', array_filter([$model->release?->name, $model->isrc])) ?: null,

@@ -97,7 +97,7 @@ test('choosing a payee offers the releases their contracts pay for, with those t
     Track::factory()->create(['label_id' => $label->id, 'release_id' => $release->id]);
 
     $this->actingAs($admin)->getJson(route('options', ['records' => 'releases', 'payee_id' => $payee->id]))
-        ->assertJsonCount(1, 'data')->assertJsonPath('data.0.name', 'Remixes');
+        ->assertJsonPath('data.0.name', 'Remixes')->assertJsonPath('data.0.related', true)->assertJsonPath('data.1.related', false);
 
     $tracks = $this->actingAs($admin)->getJson(route('agreements.release', ['release' => $release, 'payee_id' => $payee->id]))->json('tracks');
 

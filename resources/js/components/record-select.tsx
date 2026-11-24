@@ -1,5 +1,5 @@
 import { Check, ChevronDown, Search } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, Fragment } from 'react';
 import OptionsController from '@/actions/App/Http/Controllers/OptionsController';
 import { cn } from '@/lib/utils';
 
@@ -18,6 +18,8 @@ export type RecordOption = {
     id: number;
     name: string;
     hint: string | null;
+    /** Whether it belongs to what is chosen beside the dropdown; those come first. */
+    related?: boolean | null;
     image: string | null;
 };
 
@@ -317,29 +319,39 @@ export function RecordSelect({
                                 {placeholder}
                             </li>
                         )}
-                        {options.map((option) => (
-                            <li
-                                key={option.id}
-                                role="option"
-                                aria-selected={option.id === current}
-                                onClick={() => choose(option)}
-                                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
-                            >
-                                {pictured && <Picture option={option} />}
-                                <span className="min-w-0 flex-1">
-                                    <span className="block truncate">
-                                        {option.name}
-                                    </span>
-                                    {option.hint && (
-                                        <span className="block truncate text-xs text-muted-foreground">
-                                            {option.hint}
-                                        </span>
+                        {options.map((option, position) => (
+                            <Fragment key={option.id}>
+                                {option.related === false &&
+                                    options[position - 1]?.related === true && (
+                                        <li
+                                            role="presentation"
+                                            className="mt-1 border-t px-2 pt-2 pb-1 text-xs text-muted-foreground"
+                                        >
+                                            Everything else
+                                        </li>
                                     )}
-                                </span>
-                                {option.id === current && (
-                                    <Check className="size-4 shrink-0" />
-                                )}
-                            </li>
+                                <li
+                                    role="option"
+                                    aria-selected={option.id === current}
+                                    onClick={() => choose(option)}
+                                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
+                                >
+                                    {pictured && <Picture option={option} />}
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block truncate">
+                                            {option.name}
+                                        </span>
+                                        {option.hint && (
+                                            <span className="block truncate text-xs text-muted-foreground">
+                                                {option.hint}
+                                            </span>
+                                        )}
+                                    </span>
+                                    {option.id === current && (
+                                        <Check className="size-4 shrink-0" />
+                                    )}
+                                </li>
+                            </Fragment>
                         ))}
                         {!loading && options.length === 0 && (
                             <li className="px-2 py-1.5 text-sm text-muted-foreground">
