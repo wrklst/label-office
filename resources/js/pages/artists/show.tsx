@@ -1,6 +1,8 @@
 import { setLayoutProps } from '@inertiajs/react';
 import { Pencil } from 'lucide-react';
 import ArtistController from '@/actions/App/Http/Controllers/ArtistController';
+import ArtistImageController from '@/actions/App/Http/Controllers/ArtistImageController';
+import { LabelImageUpload } from '@/components/label-image-upload';
 import { Amount } from '@/components/amount';
 import { ArtistFields } from '@/components/artist-fields';
 import type { EditableArtist } from '@/components/artist-fields';
@@ -33,6 +35,7 @@ import type { Option, Paginated } from '@/types';
 type Props = {
     artistOptions: Option[];
     artist: EditableArtist & {
+        image_url: string | null;
         alias_of: { id: number; name: string } | null;
         aliases: { id: number; name: string }[];
     };
@@ -207,6 +210,26 @@ export default function ShowArtist({
                 to="release"
                 title="Releases by income"
             />
+
+            <Panel
+                title="Picture"
+                description="Shown beside the artist in lists and dropdowns. Without one, the cover of their latest release stands in."
+            >
+                <div className="max-w-sm">
+                    <LabelImageUpload
+                        kind="picture"
+                        title="Artist picture"
+                        hint="PNG, JPEG or WebP, up to 4 MB."
+                        current={artist.image_url}
+                        urls={{
+                            store: ArtistImageController.store.url(artist.id),
+                            destroy: ArtistImageController.destroy.url(
+                                artist.id,
+                            ),
+                        }}
+                    />
+                </div>
+            </Panel>
 
             <Panel title="Releases" flush>
                 {releases.total === 0 ? (

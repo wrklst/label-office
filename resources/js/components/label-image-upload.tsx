@@ -20,8 +20,12 @@ export function LabelImageUpload({
     title,
     hint,
     current,
+    urls,
 }: {
-    kind: 'logo' | 'signet';
+    /** What the picture is called in the texts, such as "logo". */
+    kind: string;
+    /** Where the picture is stored and deleted, when it is not one of the label's own. */
+    urls?: { store: string; destroy: string };
     title: string;
     hint: string;
     current: string | null;
@@ -32,7 +36,10 @@ export function LabelImageUpload({
                 <p className="text-sm font-medium">{title}</p>
                 {current && (
                     <DeleteButton
-                        url={LabelBrandingController.destroy.url(kind)}
+                        url={
+                            urls?.destroy ??
+                            LabelBrandingController.destroy.url(kind)
+                        }
                         title={`Delete ${kind}?`}
                         description="The image is deleted. You can upload another one."
                     />
@@ -57,7 +64,9 @@ export function LabelImageUpload({
                 imagePreviewHeight={96}
                 server={{
                     process: {
-                        url: LabelBrandingController.store.url(kind),
+                        url:
+                            urls?.store ??
+                            LabelBrandingController.store.url(kind),
                         headers: {
                             'X-XSRF-TOKEN': xsrfToken(),
                             Accept: 'application/json',

@@ -86,3 +86,23 @@ export function AgreementDocument({
         </div>
     );
 }
+
+/**
+ * A PDF or a picture shown in the page, so a contract can be read
+ * without downloading it. `src` has to answer with the file inline.
+ */
+export function FileViewer({ src, name }: { src: string; name: string }) {
+    return /\.pdf$/i.test(name) ? (
+        <iframe
+            src={src}
+            title={name}
+            className="h-[80vh] w-full rounded-lg border bg-background print:hidden"
+        />
+    ) : (
+        <img
+            src={src}
+            alt={name}
+            className="max-w-full rounded-lg border print:hidden"
+        />
+    );
+}

@@ -531,15 +531,21 @@ class Agreement extends Model
     }
 
     /**
-     * The copy signed outside the application, as a download.
+     * The copy signed outside the application, as a download or to be
+     * shown in the page.
      */
-    public function signedCopyResponse(): StreamedResponse
+    public function signedCopyResponse(bool $inline = false): StreamedResponse
     {
         abort_if($this->signed_copy_path === null, 404);
 
         [$disk, $path] = explode(':', $this->signed_copy_path, 2);
 
-        return Storage::disk($disk)->download($path, (string) $this->signed_copy_name);
+        abort_unless(Storage::disk($disk)->exists($path), 404);
+
+        // Shown in the page it is only ever a PDF or a picture, and is told to be nothing else.
+        return $inline
+            ? Storage::disk($disk)->response($path, (string) $this->signed_copy_name, ['X-Content-Type-Options' => 'nosniff'])
+            : Storage::disk($disk)->download($path, (string) $this->signed_copy_name);
     }
 
     /**
@@ -554,11 +560,11 @@ class Agreement extends Model
     /**
      * The PDF as a download named after the agreement.
      */
-    public function pdfResponse(): Response
+    public function pdfResponse(bool $inline = false): Response
     {
         return response($this->pdf(), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="'.(Str::slug($this->name) ?: 'agreement')."-{$this->id}.pdf\"",
+            'Content-Disposition' => ($inline ? 'inline' : 'attachment').'; filename="'.(Str::slug($this->name) ?: 'agreement')."-{$this->id}.pdf\"",
         ]);
     }
 

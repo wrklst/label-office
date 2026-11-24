@@ -88,12 +88,12 @@ class MyAgreementController extends Controller
 
         abort_if($agreement->body === null, 404);
 
-        return $agreement->pdfResponse();
+        return $agreement->pdfResponse($request->boolean('inline'));
     }
 
     public function signedCopy(Request $request, int $agreement): StreamedResponse
     {
-        return $this->find($request, $agreement)->signedCopyResponse();
+        return $this->find($request, $agreement)->signedCopyResponse($request->boolean('inline'));
     }
 
     /**

@@ -4,6 +4,7 @@ import MyAgreementController from '@/actions/App/Http/Controllers/MyAgreementCon
 import {
     AgreementDocument,
     AgreementStatus,
+    FileViewer,
     capacityName,
 } from '@/components/agreement-document';
 import type { AgreementLine } from '@/components/agreement-document';
@@ -63,7 +64,12 @@ export default function MyAgreement({ agreement }: { agreement: Agreement }) {
                             <a
                                 href={MyAgreementController.pdf.url(
                                     agreement.id,
+                                    {
+                                        query: { inline: 1 },
+                                    },
                                 )}
+                                target="_blank"
+                                rel="noreferrer"
                             >
                                 <Download />
                                 PDF
@@ -73,6 +79,15 @@ export default function MyAgreement({ agreement }: { agreement: Agreement }) {
                 </>
             }
         >
+            {agreement.signed_copy && (
+                <FileViewer
+                    src={MyAgreementController.signedCopy.url(agreement.id, {
+                        query: { inline: 1 },
+                    })}
+                    name={agreement.signed_copy}
+                />
+            )}
+
             {agreement.has_text ? (
                 <AgreementDocument
                     text={agreement.text}
@@ -82,7 +97,7 @@ export default function MyAgreement({ agreement }: { agreement: Agreement }) {
             ) : (
                 <p className="text-sm text-muted-foreground">
                     This agreement was signed outside the application. The
-                    signed copy is the agreement: download it above.
+                    signed copy above is the agreement.
                 </p>
             )}
 

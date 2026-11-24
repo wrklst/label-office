@@ -5,6 +5,7 @@ use App\Http\Controllers\AgreementTemplateController;
 use App\Http\Controllers\AirplayController;
 use App\Http\Controllers\AirplayResearchController;
 use App\Http\Controllers\ArtistController;
+use App\Http\Controllers\ArtistImageController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\DashboardController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\LabelController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\MyAgreementController;
 use App\Http\Controllers\NoticeController;
+use App\Http\Controllers\OptionsController;
 use App\Http\Controllers\PayeeController;
 use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\PeriodController;
@@ -80,6 +82,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('catalog', [CatalogController::class, 'index'])->name('catalog.index');
             Route::patch('catalog/assign', [CatalogController::class, 'assign'])->name('catalog.assign');
 
+            Route::get('options/{records}', OptionsController::class)->whereIn('records', OptionsController::RECORDS)->name('options');
+
+            Route::get('artists/{artist}/image', [ArtistImageController::class, 'show'])->name('artists.image.show');
+            Route::post('artists/{artist}/image', [ArtistImageController::class, 'store'])->name('artists.image.store');
+            Route::delete('artists/{artist}/image', [ArtistImageController::class, 'destroy'])->name('artists.image.destroy');
             Route::resource('artists', ArtistController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
             Route::resource('releases', ReleaseController::class);
 

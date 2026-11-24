@@ -130,6 +130,7 @@ class ArtistController extends Controller
             'artistOptions' => Options::artists(),
             'artist' => [
                 ...$artist->only(['id', 'name', 'alias_of_id', 'spotify_id', 'discogs_search_name', 'notes']),
+                'image_url' => ArtistImageController::url($artist),
                 'alias_of' => $artist->aliasOf?->only(['id', 'name']),
                 'aliases' => $artist->aliases()->orderBy('name')->get(['id', 'name'])->map->only(['id', 'name']),
             ],

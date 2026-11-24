@@ -3,11 +3,11 @@ import { useState } from 'react';
 import AgreementController from '@/actions/App/Http/Controllers/AgreementController';
 import { Field, SelectInput } from '@/components/field';
 import { Page, Panel } from '@/components/page';
+import { RecordSelect } from '@/components/record-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { index, show } from '@/routes/agreements';
-import type { Option } from '@/types';
 
 type Agreement = {
     id: number;
@@ -70,20 +70,17 @@ const TERMS: {
 export default function AgreementForm({
     agreement,
     templateOptions,
-    payeeOptions,
-    releaseOptions,
-    trackOptions,
 }: {
     agreement: Agreement | null;
     templateOptions: TemplateOption[];
-    payeeOptions: Option[];
-    releaseOptions: Option[];
-    trackOptions: Option[];
 }) {
     const [templateId, setTemplateId] = useState(
         String(agreement?.agreement_template_id ?? ''),
     );
     const [licensor, setLicensor] = useState(agreement?.licensor ?? 'label');
+    const [releaseId, setReleaseId] = useState<number | ''>(
+        agreement?.release_id ?? '',
+    );
     const template = templateOptions.find(
         (option) => String(option.id) === templateId,
     );
@@ -175,13 +172,13 @@ export default function AgreementForm({
                                         required
                                         hint="The payee who holds the rights in the original recording. They sign too."
                                     >
-                                        <SelectInput
+                                        <RecordSelect
                                             id="artist_payee_id"
+                                            records="payees"
                                             name="artist_payee_id"
                                             defaultValue={
-                                                agreement?.artist_payee_id ?? ''
+                                                agreement?.artist_payee_id
                                             }
-                                            options={payeeOptions}
                                             placeholder="Choose payee…"
                                             required
                                         />
@@ -194,11 +191,11 @@ export default function AgreementForm({
                                     required
                                     hint="The other party: the remixer, or the artist of a release."
                                 >
-                                    <SelectInput
+                                    <RecordSelect
                                         id="payee_id"
+                                        records="payees"
                                         name="payee_id"
-                                        defaultValue={agreement?.payee_id ?? ''}
-                                        options={payeeOptions}
+                                        defaultValue={agreement?.payee_id}
                                         placeholder="Choose payee…"
                                         required
                                     />
@@ -216,14 +213,12 @@ export default function AgreementForm({
                                     htmlFor="release_id"
                                     error={errors.release_id}
                                 >
-                                    <SelectInput
+                                    <RecordSelect
                                         id="release_id"
+                                        records="releases"
                                         name="release_id"
-                                        defaultValue={
-                                            agreement?.release_id ?? ''
-                                        }
-                                        options={releaseOptions}
-                                        placeholder="None"
+                                        value={releaseId}
+                                        onChange={setReleaseId}
                                     />
                                 </Field>
                                 <Field
@@ -231,12 +226,12 @@ export default function AgreementForm({
                                     htmlFor="track_id"
                                     error={errors.track_id}
                                 >
-                                    <SelectInput
+                                    <RecordSelect
                                         id="track_id"
+                                        records="tracks"
                                         name="track_id"
-                                        defaultValue={agreement?.track_id ?? ''}
-                                        options={trackOptions}
-                                        placeholder="None"
+                                        defaultValue={agreement?.track_id}
+                                        params={{ release_id: releaseId }}
                                     />
                                 </Field>
                             </div>

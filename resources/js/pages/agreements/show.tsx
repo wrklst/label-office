@@ -1,18 +1,21 @@
 import { Form, Link } from '@inertiajs/react';
+import { useState } from 'react';
 import { Download, Pencil, PenLine, Send } from 'lucide-react';
 import AgreementController from '@/actions/App/Http/Controllers/AgreementController';
 import {
     AgreementDocument,
     AgreementStatus,
+    FileViewer,
 } from '@/components/agreement-document';
 import type { AgreementLine } from '@/components/agreement-document';
 import { DeliverableList } from '@/components/agreement-deliverables';
 import type { Deliverable } from '@/components/agreement-deliverables';
 import { DeleteButton } from '@/components/delete-button';
-import { CheckField, Field, SelectInput } from '@/components/field';
+import { CheckField, Field } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
 import { Notice } from '@/components/notice';
 import { Page, Panel } from '@/components/page';
+import { RecordSelect } from '@/components/record-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,7 +23,6 @@ import { edit, index } from '@/routes/agreements';
 import { show as showContract } from '@/routes/contracts';
 import { show as sign } from '@/routes/my-agreements';
 import { show as showFile } from '@/routes/release-files';
-import type { Option } from '@/types';
 
 type Agreement = {
     id: number;
@@ -55,19 +57,13 @@ type Agreement = {
     people: string[];
 };
 
-export default function AgreementShow({
-    agreement,
-    payeeOptions = [],
-    contractOptions = [],
-    releaseOptions = [],
-    trackOptions = [],
-}: {
-    agreement: Agreement;
-    payeeOptions?: Option[];
-    contractOptions?: Option[];
-    releaseOptions?: Option[];
-    trackOptions?: Option[];
-}) {
+export default function AgreementShow({ agreement }: { agreement: Agreement }) {
+    // What is chosen narrows the lists beside it: a payee its contracts, a contract its releases and tracks.
+    const [matched, setMatched] = useState({
+        payee: agreement.filed?.payee_id ?? '',
+        contract: agreement.filed?.contract_id ?? '',
+        release: agreement.filed?.release_id ?? '',
+    } as Record<'payee' | 'contract' | 'release', number | ''>);
     const draft = agreement.status === 'draft';
 
     return (
@@ -115,7 +111,14 @@ export default function AgreementShow({
                     )}
                     {!draft && agreement.has_text && (
                         <Button variant="outline" asChild>
-                            <a href={AgreementController.pdf.url(agreement.id)}>
+                            <a
+                                href={AgreementController.pdf.url(
+                                    agreement.id,
+                                    { query: { inline: 1 } },
+                                )}
+                                target="_blank"
+                                rel="noreferrer"
+                            >
                                 <Download />
                                 PDF
                             </a>
@@ -373,6 +376,16 @@ export default function AgreementShow({
                 </p>
             )}
 
+            {agreement.signed_copy && (
+                <FileViewer
+                    src={AgreementController.downloadSignedCopy.url(
+                        agreement.id,
+                        { query: { inline: 1 } },
+                    )}
+                    name={agreement.signed_copy}
+                />
+            )}
+
             {agreement.has_text ? (
                 <AgreementDocument
                     text={agreement.text}
@@ -382,7 +395,7 @@ export default function AgreementShow({
             ) : (
                 <Panel
                     title="What this agreement belongs to"
-                    description="Signed outside the application: the signed copy is the agreement, download it above. Match it to what exists, or make a new payee or contract right here. Everything but the name can stay empty."
+                    description="Signed outside the application: the signed copy above is the agreement. Match it to what exists, or make a new payee or contract right here. Everything but the name can stay empty."
                 >
                     <Form
                         {...AgreementController.match.form(agreement.id)}
@@ -425,13 +438,14 @@ export default function AgreementShow({
                                     error={errors.payee_id ?? errors.new_payee}
                                     hint="Pick one, or type the name of a new payee: it is created when you save."
                                 >
-                                    <SelectInput
+                                    <RecordSelect
                                         id="match-payee"
+                                        records="payees"
                                         name="payee_id"
-                                        defaultValue={
-                                            agreement.filed?.payee_id ?? ''
+                                        value={matched.payee}
+                                        onChange={(payee) =>
+                                            setMatched({ ...matched, payee })
                                         }
-                                        options={payeeOptions}
                                         placeholder="Not matched"
                                     />
                                     <Input
@@ -446,13 +460,15 @@ export default function AgreementShow({
                                     error={errors.contract_id}
                                     hint="The contract statements are calculated from. A new one is named after the agreement and has no splits yet: add them under Deals → Contracts."
                                 >
-                                    <SelectInput
+                                    <RecordSelect
                                         id="match-contract"
+                                        records="contracts"
                                         name="contract_id"
-                                        defaultValue={
-                                            agreement.filed?.contract_id ?? ''
+                                        value={matched.contract}
+                                        onChange={(contract) =>
+                                            setMatched({ ...matched, contract })
                                         }
-                                        options={contractOptions}
+                                        params={{ payee_id: matched.payee }}
                                         placeholder="Not matched"
                                     />
                                     <CheckField
@@ -466,14 +482,17 @@ export default function AgreementShow({
                                     htmlFor="match-release"
                                     error={errors.release_id}
                                 >
-                                    <SelectInput
+                                    <RecordSelect
                                         id="match-release"
+                                        records="releases"
                                         name="release_id"
-                                        defaultValue={
-                                            agreement.filed?.release_id ?? ''
+                                        value={matched.release}
+                                        onChange={(release) =>
+                                            setMatched({ ...matched, release })
                                         }
-                                        options={releaseOptions}
-                                        placeholder="None"
+                                        params={{
+                                            contract_id: matched.contract,
+                                        }}
                                     />
                                 </Field>
                                 <Field
@@ -481,14 +500,15 @@ export default function AgreementShow({
                                     htmlFor="match-track"
                                     error={errors.track_id}
                                 >
-                                    <SelectInput
+                                    <RecordSelect
                                         id="match-track"
+                                        records="tracks"
                                         name="track_id"
-                                        defaultValue={
-                                            agreement.filed?.track_id ?? ''
-                                        }
-                                        options={trackOptions}
-                                        placeholder="None"
+                                        defaultValue={agreement.filed?.track_id}
+                                        params={{
+                                            contract_id: matched.contract,
+                                            release_id: matched.release,
+                                        }}
                                     />
                                 </Field>
                                 <div className="sm:col-span-2">

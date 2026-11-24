@@ -544,7 +544,7 @@ test('a signed copy is filed by dropping it, named after its file and matched to
     $this->actingAs($payeeUser)->get(route('my-agreements.show', $unmatched->id))->assertNotFound();
     $this->actingAs($admin)->get(route('agreements.pdf', $agreement->id))->assertNotFound();
     $this->actingAs($admin)->get(route('agreements.show', $unmatched->id))
-        ->assertInertia(fn (Assert $page) => $page->where('agreement.has_text', false)->where('agreement.lines', [])->where('agreement.filed.payee_id', null)->has('payeeOptions')->has('contractOptions'));
+        ->assertInertia(fn (Assert $page) => $page->where('agreement.has_text', false)->where('agreement.lines', [])->where('agreement.filed.payee_id', null));
 });
 
 test('a filed copy is matched to what exists or to a payee and a contract made on the spot', function () {

@@ -69,7 +69,7 @@ test('an artist page lists the releases and tracks credited to the artist', func
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('artists/show')
-            ->where('artist', ['id' => $artist->id, 'name' => 'Example Artist', 'alias_of_id' => null, 'spotify_id' => null, 'discogs_search_name' => null, 'notes' => null, 'alias_of' => null, 'aliases' => []])
+            ->where('artist', ['id' => $artist->id, 'name' => 'Example Artist', 'alias_of_id' => null, 'spotify_id' => null, 'discogs_search_name' => null, 'notes' => null, 'image_url' => null, 'alias_of' => null, 'aliases' => []])
             ->has('releases.data', 1)
             ->where('releases.data.0.id', $release->id)
             ->has('tracks.data', 1)

@@ -15,7 +15,6 @@ use App\Notifications\DeliverableReturned;
 use App\Support\AgreementExamples;
 use App\Support\CurrentLabel;
 use App\Support\IncomingFile;
-use App\Support\Options;
 use App\Support\PageSize;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -66,7 +65,6 @@ class AgreementController extends Controller
         $parties = $agreement->parties ?? $agreement->currentParties();
 
         return Inertia::render('agreements/show', [
-            ...($agreement->isFiled() ? ['payeeOptions' => Options::payees(), 'contractOptions' => Options::contracts(), 'releaseOptions' => Options::releases(), 'trackOptions' => Options::tracks()] : []),
             'agreement' => [
                 ...$agreement->only(['id', 'name', 'status', 'licensor', 'body_hash', 'contract_id']),
                 'share' => $agreement->terms['share'] ?? null,
@@ -235,9 +233,9 @@ class AgreementController extends Controller
         return back();
     }
 
-    public function downloadSignedCopy(Agreement $agreement): StreamedResponse
+    public function downloadSignedCopy(Request $request, Agreement $agreement): StreamedResponse
     {
-        return $agreement->signedCopyResponse();
+        return $agreement->signedCopyResponse($request->boolean('inline'));
     }
 
     /**
@@ -272,11 +270,11 @@ class AgreementController extends Controller
     /**
      * The agreement as a PDF, once it was sent.
      */
-    public function pdf(Agreement $agreement): HttpResponse
+    public function pdf(Request $request, Agreement $agreement): HttpResponse
     {
         abort_if($agreement->status === Agreement::DRAFT || $agreement->body === null, 404);
 
-        return $agreement->load('signatures')->pdfResponse();
+        return $agreement->load('signatures')->pdfResponse($request->boolean('inline'));
     }
 
     /**
@@ -374,9 +372,6 @@ class AgreementController extends Controller
                 // Which of the terms the template asks for, so the form shows no others.
                 'terms' => array_keys(array_filter(Agreement::TERMS, fn (string $field): bool => preg_match('/\{\{\s*'.preg_quote($field, '/').'\s*\}\}/', $template->body) === 1)),
             ]),
-            'payeeOptions' => Options::payees(),
-            'releaseOptions' => Options::releases(),
-            'trackOptions' => Options::tracks(),
         ];
     }
 }
