@@ -115,6 +115,8 @@ The application does not check a copy: that it is complete, genuine and signed b
 
 On an agreement that everyone has signed, **Create the contract** under **Royalty contract** makes a contract named after the agreement with one split: the payee at the agreed share. It is set on the linked track, or else on the linked release.
 
+The same recording often exists twice in a catalog, once on a single and once on the album or EP, as two tracks with one ISRC. When the agreement is linked to a track, the contract is also set on every other track of the label with the same ISRC that has no contract yet, and the message names their releases. In dropdowns such tracks appear once per release, each with its release beside it.
+
 A track or release that already has a contract keeps it. The new contract is still created, and the message says that it was not set: decide yourself which one applies. Without a linked track or release the contract is created and set nowhere.
 
 The contract is made once. After that the panel shows **Open the contract**. It is an ordinary contract: add further splits or change it under **Deals → Contracts**, see [Contracts, payees and ledgers](30-contracts-payees-and-ledgers.md).

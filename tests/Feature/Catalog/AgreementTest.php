@@ -593,3 +593,29 @@ test('a copy signed elsewhere closes an agreement that is out for signature', fu
         ->and(array_column($agreement->shownLines(), 'capacity'))->toBe(['label']);
     signAgreement($agreement, $payeeUser, 'payee')->assertSessionHasErrors('capacity');
 });
+
+test('the contract of a signed agreement is also set on the same recording on another release', function () {
+    ['label' => $label, 'signatory' => $admin, 'payeeUser' => $payeeUser, 'agreement' => $agreement] = agreementBetweenLabelAndPayee();
+    $single = Release::factory()->create(['label_id' => $label->id, 'name' => 'Example Single']);
+    $onAlbum = Track::factory()->create(['label_id' => $label->id, 'isrc' => 'DEEX12600001', 'contract_id' => null]);
+    $onSingle = Track::factory()->create(['label_id' => $label->id, 'release_id' => $single->id, 'isrc' => 'DEEX12600001', 'contract_id' => null]);
+    $taken = Track::factory()->create(['label_id' => $label->id, 'isrc' => 'DEEX12600001', 'contract_id' => Contract::factory()->create(['label_id' => $label->id])->id]);
+    $otherRecording = Track::factory()->create(['label_id' => $label->id, 'isrc' => 'DEEX12600002', 'contract_id' => null]);
+    $otherLabel = Track::factory()->create(['isrc' => 'DEEX12600001', 'contract_id' => null]);
+    $agreement->update(['track_id' => $onAlbum->id]);
+    $agreement->send();
+    signAgreement($agreement, $payeeUser, 'payee');
+    signAgreement($agreement, $admin, 'label');
+    $before = $taken->contract_id;
+
+    $this->actingAs($admin)->post(route('agreements.contract', $agreement->id))
+        ->assertInertiaFlash('toast.message', "Contract created and set on {$onAlbum->name}. Also set on the same recording on: Example Single.");
+
+    $contractId = $agreement->refresh()->contract_id;
+
+    expect($onAlbum->refresh()->contract_id)->toBe($contractId)
+        ->and($onSingle->refresh()->contract_id)->toBe($contractId)
+        ->and($taken->refresh()->contract_id)->toBe($before)
+        ->and($otherRecording->refresh()->contract_id)->toBeNull()
+        ->and(Track::query()->withoutGlobalScope('label')->find($otherLabel->id)->contract_id)->toBeNull();
+});

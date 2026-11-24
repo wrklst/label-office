@@ -29,6 +29,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AgreementController extends Controller
 {
+    /** @var list<string> The releases that hold the same recording and were given the new contract too. */
+    private array $sameRecording = [];
+
     public function index(): Response
     {
         return Inertia::render('agreements/index', [
@@ -324,14 +327,22 @@ class AgreementController extends Controller
                 $target->update(['contract_id' => $contract->id]);
             }
 
+            // The same recording on another release, such as a single beside the album, is paid the same way.
+            if ($target instanceof Track && filled($target->isrc)) {
+                $this->sameRecording = Track::query()->where('isrc', $target->isrc)->whereKeyNot($target->id)->whereNull('contract_id')->with('release:id,name')->get()
+                    ->each(fn (Track $track) => $track->update(['contract_id' => $contract->id]))
+                    ->map(fn (Track $track): string => (string) ($track->release->name ?? $track->name))->all();
+            }
+
             return $contract;
         });
+        $also = $this->sameRecording === [] ? '' : ' '.__('Also set on the same recording on: :releases.', ['releases' => implode(', ', $this->sameRecording)]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => match (true) {
             $target === null => __('Contract created. Set it on the release or track it pays for.'),
             $target->contract_id === $contract->id => __('Contract created and set on :name.', ['name' => $target->name]),
             default => __('Contract created. :name already has a contract, which was left as it is.', ['name' => $target->name]),
-        }]);
+        }.$also]);
 
         return to_route('contracts.show', $contract->id);
     }
