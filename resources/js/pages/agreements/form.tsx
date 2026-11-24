@@ -47,11 +47,19 @@ const TERMS: {
     {
         key: 'share',
         label: 'Share of the payee in percent',
+        hint: 'Their royalty: this much of the net income. It becomes their split on the contract.',
+        type: 'number',
+    },
+    {
+        key: 'artist_share',
+        label: 'Share of the original artist in percent',
+        hint: 'Their split on the same contract. The label keeps what the shares do not hand out.',
         type: 'number',
     },
     {
         key: 'publishing_share',
         label: 'Share of the payee in the publishing in percent',
+        hint: 'Wording only: it is written into the agreement and not calculated.',
         type: 'number',
     },
     {
@@ -165,13 +173,13 @@ export default function AgreementForm({
                                         </option>
                                     </SelectInput>
                                 </Field>
-                                {licensor === 'artist' && (
+                                {
                                     <Field
-                                        label="Artist"
+                                        label="Original artist"
                                         htmlFor="artist_payee_id"
                                         error={errors.artist_payee_id}
-                                        required
-                                        hint="The payee who holds the rights in the original recording. They sign too."
+                                        required={licensor === 'artist'}
+                                        hint="For a remix: the artist of the original recording, as a party of their own. They sign too and can have a share. Leave empty for an agreement with the artist alone, such as a release."
                                     >
                                         <RecordSelect
                                             id="artist_payee_id"
@@ -180,11 +188,11 @@ export default function AgreementForm({
                                             defaultValue={
                                                 agreement?.artist_payee_id
                                             }
-                                            placeholder="Choose payee…"
-                                            required
+                                            placeholder="Not a party"
+                                            required={licensor === 'artist'}
                                         />
                                     </Field>
-                                )}
+                                }
                                 <Field
                                     label="Payee"
                                     htmlFor="payee_id"

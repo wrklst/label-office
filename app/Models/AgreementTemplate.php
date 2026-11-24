@@ -48,6 +48,7 @@ class AgreementTemplate extends Model
         'work.artist' => 'Artist of the release or of the recording that is remixed',
         'work.tracks' => 'The tracks the agreement covers, one per line',
         'share' => 'Share of the payee in percent',
+        'artist_share' => 'Share of the original artist in percent',
         'publishing_share' => 'Share of the payee in the publishing of a remix in percent',
         'term' => 'How long the rights are granted for',
         'deliverables' => 'What has to be delivered',

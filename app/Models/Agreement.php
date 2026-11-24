@@ -38,7 +38,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * @property string $status One of the STATUS constants.
  * @property string $licensor "label" or "artist": who grants the rights.
  * @property int|null $payee_id Null only for a signed copy that was filed and is not matched yet.
- * @property int|null $artist_payee_id The original artist, when they are a party of their own.
+ * @property int|null $artist_payee_id The original artist, when they are a party of their own: they sign, whoever grants the rights.
  * @property int|null $contract_id The contract made from the signed terms.
  * @property string|null $signed_copy_path A copy signed outside the application, as "disk:path".
  * @property string|null $signed_copy_name
@@ -89,6 +89,7 @@ class Agreement extends Model
         'work_artist' => 'work.artist',
         'work_tracks' => 'work.tracks',
         'share' => 'share',
+        'artist_share' => 'artist_share',
         'publishing_share' => 'publishing_share',
         'term' => 'term',
         'deliverables' => 'deliverables',
@@ -307,7 +308,7 @@ class Agreement extends Model
                 'exempt' => (bool) $user->pivot->self_dealing_exempt,
             ])->all()),
             'payee' => isset($payees[$this->payee_id]) ? self::party($payees[$this->payee_id]) : ['name' => null, 'legal_name' => null, 'address' => null],
-            'artist' => $this->licensor === 'artist' && isset($payees[$this->artist_payee_id]) ? self::party($payees[$this->artist_payee_id]) : null,
+            'artist' => isset($payees[$this->artist_payee_id]) ? self::party($payees[$this->artist_payee_id]) : null,
         ];
     }
 
@@ -424,7 +425,7 @@ class Agreement extends Model
         return array_values(array_filter([
             in_array($user->id, array_column($this->parties['signatories'] ?? [], 'user_id')) ? 'label' : null,
             in_array($this->payee_id, $payeeIds) ? 'payee' : null,
-            $this->licensor === 'artist' && in_array($this->artist_payee_id, $payeeIds) ? 'artist' : null,
+            $this->artist_payee_id !== null && in_array($this->artist_payee_id, $payeeIds) ? 'artist' : null,
         ]));
     }
 
@@ -695,7 +696,7 @@ class Agreement extends Model
      */
     public function people(): Collection
     {
-        $payeeIds = array_filter([$this->payee_id, $this->licensor === 'artist' ? $this->artist_payee_id : null]);
+        $payeeIds = array_filter([$this->payee_id, $this->artist_payee_id]);
         $linked = DB::table('label_user')->where('label_id', $this->label_id)
             ->whereIn('payee_id', $payeeIds)
             ->pluck('user_id')->all();

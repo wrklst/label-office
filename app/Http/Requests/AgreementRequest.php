@@ -14,10 +14,6 @@ class AgreementRequest extends LabelFormRequest
     protected function prepareForValidation(): void
     {
         $this->nullify(['artist_payee_id']);
-
-        if ($this->input('licensor') !== 'artist') {
-            $this->merge(['artist_payee_id' => null]);
-        }
     }
 
     /**
@@ -42,6 +38,8 @@ class AgreementRequest extends LabelFormRequest
             'terms.*' => ['nullable', 'string', 'max:5000'],
             'terms.share' => ['nullable', 'numeric', 'between:0,100'],
             'terms.publishing_share' => ['nullable', 'numeric', 'between:0,100'],
+            // The label keeps what the shares do not hand out, so together they cannot pass 100.
+            'terms.artist_share' => ['nullable', 'numeric', 'between:0,'.(100 - (is_numeric($this->input('terms.share')) ? min(100, max(0, (float) $this->input('terms.share'))) : 0))],
         ];
     }
 

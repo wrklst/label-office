@@ -17,7 +17,7 @@ test('the templates page lists the label\'s own templates and the examples with 
             ->component('agreement-templates/index')
             ->has('templates', 1)
             ->where('templates.0.name', 'Our remix deal')
-            ->where('examples', fn ($examples) => collect($examples)->pluck('key')->all() === ['release', 'remix-artist', 'remix-label'])
+            ->where('examples', fn ($examples) => collect($examples)->pluck('key')->all() === ['release', 'remix-artist', 'remix-label', 'remix-three-party'])
             ->where('notice', AgreementExamples::NOTICE));
 });
 

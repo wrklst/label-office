@@ -354,6 +354,13 @@ class AgreementController extends Controller
                 'memo' => "From the agreement \"{$agreement->name}\", signed by everyone on {$agreement->signed_at?->toDateString()}.",
             ]);
             $contract->splits()->create(['payee_id' => $agreement->payee_id, 'split_amount' => bcdiv((string) $share, '100', 9)]);
+
+            // The original artist who signed as a party has a share of their own; the label keeps the rest.
+            $artistShare = $agreement->terms['artist_share'] ?? null;
+
+            if ($agreement->artist_payee_id !== null && is_numeric($artistShare) && (float) $artistShare > 0) {
+                $contract->splits()->create(['payee_id' => $agreement->artist_payee_id, 'split_amount' => bcdiv((string) $artistShare, '100', 9)]);
+            }
             $agreement->forceFill(['contract_id' => $contract->id])->save();
 
             return $contract;

@@ -707,3 +707,38 @@ test('a draft, a withdrawn agreement and a filed copy can be deleted, an agreeme
     Storage::disk($disk)->assertMissing($path);
     Storage::disk($disk)->assertExists($keptPath);
 });
+
+test('a remix agreement between label, artist and remixer needs all three signatures and makes one contract with both shares', function () {
+    ['label' => $label, 'signatory' => $admin, 'payee' => $remixer, 'payeeUser' => $remixerUser, 'agreement' => $agreement] = agreementBetweenLabelAndPayee();
+    $artist = Payee::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
+    $artistUser = User::factory()->create();
+    $label->users()->attach($artistUser, ['role' => LabelRole::Payee->value, 'payee_id' => $artist->id]);
+
+    // The label grants the rights; the artist is a party all the same.
+    $this->actingAs($admin)->put(route('agreements.update', $agreement->id), [
+        'name' => $agreement->name, 'agreement_template_id' => $agreement->agreement_template_id, 'licensor' => 'label',
+        'payee_id' => $remixer->id, 'artist_payee_id' => $artist->id, 'terms' => ['share' => '25', 'artist_share' => '25', 'work_title' => 'Example Remix'],
+    ])->assertSessionHasNoErrors();
+    $agreement->refresh()->send();
+
+    signAgreement($agreement, $remixerUser, 'payee');
+    signAgreement($agreement, $admin, 'label');
+
+    expect($agreement->refresh()->status)->toBe(Agreement::SENT);
+
+    signAgreement($agreement, $artistUser, 'artist')->assertSessionHasNoErrors();
+    $this->actingAs($admin)->post(route('agreements.contract', $agreement->id))->assertSessionHasNoErrors();
+
+    expect($agreement->refresh()->status)->toBe(Agreement::SIGNED)
+        ->and(Contract::query()->sole()->splits()->orderBy('id')->get()->map(fn ($split): array => [$split->payee_id, (float) $split->split_amount])->all())
+        ->toBe([[$remixer->id, 0.25], [$artist->id, 0.25]]);
+});
+
+test('the shares of an agreement cannot hand out more than everything', function () {
+    ['signatory' => $admin, 'payee' => $remixer, 'agreement' => $agreement] = agreementBetweenLabelAndPayee();
+
+    $this->actingAs($admin)->put(route('agreements.update', $agreement->id), [
+        'name' => $agreement->name, 'agreement_template_id' => $agreement->agreement_template_id, 'licensor' => 'label',
+        'payee_id' => $remixer->id, 'terms' => ['share' => '60', 'artist_share' => '50'],
+    ])->assertSessionHasErrors('terms.artist_share');
+});

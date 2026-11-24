@@ -71,7 +71,7 @@ Effective date: {{ effective_date }}
 
 6. Remuneration
 
-6.1 The Remixer receives {{ share }} % of the Net Receipts from the Remix.
+6.1 The Remixer receives {{ share }} % and the Artist receives {{ artist_share }} % of the Net Receipts from the Remix. The remainder stays with the Label.
 
 6.2 "Net Receipts" are all amounts the Label actually receives from any exploitation of the Remix, less (a) value added tax and other taxes on these amounts, (b) fees and commissions kept or charged by distributors, platforms and payment services, and (c) documented third-party costs the Label paid specifically for the Remix, such as mastering, artwork, manufacturing and promotion.
 

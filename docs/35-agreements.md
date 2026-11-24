@@ -26,10 +26,14 @@ Open **Deals → Agreements** and choose **New agreement**.
 | **Name**                  | For your own lists. It is not part of the text.                                                                                                                                                                                                                                                                                                                   |
 | **Template**              | The text the agreement is made from.                                                                                                                                                                                                                                                                                                                              |
 | **Who grants the rights** | **The label**, or **An artist of the label, as a third party**. For a remix: who commissions it and holds the rights in the original recording.                                                                                                                                                                                                                   |
-| **Artist**                | Only for the second case: the payee who grants the rights. They sign too.                                                                                                                                                                                                                                                                                         |
+| **Original artist**       | For a remix: the artist of the original recording as a party of their own. They sign too and can have a share. Needed when the artist grants the rights; leave it empty for an agreement with one artist alone, such as a release.                                                                                                                                |
 | **Payee**                 | The other party: the remixer, or the artist of a release.                                                                                                                                                                                                                                                                                                         |
 | **What it is about**      | The releases the agreement covers: add as many as it is for. Of each release it covers everything, or only the tracks you tick, such as the one or two remixes of a remix release this deal is for. The tracks on offer are those of the releases you added. A release is needed when the agreement names deliverables: their files are filed with the first one. |
 | **Terms**                 | What the chosen template leaves open, such as the share, the titles and the deliverables. Only the fields the template uses are asked.                                                                                                                                                                                                                            |
+
+**The shares.** **Share of the payee in percent** is the payee's royalty, a percentage of net income; it becomes their split on the contract. **Share of the original artist in percent** is the same for the artist who is a party. Together they cannot pass 100: with 25 for the remixer and 25 for the artist, the label keeps 50. **Share of the payee in the publishing in percent** is wording only: it is written into the text and never calculated.
+
+**Two parties or three.** The examples cover both: **Remix agreement (the label commissions the remix)** is between the label and the remixer, and what the original artist gets is left to the artist's own agreement with the label. **Remix agreement between label, artist and remixer** has all three sign one text that names both shares. Which fits is a question for your lawyer.
 
 The label is a party to every agreement, also when an artist grants the rights: it releases the music and pays the share. Choose a template that is written for the case you pick.
 
@@ -51,7 +55,7 @@ A sent agreement cannot be edited or deleted. **Withdraw** ends it while it is o
 
 - **For the label:** the people ticked under **Signs for the label** when the agreement was sent: all of them, or any one of them, as **What the label needs on an agreement** said at that moment. An admin who is not ticked cannot sign for the label. The page of a draft names who is needed before you send it.
 - **The payee:** one person whose account is linked to the payee, see below.
-- **The artist:** likewise, when an artist grants the rights.
+- **The original artist:** likewise, whenever one is named on the agreement, whoever grants the rights.
 
 An account is linked to a payee under **Settings → Team**: a member with the access **Payee** through **Payee**, an admin who is also an artist of the label through **Also a payee**.
 
@@ -113,9 +117,9 @@ The application does not check a copy: that it is complete, genuine and signed b
 
 ## The royalty contract
 
-On an agreement that everyone has signed, **Create the contract** under **Royalty contract** makes a contract named after the agreement with one split: the payee at the agreed share. It is set on exactly what the agreement covers: on the ticked tracks of a release, or on the release itself where no track is ticked.
+On an agreement that everyone has signed, **Create the contract** under **Royalty contract** makes a contract named after the agreement with the payee's split at the agreed share and, where an original artist is a party with a share of their own, the artist's split beside it. The label has no split: it keeps what the splits do not hand out. It is set on exactly what the agreement covers: on the ticked tracks of a release, or on the release itself where no track is ticked.
 
-The same recording often exists twice in a catalog, once on a single and once on the album or EP, as two tracks with one ISRC. For every track the agreement covers, the contract is also set on every other track of the label with the same ISRC that has no contract yet, and the message names them with their release.
+A recording is one track on every release it is on, so its contract applies on all of them. Tracks with one ISRC that were not merged are treated the same: For every track the agreement covers, the contract is also set on every other track of the label with the same ISRC that has no contract yet, and the message names them with their release.
 
 A track or release that already has a contract keeps it. The new contract is still created, and the message lists what it was set on and what was left as it is: decide yourself which one applies there. An agreement that covers nothing gets its contract set nowhere.
 
