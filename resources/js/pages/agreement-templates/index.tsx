@@ -1,8 +1,9 @@
-import { Pencil, Plus, TriangleAlert } from 'lucide-react';
+import { Pencil, Plus } from 'lucide-react';
 import AgreementTemplateController from '@/actions/App/Http/Controllers/AgreementTemplateController';
 import { DeleteButton } from '@/components/delete-button';
 import { CheckField, Field } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
+import { Notice } from '@/components/notice';
 import { EmptyState, Page, Panel } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,15 +26,6 @@ type Template = {
 };
 
 type Example = { key: string; name: string; body: string };
-
-function Notice({ children }: { children: string }) {
-    return (
-        <p className="flex gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
-            <span>{children}</span>
-        </p>
-    );
-}
 
 function TemplateFields({
     template,
@@ -123,7 +115,7 @@ export default function AgreementTemplates({
                 </FormDialog>
             }
         >
-            <Notice>{disclaimer}</Notice>
+            <Notice id="legal">{disclaimer}</Notice>
             {templates.length === 0 ? (
                 <EmptyState
                     title="No templates yet"
@@ -190,7 +182,7 @@ export default function AgreementTemplates({
                 description="Illustrations of how a template can look. Nothing is ever sent from an example: copy one into your templates to work on it."
             >
                 <div className="grid gap-4">
-                    <Notice>{notice}</Notice>
+                    <Notice id="examples">{notice}</Notice>
                     <ul className="divide-y rounded-lg border text-sm">
                         {examples.map((example) => (
                             <li

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\LabelRole;
 use App\Models\Concerns\BelongsToLabel;
+use App\Support\IncomingFile;
 use App\Support\WorkingCopy;
 use Carbon\CarbonImmutable;
 use Database\Factories\AgreementFactory;
@@ -17,7 +18,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Response;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -36,7 +36,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * @property string $name
  * @property string $status One of the STATUS constants.
  * @property string $licensor "label" or "artist": who grants the rights.
- * @property int $payee_id
+ * @property int|null $payee_id Null only for a signed copy that was filed and is not matched yet.
  * @property int|null $artist_payee_id The original artist, when they are a party of their own.
  * @property int|null $release_id
  * @property int|null $track_id
@@ -216,7 +216,7 @@ class Agreement extends Model
                 'name' => $user->name,
                 'exempt' => (bool) $user->pivot->self_dealing_exempt,
             ])->all()),
-            'payee' => self::party($payees[$this->payee_id]),
+            'payee' => isset($payees[$this->payee_id]) ? self::party($payees[$this->payee_id]) : ['name' => null, 'legal_name' => null, 'address' => null],
             'artist' => $this->licensor === 'artist' && isset($payees[$this->artist_payee_id]) ? self::party($payees[$this->artist_payee_id]) : null,
         ];
     }
@@ -515,11 +515,10 @@ class Agreement extends Model
     /**
      * Keep a copy that was signed outside the application.
      */
-    public function keepSignedCopy(UploadedFile $file): void
+    public function keepSignedCopy(IncomingFile $file): void
     {
         $disk = WorkingCopy::disk();
-        $extension = strtolower($file->getClientOriginalExtension());
-        $path = $file->storeAs("agreements/{$this->label_id}", Str::uuid()->toString().".{$extension}", $disk);
+        $path = $file->storeAs("agreements/{$this->label_id}", Str::uuid()->toString().'.'.$file->extension(), $disk);
 
         if ($path === false) {
             throw ValidationException::withMessages(['file' => 'The file could not be stored.']);
@@ -527,7 +526,7 @@ class Agreement extends Model
 
         $this->forceFill([
             'signed_copy_path' => "{$disk}:{$path}",
-            'signed_copy_name' => Str::limit(basename($file->getClientOriginalName()), 250, ''),
+            'signed_copy_name' => $file->name,
         ])->save();
     }
 
@@ -541,6 +540,15 @@ class Agreement extends Model
         [$disk, $path] = explode(':', $this->signed_copy_path, 2);
 
         return Storage::disk($disk)->download($path, (string) $this->signed_copy_name);
+    }
+
+    /**
+     * Whether this is a copy signed elsewhere that was filed as it is:
+     * there is no text here, the copy is the agreement.
+     */
+    public function isFiled(): bool
+    {
+        return $this->body === null && $this->signed_copy_path !== null;
     }
 
     /**

@@ -51,4 +51,6 @@ The first time an admin opens **Deals → Agreements** or **Deals → Agreement 
 
 When the terms change, their version changes, and the label is asked again. **Settings → Terms of use** shows the terms and who accepted them at any time.
 
+The pages where agreements are made show standing notices that repeat the heart of these terms. Each person can acknowledge one with **Understood, hide**, which hides it for them. **Show the notices again**, under **Settings → Terms of use**, brings them back.
+
 Payees are not asked: the label they deal with has accepted the terms and answers to them, see [6. People you bring in](#6-people-you-bring-in).

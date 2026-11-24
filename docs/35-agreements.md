@@ -94,7 +94,18 @@ A file that was handed back stays with the release; delete it there if you do no
 
 ## Agreements signed outside the application
 
-**File a signed agreement**, on **Deals → Agreements**, is for an agreement that was signed elsewhere, such as an older one on paper. Enter a **Name**, the **Payee**, the day it was **Signed on** and upload the **Signed copy** (PDF, JPEG or PNG, up to 20 MB). The copy is the agreement: there is no text, no hash and nothing is sent to anyone. The payee finds it under **My agreements** and can download it.
+On **Deals → Agreements**, drop agreements that were signed elsewhere, such as older ones on paper, on **Already signed?**: PDF, JPEG or PNG, up to 20 MB each, several at once. Each file is filed at once as an agreement of its own, named after its file. The copy is the agreement: there is no text, no hash and nothing is sent to anyone.
+
+A file whose name contains the name of exactly one of your payees is matched to that payee. Any other shows **To match** in the list. Open the agreement and say under **What this agreement belongs to** what it belongs to. Everything but the name can stay empty:
+
+| Field                   | Meaning                                                                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**, **Signed on** | What the agreement is called in your lists, and the day it was signed.                                                                                                    |
+| **Payee**               | Pick one, or type the name of a new payee under it: the payee is created when you save.                                                                                   |
+| **Contract**            | The contract statements are calculated from. **Make a new contract instead** creates one named after the agreement, without splits: add them under **Deals → Contracts**. |
+| **Release**, **Track**  | What the agreement is about.                                                                                                                                              |
+
+Once it has a payee, the people linked to that payee find it under **My agreements** and can download the copy.
 
 **Signed elsewhere**, on an agreement that is out for signature, closes it with a copy the parties signed on paper or with another service, after you confirm that every party has signed it. The agreement then counts as signed by everyone and can no longer be signed here. Signatures already given here stay listed. Use this where an agreement needs more than a simple electronic signature.
 

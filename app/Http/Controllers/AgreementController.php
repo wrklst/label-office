@@ -7,12 +7,14 @@ use App\Models\Agreement;
 use App\Models\AgreementDeliverable;
 use App\Models\AgreementTemplate;
 use App\Models\Contract;
+use App\Models\Payee;
 use App\Models\Release;
 use App\Models\Track;
 use App\Notifications\AgreementToSign;
 use App\Notifications\DeliverableReturned;
 use App\Support\AgreementExamples;
 use App\Support\CurrentLabel;
+use App\Support\IncomingFile;
 use App\Support\Options;
 use App\Support\PageSize;
 use Illuminate\Http\RedirectResponse;
@@ -20,6 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -27,9 +30,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AgreementController extends Controller
 {
-    /** What a signed copy may be: a document or a scan, small enough to post. */
-    private const array SIGNED_COPY = ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:20480'];
-
     public function index(): Response
     {
         return Inertia::render('agreements/index', [
@@ -37,11 +37,11 @@ class AgreementController extends Controller
                 ->through(fn (Agreement $agreement): array => [
                     ...$agreement->only(['id', 'name', 'status']),
                     'payee' => $agreement->payee?->name,
+                    'unmatched' => $agreement->isFiled() && $agreement->payee_id === null,
                     'sent_at' => $agreement->sent_at?->toDateString(),
                     'signed_at' => $agreement->signed_at?->toDateString(),
                 ]),
             'hasTemplates' => AgreementTemplate::query()->exists(),
-            'payeeOptions' => Options::payees(),
             'disclaimer' => AgreementExamples::DISCLAIMER,
         ]);
     }
@@ -66,6 +66,7 @@ class AgreementController extends Controller
         $parties = $agreement->parties ?? $agreement->currentParties();
 
         return Inertia::render('agreements/show', [
+            ...($agreement->isFiled() ? ['payeeOptions' => Options::payees(), 'contractOptions' => Options::contracts(), 'releaseOptions' => Options::releases(), 'trackOptions' => Options::tracks()] : []),
             'agreement' => [
                 ...$agreement->only(['id', 'name', 'status', 'licensor', 'body_hash', 'contract_id']),
                 'share' => $agreement->terms['share'] ?? null,
@@ -83,7 +84,11 @@ class AgreementController extends Controller
                 'deliverables' => $agreement->deliverables->map->toRow()->all(),
                 'planned_deliverables' => $agreement->status === Agreement::DRAFT ? $agreement->deliverableLines() : [],
                 'signed_copy' => $agreement->signed_copy_name,
-                'has_text' => $agreement->body !== null || $agreement->status === Agreement::DRAFT,
+                'has_text' => ! $agreement->isFiled(),
+                'filed' => $agreement->isFiled() ? [
+                    ...$agreement->only(['payee_id', 'contract_id', 'release_id', 'track_id']),
+                    'signed_on' => $agreement->signed_at?->toDateString(),
+                ] : null,
                 'can_sign' => $agreement->status === Agreement::SENT && $agreement->capacitiesOf($request->user()) !== [],
                 'people' => $agreement->status === Agreement::DRAFT ? [] : $agreement->people()->pluck('name')->all(),
             ],
@@ -134,29 +139,79 @@ class AgreementController extends Controller
     }
 
     /**
-     * File an agreement that was signed outside the application, such
-     * as an older one on paper: the uploaded copy is the agreement.
+     * File a copy that was signed outside the application, such as an
+     * older agreement on paper: dropped as it is, named after its file
+     * and matched to a payee when exactly one is named in the file name.
+     * Everything else is matched afterwards on the agreement.
      */
-    public function storeFiled(Request $request): RedirectResponse
+    public function storeFiled(Request $request, CurrentLabel $currentLabel): RedirectResponse
     {
-        $input = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'payee_id' => ['required', 'integer', Rule::exists('payees', 'id')->where('label_id', app(CurrentLabel::class)->id())],
-            'signed_on' => ['required', 'date', 'before_or_equal:today'],
-            'file' => self::SIGNED_COPY,
-        ]);
+        $file = $this->signedCopyFrom($request, (int) $currentLabel->id());
+        $title = trim((string) preg_replace('/[\s_-]+/', ' ', pathinfo($file->name, PATHINFO_FILENAME))) ?: 'Signed agreement';
+        $named = Payee::query()->get(['id', 'name'])->filter(fn (Payee $payee): bool => mb_strlen($payee->name) > 2 && mb_stripos($title, $payee->name) !== false);
 
-        $agreement = DB::transaction(function () use ($input, $request): Agreement {
-            $agreement = Agreement::query()->create(['name' => $input['name'], 'payee_id' => $input['payee_id'], 'licensor' => 'label']);
-            $agreement->forceFill(['status' => Agreement::SIGNED, 'signed_at' => $input['signed_on'], 'parties' => [...$agreement->currentParties(), 'signatories' => []]])->save();
-            $agreement->keepSignedCopy($request->file('file'));
-
-            return $agreement;
+        DB::transaction(function () use ($file, $title, $named): void {
+            $agreement = Agreement::query()->create(['name' => Str::limit($title, 250, ''), 'payee_id' => $named->count() === 1 ? $named->first()->id : null, 'licensor' => 'label']);
+            $agreement->forceFill(['status' => Agreement::SIGNED])->save();
+            $agreement->keepSignedCopy($file);
         });
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Agreement filed.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __(':name filed. Match it to its payee and contract.', ['name' => $file->name])]);
 
-        return to_route('agreements.show', $agreement->id);
+        return back();
+    }
+
+    /**
+     * Say what a filed copy belongs to: its payee and contract, picked
+     * from what exists or made new here, and its release and track.
+     */
+    public function match(Request $request, Agreement $agreement, CurrentLabel $currentLabel): RedirectResponse
+    {
+        abort_unless($agreement->isFiled(), 409, 'Only a filed copy is matched this way.');
+
+        $inLabel = fn (string $table) => Rule::exists($table, 'id')->where('label_id', $currentLabel->id());
+        $input = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'signed_on' => ['nullable', 'date', 'before_or_equal:today'],
+            'payee_id' => ['nullable', 'integer', $inLabel('payees')],
+            'new_payee' => ['nullable', 'string', 'max:255'],
+            'contract_id' => ['nullable', 'integer', $inLabel('contracts')],
+            'new_contract' => ['boolean'],
+            'release_id' => ['nullable', 'integer', $inLabel('releases')],
+            'track_id' => ['nullable', 'integer', $inLabel('tracks')],
+        ]);
+
+        DB::transaction(function () use ($agreement, $input): void {
+            // Something typed as new wins over what was picked: it was typed because the list did not have it.
+            $payeeId = filled($input['new_payee'] ?? null) ? Payee::query()->create(['name' => $input['new_payee']])->id : ($input['payee_id'] ?? null);
+            $contractId = ($input['new_contract'] ?? false)
+                ? Contract::query()->create(['name' => $input['name'], 'memo' => 'For the filed agreement "'.$input['name'].'". Add its splits.'])->id
+                : ($input['contract_id'] ?? null);
+
+            $agreement->forceFill([
+                'name' => $input['name'],
+                'signed_at' => $input['signed_on'] ?? null,
+                'payee_id' => $payeeId,
+                'contract_id' => $contractId,
+                'release_id' => $input['release_id'] ?? null,
+                'track_id' => $input['track_id'] ?? null,
+            ])->save();
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Agreement matched.')]);
+
+        return back();
+    }
+
+    /**
+     * A signed copy as it was handed over, posted here or sent to the
+     * bucket: a document or a scan, small enough to read as one.
+     */
+    private function signedCopyFrom(Request $request, int $labelId): IncomingFile
+    {
+        $request->validate(['file' => ['required_without:upload', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:20480'], ...IncomingFile::RULES]);
+
+        return IncomingFile::from($request, $labelId, 20480, ['application/pdf', 'image/jpeg', 'image/png'], ['pdf', 'jpg', 'jpeg', 'png'], ['type' => __('A signed copy is a PDF, JPEG or PNG.')]);
     }
 
     /**
@@ -167,10 +222,11 @@ class AgreementController extends Controller
     {
         abort_unless($agreement->status === Agreement::SENT, 409, 'A signed copy closes an agreement that is out for signature.');
 
-        $request->validate(['file' => self::SIGNED_COPY, 'confirmed' => ['accepted']], ['confirmed.accepted' => 'Confirm that every party has signed this copy.']);
+        $request->validate(['confirmed' => ['accepted']], ['confirmed.accepted' => 'Confirm that every party has signed this copy.']);
+        $file = $this->signedCopyFrom($request, $agreement->label_id);
 
-        DB::transaction(function () use ($agreement, $request): void {
-            $agreement->keepSignedCopy($request->file('file'));
+        DB::transaction(function () use ($agreement, $file): void {
+            $agreement->keepSignedCopy($file);
             $agreement->forceFill(['status' => Agreement::SIGNED, 'signed_at' => now()])->save();
         });
 

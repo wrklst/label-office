@@ -49,3 +49,23 @@ test('a label is asked again when the terms have changed, and one label\'s accep
 test('the terms name the version a label has to accept', function () {
     expect(app(Handbook::class)->find(Label::TERMS_ARTICLE)['body'])->toContain('Version '.Label::TERMS_VERSION);
 });
+
+test('a notice is hidden for the person who acknowledged it and comes back when they ask', function () {
+    $label = Label::factory()->create();
+    $admin = labelAdmin($label);
+    $other = labelAdmin($label);
+
+    $this->actingAs($admin)->post(route('notices.hide', 'legal'))->assertRedirect();
+    $this->actingAs($admin)->post(route('notices.hide', 'legal'));
+    $this->actingAs($admin)->post(route('notices.hide', 'anything'))->assertNotFound();
+
+    expect($admin->refresh()->hidden_notices)->toBe(['legal'])
+        ->and($other->refresh()->hidden_notices)->toBeNull();
+
+    $this->actingAs($admin)->get(route('agreements.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('auth.user.hidden_notices', ['legal']));
+
+    $this->actingAs($admin)->post(route('notices.restore'))->assertInertiaFlash('toast.message', 'The notices are shown again.');
+
+    expect($admin->refresh()->hidden_notices)->toBeNull();
+});

@@ -519,29 +519,61 @@ test('the label accepts what was delivered or hands it back with a note, and the
     $deliver('third.wav')->assertStatus(409);
 });
 
-test('an agreement signed on paper is filed with its copy, which its payee and the label can download', function () {
+test('a signed copy is filed by dropping it, named after its file and matched to the payee it names', function () {
     ['label' => $label, 'signatory' => $admin, 'payee' => $payee, 'payeeUser' => $payeeUser] = agreementBetweenLabelAndPayee();
     ['payeeUser' => $stranger] = agreementBetweenLabelAndPayee();
-    $input = ['name' => 'Old remix deal', 'payee_id' => $payee->id, 'signed_on' => '2023-11-07', 'file' => UploadedFile::fake()->create('signed.pdf', 100, 'application/pdf')];
 
-    $this->actingAs($admin)->post(route('agreements.filed'), [...$input, 'file' => UploadedFile::fake()->create('signed.exe', 10)])->assertSessionHasErrors('file');
-    $this->actingAs($admin)->post(route('agreements.filed'), [...$input, 'payee_id' => Payee::factory()->create()->id])->assertSessionHasErrors('payee_id');
-    $this->actingAs($admin)->post(route('agreements.filed'), $input)->assertSessionHasNoErrors();
+    $this->actingAs($admin)->post(route('agreements.filed'), ['file' => UploadedFile::fake()->create('signed.exe', 10)])->assertSessionHasErrors('file');
+    $this->actingAs($admin)->post(route('agreements.filed'), ['file' => UploadedFile::fake()->create('Remix_deal - Example Remixer signed.pdf', 100, 'application/pdf')])->assertSessionHasNoErrors();
+    $this->actingAs($admin)->post(route('agreements.filed'), ['file' => UploadedFile::fake()->create('scan 0042.pdf', 100, 'application/pdf')])->assertSessionHasNoErrors();
 
-    $agreement = Agreement::query()->where('name', 'Old remix deal')->sole();
+    $agreement = Agreement::query()->where('name', 'Remix deal Example Remixer signed')->sole();
+    $unmatched = Agreement::query()->where('name', 'scan 0042')->sole();
     [$disk, $path] = explode(':', $agreement->signed_copy_path, 2);
 
-    expect($agreement->only(['status', 'label_id', 'body', 'signed_copy_name']))->toBe(['status' => 'signed', 'label_id' => $label->id, 'body' => null, 'signed_copy_name' => 'signed.pdf'])
-        ->and($agreement->signed_at->toDateString())->toBe('2023-11-07')
+    expect($agreement->only(['status', 'label_id', 'payee_id', 'body', 'signed_copy_name']))->toBe(['status' => 'signed', 'label_id' => $label->id, 'payee_id' => $payee->id, 'body' => null, 'signed_copy_name' => 'Remix_deal - Example Remixer signed.pdf'])
+        ->and($unmatched->payee_id)->toBeNull()
         ->and($path)->toStartWith("agreements/{$label->id}/");
     Storage::disk($disk)->assertExists($path);
 
-    $this->actingAs($admin)->get(route('agreements.signed-copy', $agreement->id))->assertOk()->assertDownload('signed.pdf');
-    $this->actingAs($payeeUser)->get(route('my-agreements.signed-copy', $agreement->id))->assertOk()->assertDownload('signed.pdf');
+    $this->actingAs($admin)->get(route('agreements.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('agreements.data', fn ($rows) => collect($rows)->pluck('unmatched', 'name')->all() === ['scan 0042' => true, 'Remix deal Example Remixer signed' => false, 'Example remix deal' => false]));
+    $this->actingAs($admin)->get(route('agreements.signed-copy', $agreement->id))->assertOk()->assertDownload('Remix_deal - Example Remixer signed.pdf');
+    $this->actingAs($payeeUser)->get(route('my-agreements.signed-copy', $agreement->id))->assertOk();
     $this->actingAs($stranger)->get(route('my-agreements.signed-copy', $agreement->id))->assertNotFound();
+    $this->actingAs($payeeUser)->get(route('my-agreements.show', $unmatched->id))->assertNotFound();
     $this->actingAs($admin)->get(route('agreements.pdf', $agreement->id))->assertNotFound();
-    $this->actingAs($admin)->get(route('agreements.show', $agreement->id))
-        ->assertInertia(fn (Assert $page) => $page->where('agreement.has_text', false)->where('agreement.lines', [])->where('agreement.signed_copy', 'signed.pdf'));
+    $this->actingAs($admin)->get(route('agreements.show', $unmatched->id))
+        ->assertInertia(fn (Assert $page) => $page->where('agreement.has_text', false)->where('agreement.lines', [])->where('agreement.filed.payee_id', null)->has('payeeOptions')->has('contractOptions'));
+});
+
+test('a filed copy is matched to what exists or to a payee and a contract made on the spot', function () {
+    ['label' => $label, 'signatory' => $admin, 'payee' => $payee, 'agreement' => $made] = agreementBetweenLabelAndPayee();
+    $this->actingAs($admin)->post(route('agreements.filed'), ['file' => UploadedFile::fake()->create('scan.pdf', 100, 'application/pdf')]);
+    $agreement = Agreement::query()->where('name', 'scan')->sole();
+    $contract = Contract::factory()->create(['label_id' => $label->id]);
+    $track = Track::factory()->create(['label_id' => $label->id]);
+
+    $this->actingAs($admin)->put(route('agreements.match', $agreement->id), ['name' => 'Old remix deal', 'payee_id' => Payee::factory()->create()->id])->assertSessionHasErrors('payee_id');
+    $this->actingAs($admin)->put(route('agreements.match', $made->id), ['name' => 'Taken over'])->assertStatus(409);
+
+    $this->actingAs($admin)
+        ->put(route('agreements.match', $agreement->id), ['name' => 'Old remix deal', 'signed_on' => '2023-11-07', 'payee_id' => $payee->id, 'contract_id' => $contract->id, 'track_id' => $track->id])
+        ->assertSessionHasNoErrors();
+
+    expect($agreement->refresh()->only(['name', 'payee_id', 'contract_id', 'track_id']))->toBe(['name' => 'Old remix deal', 'payee_id' => $payee->id, 'contract_id' => $contract->id, 'track_id' => $track->id])
+        ->and($agreement->signed_at->toDateString())->toBe('2023-11-07');
+
+    $this->actingAs($admin)
+        ->put(route('agreements.match', $agreement->id), ['name' => 'Old remix deal', 'payee_id' => $payee->id, 'new_payee' => 'New Remixer', 'contract_id' => $contract->id, 'new_contract' => '1'])
+        ->assertSessionHasNoErrors();
+
+    $newPayee = Payee::query()->where('name', 'New Remixer')->sole();
+    $newContract = Contract::query()->where('name', 'Old remix deal')->sole();
+
+    expect($agreement->refresh()->only(['payee_id', 'contract_id', 'track_id']))->toBe(['payee_id' => $newPayee->id, 'contract_id' => $newContract->id, 'track_id' => null])
+        ->and($newPayee->label_id)->toBe($label->id)
+        ->and($newContract->splits()->count())->toBe(0);
 });
 
 test('a copy signed elsewhere closes an agreement that is out for signature', function () {

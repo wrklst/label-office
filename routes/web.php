@@ -14,6 +14,7 @@ use App\Http\Controllers\ItemController;
 use App\Http\Controllers\LabelController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\MyAgreementController;
+use App\Http\Controllers\NoticeController;
 use App\Http\Controllers\PayeeController;
 use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\PeriodController;
@@ -45,6 +46,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('labels/create', [LabelController::class, 'create'])->name('labels.create');
     Route::post('labels', [LabelController::class, 'store'])->name('labels.store');
     Route::post('labels/{label}/switch', [LabelController::class, 'switch'])->name('labels.switch');
+
+    Route::post('notices/restore', [NoticeController::class, 'restore'])->name('notices.restore');
+    Route::post('notices/{notice}/hide', [NoticeController::class, 'hide'])->whereIn('notice', NoticeController::KEYS)->name('notices.hide');
 
     Route::middleware('label')->group(function () {
         Route::get('my-statements', [PortalController::class, 'index'])->name('portal.index');
@@ -95,6 +99,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::middleware('terms')->group(function () {
                 Route::post('agreements/filed', [AgreementController::class, 'storeFiled'])->name('agreements.filed');
                 Route::resource('agreements', AgreementController::class);
+                Route::put('agreements/{agreement}/match', [AgreementController::class, 'match'])->name('agreements.match');
                 Route::post('agreements/{agreement}/signed-copy', [AgreementController::class, 'signedCopy'])->name('agreements.signed-copy.store');
                 Route::get('agreements/{agreement}/signed-copy', [AgreementController::class, 'downloadSignedCopy'])->name('agreements.signed-copy');
                 Route::post('agreements/{agreement}/deliverables/{deliverable}/accept', [AgreementController::class, 'accept'])->name('agreements.deliverables.accept');

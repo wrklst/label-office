@@ -33,6 +33,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property int|null $current_label_id
  * @property bool $may_create_labels Made to run a label, not invited to one: may open a first label.
  * @property bool $installation_admin May change settings of the whole installation, such as the file storage.
+ * @property list<string>|null $hidden_notices The notices this person acknowledged and hid.
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Pivot&object{role: string, payee_id: int|null, signs_for_label: bool|int, self_dealing_exempt: bool|int} $pivot Membership of the label when loaded through Label::users().
@@ -53,6 +54,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     {
         return [
             'installation_admin' => 'boolean',
+            'hidden_notices' => 'array',
             'may_create_labels' => 'boolean',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',

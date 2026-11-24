@@ -1,4 +1,5 @@
-import { Form } from '@inertiajs/react';
+import { Form, usePage } from '@inertiajs/react';
+import NoticeController from '@/actions/App/Http/Controllers/NoticeController';
 import TermsController from '@/actions/App/Http/Controllers/Settings/TermsController';
 import { CheckField } from '@/components/field';
 import { Page, Panel } from '@/components/page';
@@ -19,6 +20,8 @@ type Props = {
 };
 
 export default function Terms({ html, version, accepted, acceptance }: Props) {
+    const hidden = usePage().props.auth.user?.hidden_notices ?? [];
+
     return (
         <Page
             title="Terms of use"
@@ -64,6 +67,21 @@ export default function Terms({ html, version, accepted, acceptance }: Props) {
                     </Form>
                 )}
             </Panel>
+
+            {hidden.length > 0 && (
+                <Panel
+                    title="Notices"
+                    description="You have acknowledged and hidden the standing notices about legal guarantees. They can be shown again at any time."
+                >
+                    <Form {...NoticeController.restore.form()}>
+                        {({ processing }) => (
+                            <Button variant="outline" disabled={processing}>
+                                Show the notices again
+                            </Button>
+                        )}
+                    </Form>
+                </Panel>
+            )}
 
             <Panel title={`The terms, version ${version}`}>
                 <div

@@ -9,8 +9,9 @@ import type { AgreementLine } from '@/components/agreement-document';
 import { DeliverableList } from '@/components/agreement-deliverables';
 import type { Deliverable } from '@/components/agreement-deliverables';
 import { DeleteButton } from '@/components/delete-button';
-import { CheckField, Field } from '@/components/field';
+import { CheckField, Field, SelectInput } from '@/components/field';
 import { FormDialog } from '@/components/form-dialog';
+import { Notice } from '@/components/notice';
 import { Page, Panel } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ import { edit, index } from '@/routes/agreements';
 import { show as showContract } from '@/routes/contracts';
 import { show as sign } from '@/routes/my-agreements';
 import { show as showFile } from '@/routes/release-files';
+import type { Option } from '@/types';
 
 type Agreement = {
     id: number;
@@ -41,12 +43,31 @@ type Agreement = {
     planned_deliverables: string[];
     signed_copy: string | null;
     has_text: boolean;
+    filed: {
+        payee_id: number | null;
+        contract_id: number | null;
+        release_id: number | null;
+        track_id: number | null;
+        signed_on: string | null;
+    } | null;
     can_sign: boolean;
     lines: AgreementLine[];
     people: string[];
 };
 
-export default function AgreementShow({ agreement }: { agreement: Agreement }) {
+export default function AgreementShow({
+    agreement,
+    payeeOptions = [],
+    contractOptions = [],
+    releaseOptions = [],
+    trackOptions = [],
+}: {
+    agreement: Agreement;
+    payeeOptions?: Option[];
+    contractOptions?: Option[];
+    releaseOptions?: Option[];
+    trackOptions?: Option[];
+}) {
     const draft = agreement.status === 'draft';
 
     return (
@@ -191,9 +212,7 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
                             . The payee signs through their own account: give
                             them access under Settings → Team if they have none.
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                            {agreement.disclaimer}
-                        </p>
+                        <Notice id="legal">{agreement.disclaimer}</Notice>
                         {agreement.send_block && (
                             <p className="text-red-600">
                                 {agreement.send_block}
@@ -216,7 +235,7 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
                 </Panel>
             )}
 
-            {agreement.status === 'signed' && (
+            {agreement.status === 'signed' && agreement.has_text && (
                 <Panel
                     title="Royalty contract"
                     description="The agreement is the signed document; the contract is what statements are calculated from."
@@ -361,10 +380,124 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
                     lines={agreement.lines}
                 />
             ) : (
-                <p className="text-sm text-muted-foreground">
-                    This agreement was signed outside the application. The
-                    signed copy is the agreement: download it above.
-                </p>
+                <Panel
+                    title="What this agreement belongs to"
+                    description="Signed outside the application: the signed copy is the agreement, download it above. Match it to what exists, or make a new payee or contract right here. Everything but the name can stay empty."
+                >
+                    <Form
+                        {...AgreementController.match.form(agreement.id)}
+                        options={{ preserveScroll: true }}
+                        className="grid gap-6 sm:grid-cols-2"
+                    >
+                        {({ errors, processing }) => (
+                            <>
+                                <Field
+                                    label="Name"
+                                    htmlFor="match-name"
+                                    error={errors.name}
+                                    required
+                                >
+                                    <Input
+                                        id="match-name"
+                                        name="name"
+                                        defaultValue={agreement.name}
+                                        required
+                                    />
+                                </Field>
+                                <Field
+                                    label="Signed on"
+                                    htmlFor="match-signed-on"
+                                    error={errors.signed_on}
+                                >
+                                    <Input
+                                        id="match-signed-on"
+                                        name="signed_on"
+                                        type="date"
+                                        className="w-48"
+                                        defaultValue={
+                                            agreement.filed?.signed_on ?? ''
+                                        }
+                                    />
+                                </Field>
+                                <Field
+                                    label="Payee"
+                                    htmlFor="match-payee"
+                                    error={errors.payee_id ?? errors.new_payee}
+                                    hint="Pick one, or type the name of a new payee: it is created when you save."
+                                >
+                                    <SelectInput
+                                        id="match-payee"
+                                        name="payee_id"
+                                        defaultValue={
+                                            agreement.filed?.payee_id ?? ''
+                                        }
+                                        options={payeeOptions}
+                                        placeholder="Not matched"
+                                    />
+                                    <Input
+                                        name="new_payee"
+                                        aria-label="New payee"
+                                        placeholder="Or a new payee…"
+                                    />
+                                </Field>
+                                <Field
+                                    label="Contract"
+                                    htmlFor="match-contract"
+                                    error={errors.contract_id}
+                                    hint="The contract statements are calculated from. A new one is named after the agreement and has no splits yet: add them under Deals → Contracts."
+                                >
+                                    <SelectInput
+                                        id="match-contract"
+                                        name="contract_id"
+                                        defaultValue={
+                                            agreement.filed?.contract_id ?? ''
+                                        }
+                                        options={contractOptions}
+                                        placeholder="Not matched"
+                                    />
+                                    <CheckField
+                                        withZero
+                                        name="new_contract"
+                                        label="Make a new contract instead"
+                                    />
+                                </Field>
+                                <Field
+                                    label="Release"
+                                    htmlFor="match-release"
+                                    error={errors.release_id}
+                                >
+                                    <SelectInput
+                                        id="match-release"
+                                        name="release_id"
+                                        defaultValue={
+                                            agreement.filed?.release_id ?? ''
+                                        }
+                                        options={releaseOptions}
+                                        placeholder="None"
+                                    />
+                                </Field>
+                                <Field
+                                    label="Track"
+                                    htmlFor="match-track"
+                                    error={errors.track_id}
+                                >
+                                    <SelectInput
+                                        id="match-track"
+                                        name="track_id"
+                                        defaultValue={
+                                            agreement.filed?.track_id ?? ''
+                                        }
+                                        options={trackOptions}
+                                        placeholder="None"
+                                    />
+                                </Field>
+                                <div className="sm:col-span-2">
+                                    <Button disabled={processing}>Save</Button>
+                                </div>
+                            </>
+                        )}
+                    </Form>
+                </Panel>
             )}
         </Page>
     );
