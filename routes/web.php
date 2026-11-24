@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AgreementTemplateController;
 use App\Http\Controllers\AirplayController;
 use App\Http\Controllers\AirplayResearchController;
 use App\Http\Controllers\ArtistController;
@@ -76,6 +77,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::resource('contracts', ContractController::class);
             Route::resource('payees', PayeeController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
             Route::resource('ledgers', LedgerController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::resource('agreement-templates', AgreementTemplateController::class)->only(['index', 'store', 'update', 'destroy']);
 
             Route::resource('airplays', AirplayController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::post('airplays/{airplay}/links', [AirplayController::class, 'storeLink'])->name('airplays.links.store');

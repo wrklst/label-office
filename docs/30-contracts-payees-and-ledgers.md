@@ -142,6 +142,24 @@ Example: a compilation earns 400. Contract A (weight 3) pays Example Artist 50%.
 
 A contract cannot be prorated across itself, directly or through other contracts.
 
+## Agreement templates
+
+**Deals → Agreement templates** holds the texts your written agreements are made from. A template is the label's own text: the label answers for what it says. The application gives no legal advice.
+
+### The examples
+
+Under **Examples** the application ships three texts: a remix agreement where the label commissions the remix, a remix agreement where the original artist commissions it and the label releases it, and a release agreement between an artist and the label.
+
+They are examples only. They are not legal advice, come without any warranty, were not written or reviewed by a lawyer and may be wrong, incomplete or unenforceable. They are drafted with German law and a German GmbH as the label in mind and do not fit other countries or legal forms without changes. Do not use one before a qualified lawyer has reviewed and adapted it for you.
+
+Nothing is ever sent from an example. **Read** shows its text. **Copy to my templates** makes a copy that is yours, after you tick **I understand that this is an unreviewed example**.
+
+### Your own templates
+
+**New template** takes a **Name** and the **Text**. The pencil opens a template to change it; the bin deletes it.
+
+The text can leave open what differs from deal to deal, as a field in double braces such as `{{ share }}` or `{{ payee.legal_name }}`. **Fields an agreement fills in**, below the text, lists every field. A text that uses a field that does not exist is not saved.
+
 ## Worked example
 
 Example Records accounts in EUR and has one release, Example Release (EX001).

@@ -41,6 +41,7 @@ import { dashboard, handbook } from '@/routes';
 import { index as airplays } from '@/routes/airplays';
 import { index as artists } from '@/routes/artists';
 import { index as catalog } from '@/routes/catalog';
+import { index as agreementTemplates } from '@/routes/agreement-templates';
 import { index as contracts } from '@/routes/contracts';
 import { index as dataImports } from '@/routes/data-imports';
 import { index as items } from '@/routes/items';
@@ -97,6 +98,11 @@ const adminGroups: NavGroup[] = [
             { title: 'Contracts', href: contracts(), icon: FileSignature },
             { title: 'Payees', href: payees(), icon: Users },
             { title: 'Ledgers', href: ledgers(), icon: BookOpenText },
+            {
+                title: 'Agreement templates',
+                href: agreementTemplates(),
+                icon: FileSignature,
+            },
         ],
     },
     {
