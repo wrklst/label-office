@@ -29,9 +29,11 @@ type Row = {
 export default function Agreements({
     agreements,
     hasTemplates,
+    disclaimer,
 }: {
     agreements: Paginated<Row>;
     hasTemplates: boolean;
+    disclaimer: string;
 }) {
     return (
         <Page
@@ -48,6 +50,9 @@ export default function Agreements({
                 )
             }
         >
+            <p className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
+                {disclaimer}
+            </p>
             {!hasTemplates ? (
                 <EmptyState
                     title="Start with a template"

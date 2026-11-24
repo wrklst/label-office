@@ -46,7 +46,14 @@ Who the label is when it is a party to an agreement, and whose signatures it nee
 | **Address**        | The address of the company.                                                                       |
 | **Register entry** | Court and number, for example `Amtsgericht Charlottenburg, HRB 123456`. Empty when there is none. |
 
-Under **Signs for the label**, tick every admin whose signature the label needs. All of them are needed, not any one of them: a GmbH with one managing director ticks that one person, a GbR whose partners only sign together ticks every partner. Only admins are listed, and someone who stops being an admin stops signing.
+Signing for the label is a right of its own. Under **Signs for the label**, tick the admins who have it. Being an admin does not give it: an admin who is not ticked can prepare and send agreements but not sign them. Only admins are listed, and someone who stops being an admin stops signing.
+
+**What the label needs on an agreement** says how many of the ticked people it takes:
+
+- **Everyone ticked above, together**: an agreement counts as signed by the label only when all of them have signed. This is the usual case for a GbR, whose partners represent it together.
+- **Any one of those ticked above**: one signature is enough, and once one of them has signed the others no longer can. This is the usual case for a GmbH whose managing directors may each represent it alone.
+
+What applies to your label is in its partnership agreement or its register entry, not in this setting: set it to match. An agreement keeps the people and the rule it was sent with.
 
 An admin account is not authority to sign. Tick only people who are entitled to represent the label: the managing directors of a GmbH as registered, the partners of a GbR as its partnership agreement says.
 

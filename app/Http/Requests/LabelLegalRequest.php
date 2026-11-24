@@ -31,6 +31,7 @@ class LabelLegalRequest extends LabelFormRequest
             'legal_form' => ['nullable', Rule::in(Label::LEGAL_FORMS)],
             'legal_address' => ['nullable', 'string', 'max:1000'],
             'legal_register' => ['nullable', 'string', 'max:255'],
+            'signing_rule' => ['required', Rule::in(['all', 'any'])],
             'signatories' => ['array'],
             'signatories.*' => ['integer', $admin],
             'self_dealing_exempt' => ['array'],

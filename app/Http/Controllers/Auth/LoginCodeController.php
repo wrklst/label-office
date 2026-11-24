@@ -132,6 +132,9 @@ class LoginCodeController extends Controller
         Auth::guard('web')->login($user);
         $request->session()->regenerate();
         $request->session()->forget(self::SESSION_EMAIL);
+        // The code just proved control of the mailbox, which is what resets a password: it stands in for confirming
+        // one, so someone who never set a password can add a passkey under Settings → Security.
+        $request->session()->passwordConfirmed();
 
         return redirect()->intended(config('fortify.home'));
     }

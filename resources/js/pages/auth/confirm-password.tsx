@@ -55,6 +55,12 @@ export default function ConfirmPassword() {
                     </div>
                 )}
             </Form>
+
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+                Never set a password? Log out and sign in with an emailed code.
+                For the next hours you are let in here without one, for example
+                to add a passkey.
+            </p>
         </>
     );
 }

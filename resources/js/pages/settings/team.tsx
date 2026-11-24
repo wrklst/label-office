@@ -17,7 +17,6 @@ type Member = {
     email: string;
     role: 'admin' | 'payee';
     payee_id: number | null;
-    signs_as_payee_id: number | null;
     payee: string | null;
 };
 
@@ -59,40 +58,27 @@ function RoleFields({
                     <option value="admin">Admin – full access</option>
                 </SelectInput>
             </Field>
-            {role === 'payee' && (
-                <Field
-                    label="Payee"
-                    htmlFor={`payee-${member?.id ?? 'new'}`}
-                    error={errors.payee_id}
-                    required
-                    hint="Whose statements this person may see."
-                >
-                    <SelectInput
-                        id={`payee-${member?.id ?? 'new'}`}
-                        name="payee_id"
-                        defaultValue={member?.payee_id ?? ''}
-                        options={payeeOptions}
-                        placeholder="Choose payee…"
-                        required
-                    />
-                </Field>
-            )}
-            {role === 'admin' && (
-                <Field
-                    label="Signs agreements as"
-                    htmlFor={`signs-as-${member?.id ?? 'new'}`}
-                    error={errors.signs_as_payee_id}
-                    hint="Only when this admin is also an artist of the label: the payee they sign their own agreements as."
-                >
-                    <SelectInput
-                        id={`signs-as-${member?.id ?? 'new'}`}
-                        name="signs_as_payee_id"
-                        defaultValue={member?.signs_as_payee_id ?? ''}
-                        options={payeeOptions}
-                        placeholder="Nobody"
-                    />
-                </Field>
-            )}
+            <Field
+                key={role}
+                label={role === 'payee' ? 'Payee' : 'Also a payee'}
+                htmlFor={`payee-${member?.id ?? 'new'}`}
+                error={errors.payee_id}
+                required={role === 'payee'}
+                hint={
+                    role === 'payee'
+                        ? 'Whose statements this person may see.'
+                        : 'Only for an admin who is also an artist of the label: they read their own share under My statements and sign their own agreements as this payee.'
+                }
+            >
+                <SelectInput
+                    id={`payee-${member?.id ?? 'new'}`}
+                    name="payee_id"
+                    defaultValue={member?.payee_id ?? ''}
+                    options={payeeOptions}
+                    placeholder={role === 'payee' ? 'Choose payee…' : 'Nobody'}
+                    required={role === 'payee'}
+                />
+            </Field>
         </>
     );
 }

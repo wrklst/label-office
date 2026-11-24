@@ -210,7 +210,7 @@ test('the legal details and the people who sign for the label can be saved', fun
 
     $this->actingAs($admin)
         ->put(route('label-settings.legal'), [
-            'legal_name' => 'Example Records GbR', 'legal_form' => 'gbr', 'legal_address' => "Example Street 1\n10000 Berlin", 'legal_register' => '',
+            'legal_name' => 'Example Records GbR', 'legal_form' => 'gbr', 'legal_address' => "Example Street 1\n10000 Berlin", 'legal_register' => '', 'signing_rule' => 'any',
             'signatories' => [$admin->id, $partner->id],
             // An exemption only counts for someone who signs.
             'self_dealing_exempt' => [$admin->id, $silent->id],
@@ -220,11 +220,11 @@ test('the legal details and the people who sign for the label can be saved', fun
 
     $label->refresh();
 
-    expect($label->only(['legal_name', 'legal_form', 'legal_register']))->toBe(['legal_name' => 'Example Records GbR', 'legal_form' => 'gbr', 'legal_register' => null])
+    expect($label->only(['legal_name', 'legal_form', 'legal_register', 'signing_rule']))->toBe(['legal_name' => 'Example Records GbR', 'legal_form' => 'gbr', 'legal_register' => null, 'signing_rule' => 'any'])
         ->and($label->signatories()->pluck('users.id')->sort()->values()->all())->toBe([$admin->id, $partner->id])
         ->and($label->users()->wherePivot('self_dealing_exempt', true)->pluck('users.id')->all())->toBe([$admin->id]);
 
-    $this->actingAs($admin)->put(route('label-settings.legal'), ['signatories' => [$admin->id]])->assertSessionHasNoErrors();
+    $this->actingAs($admin)->put(route('label-settings.legal'), ['signing_rule' => 'all', 'signatories' => [$admin->id]])->assertSessionHasNoErrors();
 
     expect($label->signatories()->pluck('users.id')->all())->toBe([$admin->id]);
 
@@ -245,7 +245,7 @@ test('only an admin of the label can be made to sign for it', function () {
 
     foreach ([$payeeUser, $foreignAdmin] as $user) {
         $this->actingAs($admin)
-            ->put(route('label-settings.legal'), ['signatories' => [$user->id]])
+            ->put(route('label-settings.legal'), ['signing_rule' => 'all', 'signatories' => [$user->id]])
             ->assertSessionHasErrors('signatories.0');
     }
 

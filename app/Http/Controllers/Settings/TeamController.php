@@ -28,7 +28,6 @@ class TeamController extends Controller
                 'email' => $user->email,
                 'role' => $user->pivot->role,
                 'payee_id' => $user->pivot->payee_id,
-                'signs_as_payee_id' => $user->pivot->signs_as_payee_id,
                 'payee' => $payees[$user->pivot->payee_id] ?? null,
             ]),
             'payeeOptions' => Options::payees(),
@@ -116,17 +115,17 @@ class TeamController extends Controller
     }
 
     /**
-     * @return array{role: string, payee_id: int|null, signs_as_payee_id: int|null}
+     * An admin can be a payee of the label too: an artist who helps run
+     * it reads their own statements and signs their own agreements as
+     * that payee. For a payee member the link is what gives access.
+     *
+     * @return array{role: string, payee_id: int|null}
      */
     private function pivot(MemberRequest $request): array
     {
-        $role = $request->validated('role');
-
         return [
-            'role' => $role,
-            'payee_id' => $role === LabelRole::Payee->value ? $request->validated('payee_id') : null,
-            // An admin reads no statements as a payee, but can be a party to an agreement as one.
-            'signs_as_payee_id' => $role === LabelRole::Admin->value ? $request->validated('signs_as_payee_id') : null,
+            'role' => $request->validated('role'),
+            'payee_id' => $request->validated('payee_id'),
         ];
     }
 

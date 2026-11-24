@@ -92,11 +92,13 @@ export default function AgreementTemplates({
     templates,
     examples,
     notice,
+    disclaimer,
     fields,
 }: {
     templates: Template[];
     examples: Example[];
     notice: string;
+    disclaimer: string;
     fields: Record<string, string>;
 }) {
     return (
@@ -121,6 +123,7 @@ export default function AgreementTemplates({
                 </FormDialog>
             }
         >
+            <Notice>{disclaimer}</Notice>
             {templates.length === 0 ? (
                 <EmptyState
                     title="No templates yet"

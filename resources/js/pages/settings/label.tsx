@@ -29,6 +29,7 @@ type Props = {
         legal_form: string | null;
         legal_address: string | null;
         legal_register: string | null;
+        signing_rule: string;
     };
     admins: {
         id: number;
@@ -246,7 +247,7 @@ export default function LabelSettings({
                 {({ errors, processing }) => (
                     <Panel
                         title="Legal entity and signatories"
-                        description="Who the label is as a party to an agreement, and whose signatures it needs. An agreement counts as signed by the label only when everyone ticked here has signed."
+                        description="Who the label is as a party to an agreement, who has the right to sign for it, and how many of them it takes. Signing for the label is a right of its own: being an admin does not give it."
                     >
                         <div className="grid gap-6">
                             <Field
@@ -310,7 +311,7 @@ export default function LabelSettings({
                                     errors.signatories ??
                                     errors.self_dealing_exempt
                                 }
-                                hint="Only admins can sign for the label. Tick only people who are entitled to represent it: an admin account alone is not authority to sign."
+                                hint="Tick only admins who are entitled to represent the label: the managing directors of a GmbH who may sign for it, the partners of a GbR. Nobody else can sign for the label."
                             >
                                 <div className="grid gap-3">
                                     {admins.map((admin) => (
@@ -352,6 +353,27 @@ export default function LabelSettings({
                                         </div>
                                     ))}
                                 </div>
+                            </Field>
+                            <Field
+                                label="What the label needs on an agreement"
+                                htmlFor="signing_rule"
+                                error={errors.signing_rule}
+                                required
+                                hint="A GbR usually needs all of its partners together. A GmbH usually needs one managing director who may represent it alone. What applies to you is in your partnership agreement or register entry."
+                            >
+                                <SelectInput
+                                    id="signing_rule"
+                                    name="signing_rule"
+                                    className="w-80"
+                                    defaultValue={legal.signing_rule}
+                                >
+                                    <option value="all">
+                                        Everyone ticked above, together
+                                    </option>
+                                    <option value="any">
+                                        Any one of those ticked above
+                                    </option>
+                                </SelectInput>
                             </Field>
                             <div>
                                 <Button disabled={processing}>Save</Button>

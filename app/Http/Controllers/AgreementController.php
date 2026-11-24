@@ -9,6 +9,7 @@ use App\Models\Contract;
 use App\Models\Release;
 use App\Models\Track;
 use App\Notifications\AgreementToSign;
+use App\Support\AgreementExamples;
 use App\Support\CurrentLabel;
 use App\Support\Options;
 use App\Support\PageSize;
@@ -32,6 +33,7 @@ class AgreementController extends Controller
                     'signed_at' => $agreement->signed_at?->toDateString(),
                 ]),
             'hasTemplates' => AgreementTemplate::query()->exists(),
+            'disclaimer' => AgreementExamples::DISCLAIMER,
         ]);
     }
 
@@ -66,6 +68,8 @@ class AgreementController extends Controller
                 'send_block' => $agreement->status === Agreement::DRAFT ? $agreement->sendBlock() : null,
                 'label_party' => $parties['label'],
                 'signatories' => array_column($parties['signatories'], 'name'),
+                'signing_rule' => $parties['rule'] ?? 'all',
+                'disclaimer' => AgreementExamples::DISCLAIMER,
                 'lines' => $this->lines($agreement),
                 'people' => $agreement->status === Agreement::DRAFT ? [] : $agreement->people()->pluck('name')->all(),
             ],

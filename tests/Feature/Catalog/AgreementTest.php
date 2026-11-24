@@ -7,11 +7,13 @@ use App\Models\Contract;
 use App\Models\Label;
 use App\Models\LoginCode;
 use App\Models\Payee;
+use App\Models\Statement;
 use App\Models\Track;
 use App\Models\User;
 use App\Notifications\AgreementSigned;
 use App\Notifications\AgreementSigningCode;
 use App\Notifications\AgreementToSign;
+use App\Support\PayeeAccess;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -200,7 +202,7 @@ test('the label needs every one of its signatories', function () {
 
 test('someone who signs for the label does not also sign the other side unless they are exempt', function (bool $exempt) {
     ['label' => $label, 'signatory' => $admin, 'payee' => $payee, 'agreement' => $agreement] = agreementBetweenLabelAndPayee(['self_dealing_exempt' => $exempt]);
-    $label->users()->updateExistingPivot($admin->id, ['signs_as_payee_id' => $payee->id]);
+    $label->users()->updateExistingPivot($admin->id, ['payee_id' => $payee->id]);
     $agreement->send();
 
     signAgreement($agreement, $admin, 'payee')->assertSessionHasNoErrors();
@@ -282,21 +284,55 @@ test('an agreement that is out for signature can be withdrawn, a signed one cann
     $this->actingAs($admin)->post(route('agreements.void', $signed->id))->assertStatus(409);
 });
 
-test('an admin can be set to sign as a payee of their own label, and a payee member cannot', function () {
-    ['label' => $label, 'signatory' => $admin, 'payee' => $payee, 'payeeUser' => $payeeUser] = agreementBetweenLabelAndPayee();
+test('one signatory is enough for a label that is bound by any one of them', function () {
+    ['label' => $label, 'signatory' => $admin, 'payeeUser' => $payeeUser, 'agreement' => $agreement] = agreementBetweenLabelAndPayee();
+    $second = User::factory()->create(['name' => 'Sam Second']);
+    $label->users()->attach($second, ['role' => LabelRole::Admin->value, 'signs_for_label' => true]);
+    $label->update(['signing_rule' => 'any']);
+    $agreement->send();
+
+    expect($agreement->text())->toContain('(Dana Director or Sam Second)')
+        ->and(array_column($agreement->signatureLines(), 'name'))->toBe(['One of: Dana Director, Sam Second', 'Robin Example']);
+
+    // The rule is the one the agreement was sent under.
+    $label->update(['signing_rule' => 'all']);
+
+    signAgreement($agreement, $payeeUser, 'payee')->assertSessionHasNoErrors();
+    signAgreement($agreement, $second, 'label')->assertSessionHasNoErrors();
+
+    expect($agreement->refresh()->status)->toBe(Agreement::SIGNED)
+        ->and(array_column($agreement->signatureLines(), 'name'))->toBe(['Sam Second', 'Robin Example']);
+});
+
+test('an admin without the right to sign cannot sign for the label', function () {
+    ['label' => $label, 'agreement' => $agreement] = agreementBetweenLabelAndPayee();
+    $plainAdmin = labelAdmin($label);
+    $agreement->send();
+
+    $this->actingAs($plainAdmin)->get(route('agreements.show', $agreement->id))->assertOk();
+    $this->actingAs($plainAdmin)->get(route('my-agreements.show', $agreement->id))->assertNotFound();
+    signAgreement($agreement, $plainAdmin, 'label')->assertNotFound();
+});
+
+test('an admin who is also a payee of the label reads their own statements and agreements as that payee', function () {
+    ['label' => $label, 'signatory' => $admin, 'payee' => $payee, 'agreement' => $agreement] = agreementBetweenLabelAndPayee();
+    $other = Payee::factory()->create(['label_id' => $label->id]);
+    $own = Statement::factory()->create(['label_id' => $label->id, 'payee_id' => $payee->id, 'published_at' => now(), 'archived' => false]);
+    Statement::factory()->create(['label_id' => $label->id, 'payee_id' => $other->id, 'published_at' => now(), 'archived' => false]);
+    $agreement->send();
+
+    expect((new PayeeAccess($admin))->isPayeeAnywhere())->toBeFalse();
+
+    $label->users()->updateExistingPivot($admin->id, ['payee_id' => $payee->id]);
+    $access = new PayeeAccess($admin->fresh());
+
+    expect($access->isPayeeAnywhere())->toBeTrue()
+        ->and($access->statements()->pluck('id')->all())->toBe([$own->id])
+        ->and(Agreement::query()->forPayeeUser($admin)->pluck('id')->all())->toBe([$agreement->id]);
 
     $this->actingAs($admin)
-        ->put(route('team.update', $admin->id), ['role' => 'admin', 'signs_as_payee_id' => $payee->id])
-        ->assertSessionHasNoErrors();
-    $this->actingAs($admin)
-        ->put(route('team.update', $payeeUser->id), ['role' => 'payee', 'payee_id' => $payee->id, 'signs_as_payee_id' => $payee->id])
-        ->assertSessionHasNoErrors();
-    $this->actingAs($admin)
-        ->put(route('team.update', $admin->id), ['role' => 'admin', 'signs_as_payee_id' => Payee::factory()->create()->id])
-        ->assertSessionHasErrors('signs_as_payee_id');
-
-    $this->assertDatabaseHas('label_user', ['label_id' => $label->id, 'user_id' => $admin->id, 'payee_id' => null, 'signs_as_payee_id' => $payee->id]);
-    $this->assertDatabaseHas('label_user', ['label_id' => $label->id, 'user_id' => $payeeUser->id, 'payee_id' => $payee->id, 'signs_as_payee_id' => null]);
+        ->get(route('portal.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('view', 'payee')->has('groups', 1)->has('groups.0.statements.data', 1));
 });
 
 test('a signed agreement makes the contract that pays its share, once, and leaves an existing contract alone', function () {

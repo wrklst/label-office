@@ -144,7 +144,7 @@ A contract cannot be prorated across itself, directly or through other contracts
 
 ## Agreement templates
 
-**Deals → Agreement templates** holds the texts your written agreements are made from. A template is the label's own text: the label answers for what it says. The application gives no legal advice.
+**Deals → Agreement templates** holds the texts your written agreements are made from. A template is the label's own text: the label answers for what it says. This application gives no legal advice and guarantees no legal compliance: not for the tool, not for signing electronically, and not for any text, example or template in it. Whether an agreement signed here is valid and enforceable depends on the law that applies to you. Electronic signatures are not accepted for every kind of agreement or in every country. Clear the use of this tool and of your texts with your legal adviser before you rely on them.
 
 ### The examples
 

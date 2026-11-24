@@ -39,7 +39,7 @@ use Illuminate\Support\Str;
  * @property array<string, string|null>|null $terms What the deal fills in, by the keys of TERMS.
  * @property string|null $body
  * @property string|null $body_hash
- * @property array{label: array<string, string|null>, signatories: list<array{user_id: int, name: string, exempt: bool}>, payee: array<string, string|null>, artist: array<string, string|null>|null}|null $parties
+ * @property array{label: array<string, string|null>, rule?: string, signatories: list<array{user_id: int, name: string, exempt: bool}>, payee: array<string, string|null>, artist: array<string, string|null>|null}|null $parties
  * @property CarbonImmutable|null $sent_at
  * @property CarbonImmutable|null $signed_at
  * @property CarbonImmutable|null $voided_at
@@ -144,9 +144,7 @@ class Agreement extends Model
                 ->where('label_user.user_id', $user->id)
                 ->where(fn ($linked) => $linked
                     ->whereColumn('label_user.payee_id', 'agreements.payee_id')
-                    ->orWhereColumn('label_user.payee_id', 'agreements.artist_payee_id')
-                    ->orWhereColumn('label_user.signs_as_payee_id', 'agreements.payee_id')
-                    ->orWhereColumn('label_user.signs_as_payee_id', 'agreements.artist_payee_id')));
+                    ->orWhereColumn('label_user.payee_id', 'agreements.artist_payee_id')));
     }
 
     /**
@@ -167,7 +165,7 @@ class Agreement extends Model
      * The parties as they stand now: who the label is, who signs for
      * it, and who the payees are.
      *
-     * @return array{label: array<string, string|null>, signatories: list<array{user_id: int, name: string, exempt: bool}>, payee: array<string, string|null>, artist: array<string, string|null>|null}
+     * @return array{label: array<string, string|null>, rule: string, signatories: list<array{user_id: int, name: string, exempt: bool}>, payee: array<string, string|null>, artist: array<string, string|null>|null}
      */
     public function currentParties(): array
     {
@@ -177,6 +175,7 @@ class Agreement extends Model
 
         return [
             'label' => $label->only(['legal_name', 'legal_form', 'legal_address', 'legal_register']),
+            'rule' => $label->signing_rule,
             'signatories' => array_values($label->signatories()->orderBy('name')->get()->map(fn (User $user): array => [
                 'user_id' => $user->id,
                 'name' => $user->name,
@@ -200,7 +199,7 @@ class Agreement extends Model
             'label.legal_name' => $parties['label']['legal_name'],
             'label.address' => $parties['label']['legal_address'],
             'label.register' => $parties['label']['legal_register'],
-            'label.signatories' => implode(', ', array_column($parties['signatories'], 'name')),
+            'label.signatories' => implode(($parties['rule'] ?? 'all') === 'any' ? ' or ' : ', ', array_column($parties['signatories'], 'name')),
         ];
 
         foreach (['payee', 'artist'] as $side) {
@@ -289,8 +288,7 @@ class Agreement extends Model
      */
     public function capacitiesOf(User $user): array
     {
-        $member = DB::table('label_user')->where('label_id', $this->label_id)->where('user_id', $user->id)->first(['payee_id', 'signs_as_payee_id']);
-        $payeeIds = array_filter([$member?->payee_id, $member?->signs_as_payee_id]);
+        $payeeIds = DB::table('label_user')->where('label_id', $this->label_id)->where('user_id', $user->id)->whereNotNull('payee_id')->pluck('payee_id')->all();
 
         return array_values(array_filter([
             in_array($user->id, array_column($this->parties['signatories'] ?? [], 'user_id')) ? 'label' : null,
@@ -313,6 +311,7 @@ class Agreement extends Model
             $this->status !== self::SENT => 'This agreement is not open for signature.',
             ! in_array($capacity, $this->capacitiesOf($user)) => 'You cannot sign this agreement in that role.',
             in_array($capacity, $signed) => 'You have already signed in that role.',
+            $capacity === 'label' && $this->anyOneSigns() && $this->signatures->contains('capacity', 'label') => 'The label has already signed: one of its signatories is enough.',
             $capacity !== 'label' && $this->signatures->contains('capacity', $capacity) => 'Someone has already signed in that role.',
             $crossesSides && ! $exempt => 'You have signed the other side of this agreement. The same person cannot sign for the label and as its other party unless the label has exempted them from the ban on self-dealing.',
             default => null,
@@ -320,22 +319,43 @@ class Agreement extends Model
     }
 
     /**
-     * Every signature the agreement needs: each of the label's
-     * signatories, the payee, and the artist when they are a party.
+     * Whether one of the label's signatories is enough, as the rule
+     * stood when the agreement was sent.
+     */
+    private function anyOneSigns(): bool
+    {
+        return ($this->parties['rule'] ?? 'all') === 'any';
+    }
+
+    /**
+     * Every signature the agreement needs: for the label each of its
+     * signatories, or one line for any one of them; the payee; and the
+     * artist when they are a party.
      *
      * @return list<array{capacity: string, name: string, user_id: int|null, signature: AgreementSignature|null}>
      */
     public function signatureLines(): array
     {
         $lines = [];
+        $signatories = $this->parties['signatories'] ?? [];
 
-        foreach ($this->parties['signatories'] ?? [] as $signatory) {
+        if ($this->anyOneSigns()) {
+            $signature = $this->signatures->firstWhere('capacity', 'label');
             $lines[] = [
                 'capacity' => 'label',
-                'name' => $signatory['name'],
-                'user_id' => $signatory['user_id'],
-                'signature' => $this->signatures->first(fn (AgreementSignature $signature): bool => $signature->capacity === 'label' && $signature->user_id === $signatory['user_id']),
+                'name' => $signature->name ?? (count($signatories) > 1 ? 'One of: ' : '').implode(', ', array_column($signatories, 'name')),
+                'user_id' => $signature?->user_id,
+                'signature' => $signature,
             ];
+        } else {
+            foreach ($signatories as $signatory) {
+                $lines[] = [
+                    'capacity' => 'label',
+                    'name' => $signatory['name'],
+                    'user_id' => $signatory['user_id'],
+                    'signature' => $this->signatures->first(fn (AgreementSignature $signature): bool => $signature->capacity === 'label' && $signature->user_id === $signatory['user_id']),
+                ];
+            }
         }
 
         foreach (['payee', 'artist'] as $side) {
@@ -460,7 +480,7 @@ class Agreement extends Model
     {
         $payeeIds = array_filter([$this->payee_id, $this->licensor === 'artist' ? $this->artist_payee_id : null]);
         $linked = DB::table('label_user')->where('label_id', $this->label_id)
-            ->where(fn ($member) => $member->whereIn('payee_id', $payeeIds)->orWhereIn('signs_as_payee_id', $payeeIds))
+            ->whereIn('payee_id', $payeeIds)
             ->pluck('user_id')->all();
 
         return User::query()->whereIn('id', [...array_column($this->parties['signatories'] ?? [], 'user_id'), ...$linked])->get();

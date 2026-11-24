@@ -20,6 +20,7 @@ class AgreementTemplateController extends Controller
             ]),
             'examples' => array_values(AgreementExamples::all()),
             'notice' => AgreementExamples::NOTICE,
+            'disclaimer' => AgreementExamples::DISCLAIMER,
             'fields' => AgreementTemplate::FIELDS,
         ]);
     }

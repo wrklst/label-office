@@ -369,6 +369,10 @@ All commands and options: [docs/50-command-line.md](docs/50-command-line.md).
 - Uploads are sent in one request per file; there is no resumable upload.
 - The interface is in English only.
 
+## No legal guarantee
+
+Label Office can draft agreements from templates and have them signed online. This application gives no legal advice and guarantees no legal compliance: not for the tool, not for signing electronically, and not for any text, example or template in it. Whether an agreement signed here is valid and enforceable depends on the law that applies to you. Electronic signatures are not accepted for every kind of agreement or in every country. Clear the use of this tool and of your texts with your legal adviser before you rely on them. The example agreement texts that ship with it are illustrations for German law and a German GmbH, not written or reviewed by a lawyer, and must not be used without legal review. See [Agreements](docs/35-agreements.md).
+
 ## Development
 
 ```sh

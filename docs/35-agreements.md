@@ -2,7 +2,9 @@
 
 This page covers written agreements with payees: drafting one from a template, sending it for signature, how it is signed online, and what is kept as proof.
 
-The application gives no legal advice. Whether an agreement is valid and says what you mean depends on its text, which is yours: see [Agreement templates](30-contracts-payees-and-ledgers.md#agreement-templates). The application records who agreed to which text and when.
+**No legal guarantee.** This application gives no legal advice and guarantees no legal compliance: not for the tool, not for signing electronically, and not for any text, example or template in it. Whether an agreement signed here is valid and enforceable depends on the law that applies to you. Electronic signatures are not accepted for every kind of agreement or in every country. Clear the use of this tool and of your texts with your legal adviser before you rely on them.
+
+The text of an agreement is yours: see [Agreement templates](30-contracts-payees-and-ledgers.md#agreement-templates). The application records who agreed to which text and when, and nothing more.
 
 ## What an agreement is, and what it is not
 
@@ -10,7 +12,7 @@ An agreement is the document the parties sign. A contract under **Deals → Cont
 
 ## Before the first agreement
 
-1. Under **Settings → Label**, fill in **Legal entity and signatories** and tick who signs for the label. See [Label settings](41-label-settings.md#legal-entity-and-signatories).
+1. Under **Settings → Label**, fill in **Legal entity and signatories**: tick who has the right to sign for the label and choose whether all of them are needed or one is enough. See [Label settings](41-label-settings.md#legal-entity-and-signatories).
 2. Under **Deals → Agreement templates**, have at least one template of your own.
 3. Give the payee a **Legal name** and **Address** under **Deals → Payees**, and access under **Settings → Team**, so they have an account to sign with.
 
@@ -46,11 +48,11 @@ A sent agreement cannot be edited or deleted. **Withdraw** ends it while it is o
 
 ## Who has to sign
 
-- **For the label:** every person ticked under **Signs for the label** when the agreement was sent. All of them, not one of them.
+- **For the label:** the people ticked under **Signs for the label** when the agreement was sent: all of them, or any one of them, as **What the label needs on an agreement** said at that moment. An admin who is not ticked cannot sign for the label. The page of a draft names who is needed before you send it.
 - **The payee:** one person whose account is linked to the payee, see below.
 - **The artist:** likewise, when an artist grants the rights.
 
-An account is linked to a payee in one of two ways under **Settings → Team**: a member with the access **Payee** is linked through **Payee**; an admin who is also an artist of the label is linked through **Signs agreements as**.
+An account is linked to a payee under **Settings → Team**: a member with the access **Payee** through **Payee**, an admin who is also an artist of the label through **Also a payee**.
 
 Someone who signs for the label cannot also sign the same agreement as its payee or artist, unless **May also sign the other side** is ticked for them under **Settings → Label**. The same person on both sides is self-dealing, which German law (§ 181 BGB) only allows with an exemption. Without one, another person has to sign one of the sides.
 
@@ -83,7 +85,7 @@ For every signature: the typed name, the email address of the account, the role,
 
 The copy sent to every party holds the text, the list of signatures and the hash. Anyone can check the hash: it is the SHA-256 of the text above the line in the text file. The PDF shows the same text and signatures for reading and filing; it is made from the stored record each time and carries no cryptographic signature of its own.
 
-This is a simple electronic signature. It is not a qualified electronic signature and does not replace the written form where a law demands it. Whether your agreements need more than this is a question for your lawyer.
+This is a simple electronic signature. It is not a qualified electronic signature and does not replace the written form where a law demands it. Whether this is enough for your agreements, in your country and in the country of the other party, is a question for your legal adviser: the application does not claim that it is.
 
 ## Good to know
 

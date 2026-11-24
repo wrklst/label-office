@@ -505,3 +505,21 @@ test('the email about disabled codes points to the password login', function () 
     expect($content)->toContain('two-factor authentication')
         ->toContain(route('login'));
 });
+
+test('a payee who signed in with an emailed code reaches the passkeys without a password, anyone else is asked for one', function () {
+    $label = Label::factory()->create();
+    $payeeUser = User::factory()->create(['email' => 'artist@example.com']);
+    $label->users()->attach($payeeUser, ['role' => LabelRole::Payee->value, 'payee_id' => Payee::factory()->create(['label_id' => $label->id])->id]);
+
+    $this->actingAs($payeeUser)->get(route('security.edit'))->assertRedirect(route('password.confirm'));
+    auth()->logout();
+    Notification::fake();
+
+    $this->post(route('login.code.store'), ['email' => 'artist@example.com']);
+    $this->post(route('login.code.authenticate'), ['code' => Notification::sent($payeeUser, LoginCodeNotification::class)->sole()->code])
+        ->assertSessionHasNoErrors();
+
+    $this->get(route('security.edit'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->component('settings/security')->where('canManagePasskeys', true));
+});

@@ -28,6 +28,8 @@ type Agreement = {
     signed_at: string | null;
     send_block: string | null;
     signatories: string[];
+    signing_rule: string;
+    disclaimer: string;
     lines: AgreementLine[];
     people: string[];
 };
@@ -104,13 +106,21 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
                 >
                     <div className="grid gap-3 text-sm">
                         <p>
-                            Signs for the label:{' '}
+                            Needed for the label:{' '}
                             <span className="font-medium">
-                                {agreement.signatories.join(', ') ||
-                                    'nobody yet'}
+                                {agreement.signatories.length === 0
+                                    ? 'nobody has the right to sign yet'
+                                    : agreement.signatories.length === 1
+                                      ? agreement.signatories[0]
+                                      : agreement.signing_rule === 'any'
+                                        ? `one of ${agreement.signatories.join(', ')}`
+                                        : `all of ${agreement.signatories.join(', ')}`}
                             </span>
                             . The payee signs through their own account: give
                             them access under Settings → Team if they have none.
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            {agreement.disclaimer}
                         </p>
                         {agreement.send_block && (
                             <p className="text-red-600">

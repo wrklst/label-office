@@ -18,7 +18,9 @@ use SortDirection;
  * What one account may read as a payee, across labels. This is the only
  * place where the label scope is lifted for payees: every query here is
  * limited to the (label, payee) pairs of the user's own label_user rows
- * with the payee role, never to anything the request says.
+ * that are linked to a payee, never to anything the request says. An
+ * admin who is also a payee of the label reads their own share here
+ * like any other payee.
  */
 final class PayeeAccess
 {
@@ -36,18 +38,18 @@ final class PayeeAccess
     public function labels(): Collection
     {
         return $this->labels ??= $this->user->labels()
-            ->wherePivot('role', LabelRole::Payee->value)
             ->wherePivotNotNull('payee_id')
             ->orderBy('name')
             ->get();
     }
 
     /**
-     * Whether the user has a payee role anywhere, linked or not.
+     * Whether the user is a payee anywhere: with the payee role, linked
+     * or not, or as an admin who is linked to a payee.
      */
     public function isPayeeAnywhere(): bool
     {
-        return $this->user->labels()->wherePivot('role', LabelRole::Payee->value)->exists();
+        return $this->user->labels()->where(fn ($member) => $member->where('label_user.role', LabelRole::Payee->value)->orWhereNotNull('label_user.payee_id'))->exists();
     }
 
     /**

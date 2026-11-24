@@ -73,7 +73,7 @@ A role belongs to the combination of a person and a label. There are two.
 
 **Admin** means full access to everything in that label. There are no finer permissions: every admin can see all contracts and balances, change settings and manage the team.
 
-**Payee** means access to **My statements** and **My agreements** and nothing else. A payee who opens any other page of the label is sent back to **My statements**. In every label a payee user is linked to exactly one payee record, and that link decides whose statements they see in that label. A payee role without a linked payee gives access to nothing. Someone who runs one label and is a payee of another is a full admin of the first and sees nothing of the second beyond their own published statements.
+**Payee** means access to **My statements** and **My agreements** and nothing else. A payee who opens any other page of the label is sent back to **My statements**. In every label a payee user is linked to exactly one payee record, and that link decides whose statements they see in that label. A payee role without a linked payee gives access to nothing. Someone who runs one label and is a payee of another is a full admin of the first and sees nothing of the second beyond their own published statements. An admin can also be a payee of the label they run, see [Inviting team members and payees](#inviting-team-members-and-payees).
 
 A label always keeps at least one admin: the last admin cannot be removed or turned into a payee.
 
@@ -85,6 +85,7 @@ Besides the role, one account in the whole installation is the **installation ad
 2. Under **Add a person**, enter the **Email**. **Name** is optional and only used when a new account is created.
 3. Choose the **Access**:
     - **Admin – full access**, or
+    - **Admin – full access** can also name a payee under **Also a payee**, for an artist who helps run the label: they keep full access, read their own share under **My statements** like any payee, and sign their own agreements as that payee.
     - **Payee – own statements only**. Then also pick the **Payee** whose statements this person may see.
 4. Choose **Add to label**.
 
@@ -225,7 +226,7 @@ A passkey is a key stored on your device or in your password manager, unlocked b
 
 To add one:
 
-1. Open **Settings → Security**. You are asked to confirm your password first.
+1. Open **Settings → Security**. You are asked to confirm your password first. Someone who never set a password, as most payees, signs in with an emailed code instead: for the next three hours that sign-in counts as the confirmation, so the page opens right away.
 2. Under **Passkeys**, choose **Add passkey**.
 3. Give it a **Passkey name** such as "MacBook Pro" and choose **Register passkey**. Your browser or device takes over from there.
 

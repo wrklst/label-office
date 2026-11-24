@@ -34,7 +34,7 @@ class LabelSettingsController extends Controller
                 'mechanicals_include_physical' => $tools->includePhysical,
                 'ignore_negative_quantities' => $tools->ignoreNegativeQuantities,
             ],
-            'legal' => $label->only(['legal_name', 'legal_form', 'legal_address', 'legal_register']),
+            'legal' => $label->only(['legal_name', 'legal_form', 'legal_address', 'legal_register', 'signing_rule']),
             'admins' => $label->users()->wherePivot('role', LabelRole::Admin->value)->orderBy('name')->get()->map(fn (User $user): array => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -80,7 +80,7 @@ class LabelSettingsController extends Controller
         $label = $currentLabel->get();
         $signatories = $request->validated('signatories', []);
 
-        $label->update($request->safe()->only(['legal_name', 'legal_form', 'legal_address', 'legal_register']));
+        $label->update($request->safe()->only(['legal_name', 'legal_form', 'legal_address', 'legal_register', 'signing_rule']));
 
         foreach ($label->users()->pluck('users.id') as $userId) {
             $label->users()->updateExistingPivot($userId, [

@@ -32,8 +32,8 @@ test('the team page lists the members of the label by name', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('settings/team')
             ->where('members', [
-                ['id' => $member->id, 'name' => 'Adam Example', 'email' => 'adam@example.com', 'role' => 'payee', 'payee_id' => $payee->id, 'signs_as_payee_id' => null, 'payee' => 'Example Artist'],
-                ['id' => $admin->id, 'name' => 'Zoe Example', 'email' => 'zoe@example.com', 'role' => 'admin', 'payee_id' => null, 'signs_as_payee_id' => null, 'payee' => null],
+                ['id' => $member->id, 'name' => 'Adam Example', 'email' => 'adam@example.com', 'role' => 'payee', 'payee_id' => $payee->id, 'payee' => 'Example Artist'],
+                ['id' => $admin->id, 'name' => 'Zoe Example', 'email' => 'zoe@example.com', 'role' => 'admin', 'payee_id' => null, 'payee' => null],
             ])
             ->where('payeeOptions', [['id' => $payee->id, 'name' => 'Example Artist']]));
 });
@@ -99,7 +99,7 @@ test('a person can be added as a payee linked to a payee of the label', function
     $this->assertDatabaseHas('label_user', ['label_id' => $label->id, 'user_id' => $existing->id, 'role' => 'payee', 'payee_id' => $payee->id]);
 });
 
-test('an admin is never linked to a payee', function () {
+test('an admin can be a payee of the label too', function () {
     $label = Label::factory()->create();
     $payee = Payee::factory()->create(['label_id' => $label->id]);
     $existing = User::factory()->create();
@@ -107,8 +107,12 @@ test('an admin is never linked to a payee', function () {
     $this->actingAs(labelAdmin($label))
         ->post(route('team.store'), ['email' => $existing->email, 'role' => 'admin', 'payee_id' => $payee->id])
         ->assertSessionHasNoErrors();
+    $this->actingAs(labelAdmin($label))
+        ->post(route('team.store'), ['email' => 'plain@example.com', 'role' => 'admin'])
+        ->assertSessionHasNoErrors();
 
-    $this->assertDatabaseHas('label_user', ['user_id' => $existing->id, 'role' => 'admin', 'payee_id' => null]);
+    $this->assertDatabaseHas('label_user', ['user_id' => $existing->id, 'role' => 'admin', 'payee_id' => $payee->id]);
+    $this->assertDatabaseHas('label_user', ['user_id' => User::query()->where('email', 'plain@example.com')->value('id'), 'role' => 'admin', 'payee_id' => null]);
 });
 
 test('someone who already has access is not added again', function () {
@@ -165,13 +169,19 @@ test('a member can be turned from an admin into a payee', function () {
     $this->assertDatabaseHas('label_user', ['label_id' => $label->id, 'user_id' => $member->id, 'role' => 'payee', 'payee_id' => $payee->id]);
 });
 
-test('promoting a payee to admin removes the link to their payee', function () {
+test('promoting a payee to admin keeps the link to their payee only when it is asked for', function () {
     $label = Label::factory()->create();
     $payee = Payee::factory()->create(['label_id' => $label->id]);
     $member = labelMember($label, LabelRole::Payee, $payee);
 
     $this->actingAs(labelAdmin($label))
         ->put(route('team.update', $member->id), ['role' => 'admin', 'payee_id' => $payee->id])
+        ->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('label_user', ['label_id' => $label->id, 'user_id' => $member->id, 'role' => 'admin', 'payee_id' => $payee->id]);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('team.update', $member->id), ['role' => 'admin', 'payee_id' => ''])
         ->assertSessionHasNoErrors();
 
     $this->assertDatabaseHas('label_user', ['label_id' => $label->id, 'user_id' => $member->id, 'role' => 'admin', 'payee_id' => null]);
