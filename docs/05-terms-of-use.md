@@ -8,7 +8,9 @@ In these terms, "the software" is Label Office with its handbook, its example te
 
 ## 1. What you get
 
-The software is free and open source under the MIT licence. It is given to you as it is, free of charge. You install and run it yourself, on your own server and on your own responsibility. We run nothing for you, hold none of your data and are not a party to anything you do with the software.
+The software is an open-source package under the MIT licence: free to download, to use and to modify. It is provided as is, free of charge, and we guarantee nothing about it: not that it works, not that it is free of errors, not that it is fit for any purpose. A copy that you or someone else has modified is not ours to answer for either.
+
+We do not host it. You install and run it yourself, on your own server and on your own responsibility. We run nothing for you, hold none of your data and are not a party to anything you do with the software.
 
 ## 2. No advice
 

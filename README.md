@@ -399,8 +399,9 @@ All commands and options: [docs/50-command-line.md](docs/50-command-line.md).
 
 ## No legal guarantee
 
-Label Office gives no legal, tax or accounting advice and guarantees no legal
-compliance: not for the tool, not for signing agreements electronically, not
+Label Office is an open-source package, free to download and modify, provided
+as is and hosted by nobody but you. Nothing about it is guaranteed. It gives
+no legal, tax or accounting advice and guarantees no legal compliance: not for the tool, not for signing agreements electronically, not
 for its figures and not for any text, example or template in it. You cannot
 assume that it delivers what you need in your country. Clear its use with a
 qualified legal adviser before you use any of its tools, and decide on that
