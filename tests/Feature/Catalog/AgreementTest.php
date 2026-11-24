@@ -742,3 +742,19 @@ test('the shares of an agreement cannot hand out more than everything', function
         'payee_id' => $remixer->id, 'terms' => ['share' => '60', 'artist_share' => '50'],
     ])->assertSessionHasErrors('terms.artist_share');
 });
+
+test('a track that is on two covered releases is ticked under both and saved once', function () {
+    ['label' => $label, 'signatory' => $admin, 'payee' => $payee, 'agreement' => $agreement] = agreementBetweenLabelAndPayee();
+    $single = Release::factory()->create(['label_id' => $label->id]);
+    $album = Release::factory()->create(['label_id' => $label->id]);
+    $track = Track::factory()->create(['label_id' => $label->id, 'release_id' => $single->id]);
+    $track->putOn($album->id, 3);
+
+    $this->actingAs($admin)->put(route('agreements.update', $agreement->id), [
+        'name' => $agreement->name, 'agreement_template_id' => $agreement->agreement_template_id, 'licensor' => 'label', 'payee_id' => $payee->id,
+        'release_ids' => [$single->id, $album->id], 'track_ids' => [$track->id, $track->id],
+    ])->assertSessionHasNoErrors();
+
+    expect($agreement->tracks()->pluck('tracks.id')->all())->toBe([$track->id])
+        ->and($agreement->releases()->count())->toBe(2);
+});

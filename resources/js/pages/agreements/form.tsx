@@ -221,9 +221,15 @@ export default function AgreementForm({
                                 initial={agreement?.coverage ?? []}
                                 params={{ payee_id: payeeId }}
                             />
-                            {(errors.release_ids ?? errors.track_ids) && (
+                            {(errors.release_ids ??
+                                Object.entries(errors).find(([key]) =>
+                                    /^(release|track)_ids/.test(key),
+                                )?.[1]) && (
                                 <p className="mt-2 text-sm text-red-600">
-                                    {errors.release_ids ?? errors.track_ids}
+                                    {errors.release_ids ??
+                                        Object.entries(errors).find(([key]) =>
+                                            /^(release|track)_ids/.test(key),
+                                        )?.[1]}
                                 </p>
                             )}
                         </Panel>

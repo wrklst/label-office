@@ -32,8 +32,8 @@ class AgreementRequest extends LabelFormRequest
             'release_ids' => ['array'],
             'release_ids.*' => ['integer', 'distinct', $this->inLabel('releases')],
             'track_ids' => ['array'],
-            // The tracks on offer are those of the chosen releases.
-            'track_ids.*' => ['integer', 'distinct', Rule::exists('release_track', 'track_id')->whereIn('release_id', array_filter((array) $this->input('release_ids'), 'is_numeric') ?: [0])],
+            // The tracks on offer are those of the chosen releases. One that is on two of them arrives twice.
+            'track_ids.*' => ['integer', Rule::exists('release_track', 'track_id')->whereIn('release_id', array_filter((array) $this->input('release_ids'), 'is_numeric') ?: [0])],
             'terms' => ['array:'.implode(',', array_keys(Agreement::TERMS))],
             'terms.*' => ['nullable', 'string', 'max:5000'],
             'terms.share' => ['nullable', 'numeric', 'between:0,100'],

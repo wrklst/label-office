@@ -531,7 +531,10 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
                                     label="Releases and tracks"
                                     className="sm:col-span-2"
                                     error={
-                                        errors.release_ids ?? errors.track_ids
+                                        errors.release_ids ??
+                                        Object.entries(errors).find(([key]) =>
+                                            /^(release|track)_ids/.test(key),
+                                        )?.[1]
                                     }
                                     hint="Any number of releases. Of each, the whole release or only the tracks you tick."
                                 >

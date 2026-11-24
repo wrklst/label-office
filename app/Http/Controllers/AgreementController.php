@@ -189,7 +189,7 @@ class AgreementController extends Controller
             'release_ids' => ['array'],
             'release_ids.*' => ['integer', 'distinct', $inLabel('releases')],
             'track_ids' => ['array'],
-            'track_ids.*' => ['integer', 'distinct', Rule::exists('release_track', 'track_id')->whereIn('release_id', array_filter((array) $request->input('release_ids'), 'is_numeric') ?: [0])],
+            'track_ids.*' => ['integer', Rule::exists('release_track', 'track_id')->whereIn('release_id', array_filter((array) $request->input('release_ids'), 'is_numeric') ?: [0])],
         ]);
 
         DB::transaction(function () use ($agreement, $input): void {
