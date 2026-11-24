@@ -6,7 +6,7 @@ The application gives no legal advice. Whether an agreement is valid and says wh
 
 ## What an agreement is, and what it is not
 
-An agreement is the document the parties sign. A contract under **Deals → Contracts** is the calculation: it holds the splits that statements are made from. The two are separate records. Signing an agreement does not change any split.
+An agreement is the document the parties sign. A contract under **Deals → Contracts** is the calculation: it holds the splits that statements are made from. The two are separate records. Signing an agreement does not change any split on its own: you make the contract from it with one click, see [The royalty contract](#the-royalty-contract).
 
 ## Before the first agreement
 
@@ -68,6 +68,14 @@ The page shows the whole text, who has signed so far, and under **Sign**:
 Choosing **Sign** records the signature. Once every party has signed, the agreement reads **Signed by everyone** and each of them is emailed a copy as a text file.
 
 **Print or save as PDF** prints the text and the signatures through the browser.
+
+## The royalty contract
+
+On an agreement that everyone has signed, **Create the contract** under **Royalty contract** makes a contract named after the agreement with one split: the payee at the agreed share. It is set on the linked track, or else on the linked release.
+
+A track or release that already has a contract keeps it. The new contract is still created, and the message says that it was not set: decide yourself which one applies. Without a linked track or release the contract is created and set nowhere.
+
+The contract is made once. After that the panel shows **Open the contract**. It is an ordinary contract: add further splits or change it under **Deals → Contracts**, see [Contracts, payees and ledgers](30-contracts-payees-and-ledgers.md).
 
 ## What is kept as proof
 

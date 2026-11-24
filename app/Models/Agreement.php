@@ -31,6 +31,7 @@ use Illuminate\Support\Facades\DB;
  * @property int|null $artist_payee_id The original artist, when they are a party of their own.
  * @property int|null $release_id
  * @property int|null $track_id
+ * @property int|null $contract_id The contract made from the signed terms.
  * @property array<string, string|null>|null $terms What the deal fills in, by the keys of TERMS.
  * @property string|null $body
  * @property string|null $body_hash

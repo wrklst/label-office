@@ -3,9 +3,11 @@
 use App\Enums\LabelRole;
 use App\Models\Agreement;
 use App\Models\AgreementTemplate;
+use App\Models\Contract;
 use App\Models\Label;
 use App\Models\LoginCode;
 use App\Models\Payee;
+use App\Models\Track;
 use App\Models\User;
 use App\Notifications\AgreementSigned;
 use App\Notifications\AgreementSigningCode;
@@ -295,4 +297,43 @@ test('an admin can be set to sign as a payee of their own label, and a payee mem
 
     $this->assertDatabaseHas('label_user', ['label_id' => $label->id, 'user_id' => $admin->id, 'payee_id' => null, 'signs_as_payee_id' => $payee->id]);
     $this->assertDatabaseHas('label_user', ['label_id' => $label->id, 'user_id' => $payeeUser->id, 'payee_id' => $payee->id, 'signs_as_payee_id' => null]);
+});
+
+test('a signed agreement makes the contract that pays its share, once, and leaves an existing contract alone', function () {
+    ['label' => $label, 'signatory' => $admin, 'payee' => $payee, 'payeeUser' => $payeeUser, 'agreement' => $agreement] = agreementBetweenLabelAndPayee();
+    $track = Track::factory()->create(['label_id' => $label->id, 'contract_id' => null]);
+    $agreement->update(['track_id' => $track->id, 'terms' => [...$agreement->terms, 'share' => '37.5']]);
+    $agreement->send();
+
+    $this->actingAs($admin)->post(route('agreements.contract', $agreement->id))->assertStatus(409);
+
+    signAgreement($agreement, $payeeUser, 'payee');
+    signAgreement($agreement, $admin, 'label');
+
+    $this->actingAs($admin)->post(route('agreements.contract', $agreement->id))->assertSessionHasNoErrors();
+
+    $contract = Contract::query()->sole();
+    $split = $contract->splits()->sole();
+
+    expect($agreement->refresh()->contract_id)->toBe($contract->id)
+        ->and($split->payee_id)->toBe($payee->id)
+        ->and($split->split_amount)->toBe('0.375000000')
+        ->and($track->refresh()->contract_id)->toBe($contract->id);
+
+    $this->actingAs($admin)->post(route('agreements.contract', $agreement->id))->assertStatus(409);
+
+    // A track that is already accounted for keeps its contract.
+    ['label' => $label, 'signatory' => $admin, 'payeeUser' => $payeeUser, 'agreement' => $second] = agreementBetweenLabelAndPayee();
+    $existing = Contract::factory()->create(['label_id' => $label->id]);
+    $taken = Track::factory()->create(['label_id' => $label->id, 'contract_id' => $existing->id]);
+    $second->update(['track_id' => $taken->id]);
+    $second->send();
+    signAgreement($second, $payeeUser, 'payee');
+    signAgreement($second, $admin, 'label');
+
+    $this->actingAs($admin)->post(route('agreements.contract', $second->id))
+        ->assertInertiaFlash('toast.message', "Contract created. {$taken->name} already has a contract, which was left as it is.");
+
+    expect($taken->refresh()->contract_id)->toBe($existing->id)
+        ->and($second->refresh()->contract_id)->not->toBeNull();
 });

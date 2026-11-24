@@ -87,6 +87,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::resource('agreements', AgreementController::class);
             Route::post('agreements/{agreement}/send', [AgreementController::class, 'send'])->name('agreements.send');
             Route::post('agreements/{agreement}/void', [AgreementController::class, 'void'])->name('agreements.void');
+            Route::post('agreements/{agreement}/contract', [AgreementController::class, 'contract'])->name('agreements.contract');
             Route::resource('agreement-templates', AgreementTemplateController::class)->only(['index', 'store', 'update', 'destroy']);
 
             Route::resource('airplays', AirplayController::class)->only(['index', 'store', 'update', 'destroy']);

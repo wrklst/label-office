@@ -5,11 +5,15 @@ namespace App\Http\Controllers;
 use App\Http\Requests\AgreementRequest;
 use App\Models\Agreement;
 use App\Models\AgreementTemplate;
+use App\Models\Contract;
+use App\Models\Release;
+use App\Models\Track;
 use App\Notifications\AgreementToSign;
 use App\Support\CurrentLabel;
 use App\Support\Options;
 use App\Support\PageSize;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -51,7 +55,8 @@ class AgreementController extends Controller
 
         return Inertia::render('agreements/show', [
             'agreement' => [
-                ...$agreement->only(['id', 'name', 'status', 'licensor', 'body_hash']),
+                ...$agreement->only(['id', 'name', 'status', 'licensor', 'body_hash', 'contract_id']),
+                'share' => $agreement->terms['share'] ?? null,
                 'payee' => $agreement->payee?->name,
                 'template' => $agreement->template?->name,
                 'text' => $agreement->text(),
@@ -122,6 +127,50 @@ class AgreementController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Agreement withdrawn. It can no longer be signed.')]);
 
         return back();
+    }
+
+    /**
+     * Make the contract that pays what was signed: one split for the
+     * payee at the agreed share. It is set on the linked track, or else
+     * the linked release, unless that already has a contract: income
+     * that is accounted for one way is not silently accounted another.
+     */
+    public function contract(Agreement $agreement): RedirectResponse
+    {
+        abort_unless($agreement->status === Agreement::SIGNED && $agreement->contract_id === null, 409, 'A contract is made once, from an agreement everyone has signed.');
+
+        $share = $agreement->terms['share'] ?? null;
+
+        if (! is_numeric($share) || (float) $share <= 0) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('This agreement names no share to make a contract from.')]);
+
+            return back();
+        }
+
+        $target = Track::query()->find($agreement->track_id) ?? Release::query()->find($agreement->release_id);
+
+        $contract = DB::transaction(function () use ($agreement, $share, $target): Contract {
+            $contract = Contract::query()->create([
+                'name' => $agreement->name,
+                'memo' => "From the agreement \"{$agreement->name}\", signed by everyone on {$agreement->signed_at?->toDateString()}.",
+            ]);
+            $contract->splits()->create(['payee_id' => $agreement->payee_id, 'split_amount' => bcdiv((string) $share, '100', 9)]);
+            $agreement->forceFill(['contract_id' => $contract->id])->save();
+
+            if ($target !== null && $target->contract_id === null) {
+                $target->update(['contract_id' => $contract->id]);
+            }
+
+            return $contract;
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => match (true) {
+            $target === null => __('Contract created. Set it on the release or track it pays for.'),
+            $target->contract_id === $contract->id => __('Contract created and set on :name.', ['name' => $target->name]),
+            default => __('Contract created. :name already has a contract, which was left as it is.', ['name' => $target->name]),
+        }]);
+
+        return to_route('contracts.show', $contract->id);
     }
 
     public function destroy(Agreement $agreement): RedirectResponse

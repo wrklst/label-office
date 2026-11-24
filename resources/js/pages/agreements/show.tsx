@@ -10,6 +10,7 @@ import { DeleteButton } from '@/components/delete-button';
 import { Page, Panel } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import { edit, index } from '@/routes/agreements';
+import { show as showContract } from '@/routes/contracts';
 import { show as sign } from '@/routes/my-agreements';
 
 type Agreement = {
@@ -18,6 +19,8 @@ type Agreement = {
     status: string;
     licensor: string;
     body_hash: string | null;
+    contract_id: number | null;
+    share: string | null;
     payee: string | null;
     template: string | null;
     text: string;
@@ -120,6 +123,45 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
                             )}
                         </Form>
                     </div>
+                </Panel>
+            )}
+
+            {agreement.status === 'signed' && (
+                <Panel
+                    title="Royalty contract"
+                    description="The agreement is the signed document; the contract is what statements are calculated from."
+                >
+                    {agreement.contract_id ? (
+                        <Button variant="outline" asChild>
+                            <Link href={showContract(agreement.contract_id)}>
+                                Open the contract
+                            </Link>
+                        </Button>
+                    ) : (
+                        <Form
+                            {...AgreementController.contract.form(agreement.id)}
+                            className="grid gap-3 text-sm"
+                        >
+                            {({ processing }) => (
+                                <>
+                                    <p>
+                                        Creates a contract that gives{' '}
+                                        {agreement.payee} {agreement.share} %
+                                        and sets it on the linked track or
+                                        release, unless that already has a
+                                        contract. Nothing is created on its own:
+                                        check the contract before the next
+                                        statements.
+                                    </p>
+                                    <div>
+                                        <Button disabled={processing}>
+                                            Create the contract
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
+                        </Form>
+                    )}
                 </Panel>
             )}
 
