@@ -201,3 +201,53 @@ test('a payee cannot reach the label settings', function () {
     $this->assertDatabaseHas('labels', ['id' => $label->id, 'name' => 'Example Records']);
     $this->assertDatabaseCount('territories', 1);
 });
+
+test('the legal details and the people who sign for the label can be saved', function () {
+    $label = Label::factory()->create();
+    $admin = labelAdmin($label);
+    $partner = labelAdmin($label);
+    $silent = labelAdmin($label);
+
+    $this->actingAs($admin)
+        ->put(route('label-settings.legal'), [
+            'legal_name' => 'Example Records GbR', 'legal_form' => 'gbr', 'legal_address' => "Example Street 1\n10000 Berlin", 'legal_register' => '',
+            'signatories' => [$admin->id, $partner->id],
+            // An exemption only counts for someone who signs.
+            'self_dealing_exempt' => [$admin->id, $silent->id],
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertInertiaFlash('toast.message', 'Legal details saved.');
+
+    $label->refresh();
+
+    expect($label->only(['legal_name', 'legal_form', 'legal_register']))->toBe(['legal_name' => 'Example Records GbR', 'legal_form' => 'gbr', 'legal_register' => null])
+        ->and($label->signatories()->pluck('users.id')->sort()->values()->all())->toBe([$admin->id, $partner->id])
+        ->and($label->users()->wherePivot('self_dealing_exempt', true)->pluck('users.id')->all())->toBe([$admin->id]);
+
+    $this->actingAs($admin)->put(route('label-settings.legal'), ['signatories' => [$admin->id]])->assertSessionHasNoErrors();
+
+    expect($label->signatories()->pluck('users.id')->all())->toBe([$admin->id]);
+
+    $this->actingAs($admin)
+        ->get(route('label-settings.edit'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('legal.legal_form', 'gbr')
+            ->has('admins', 3)
+            ->where('admins', fn ($admins) => collect($admins)->where('signs_for_label', true)->pluck('id')->all() === [$admin->id]));
+});
+
+test('only an admin of the label can be made to sign for it', function () {
+    $label = Label::factory()->create();
+    $admin = labelAdmin($label);
+    $payeeUser = User::factory()->create();
+    $label->users()->attach($payeeUser, ['role' => LabelRole::Payee->value, 'payee_id' => Payee::factory()->create(['label_id' => $label->id])->id]);
+    $foreignAdmin = labelAdmin(Label::factory()->create());
+
+    foreach ([$payeeUser, $foreignAdmin] as $user) {
+        $this->actingAs($admin)
+            ->put(route('label-settings.legal'), ['signatories' => [$user->id]])
+            ->assertSessionHasErrors('signatories.0');
+    }
+
+    expect($label->signatories()->count())->toBe(0);
+});

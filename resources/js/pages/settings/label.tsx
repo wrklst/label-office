@@ -2,11 +2,12 @@ import { Form, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import LabelSettingsController from '@/actions/App/Http/Controllers/Settings/LabelSettingsController';
 import { DeleteButton } from '@/components/delete-button';
-import { CheckField, Field } from '@/components/field';
+import { CheckField, Field, SelectInput } from '@/components/field';
 import { Page, Panel } from '@/components/page';
 import { LabelImageUpload } from '@/components/label-image-upload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { edit } from '@/routes/label-settings';
 
 type Props = {
@@ -23,6 +24,18 @@ type Props = {
         mechanicals_include_physical: boolean;
         ignore_negative_quantities: boolean;
     };
+    legal: {
+        legal_name: string | null;
+        legal_form: string | null;
+        legal_address: string | null;
+        legal_register: string | null;
+    };
+    admins: {
+        id: number;
+        name: string;
+        signs_for_label: boolean;
+        self_dealing_exempt: boolean;
+    }[];
     territories: {
         id: number;
         name: string;
@@ -34,9 +47,14 @@ type Props = {
 export default function LabelSettings({
     settings,
     royaltyTools,
+    legal,
+    admins,
     territories,
 }: Props) {
     const { label } = usePage().props;
+    const [signing, setSigning] = useState(
+        admins.filter((admin) => admin.signs_for_label).map(({ id }) => id),
+    );
     const [tools, setTools] = useState({
         mechanicals: settings.accounts_mechanicals,
         ppd: settings.accounts_ppd,
@@ -218,6 +236,128 @@ export default function LabelSettings({
                             <Button disabled={processing}>Save</Button>
                         </div>
                     </>
+                )}
+            </Form>
+
+            <Form
+                {...LabelSettingsController.updateLegal.form()}
+                options={{ preserveScroll: true }}
+            >
+                {({ errors, processing }) => (
+                    <Panel
+                        title="Legal entity and signatories"
+                        description="Who the label is as a party to an agreement, and whose signatures it needs. An agreement counts as signed by the label only when everyone ticked here has signed."
+                    >
+                        <div className="grid gap-6">
+                            <Field
+                                label="Legal name"
+                                htmlFor="legal_name"
+                                error={errors.legal_name}
+                                hint="As registered, for example Example Records GmbH."
+                            >
+                                <Input
+                                    id="legal_name"
+                                    name="legal_name"
+                                    defaultValue={legal.legal_name ?? ''}
+                                />
+                            </Field>
+                            <Field
+                                label="Legal form"
+                                htmlFor="legal_form"
+                                error={errors.legal_form}
+                                hint="A GmbH is represented by its managing directors as registered. A GbR is represented by all partners together unless its partnership agreement says otherwise."
+                            >
+                                <SelectInput
+                                    id="legal_form"
+                                    name="legal_form"
+                                    className="w-64"
+                                    defaultValue={legal.legal_form ?? ''}
+                                    placeholder="Not set"
+                                    options={[
+                                        { id: 'gmbh', name: 'GmbH' },
+                                        { id: 'gbr', name: 'GbR' },
+                                        { id: 'other', name: 'Other' },
+                                    ]}
+                                />
+                            </Field>
+                            <Field
+                                label="Address"
+                                htmlFor="legal_address"
+                                error={errors.legal_address}
+                            >
+                                <Textarea
+                                    id="legal_address"
+                                    name="legal_address"
+                                    rows={3}
+                                    defaultValue={legal.legal_address ?? ''}
+                                />
+                            </Field>
+                            <Field
+                                label="Register entry"
+                                htmlFor="legal_register"
+                                error={errors.legal_register}
+                                hint="Court and number, for example Amtsgericht Charlottenburg, HRB 123456. Leave empty when there is none."
+                            >
+                                <Input
+                                    id="legal_register"
+                                    name="legal_register"
+                                    defaultValue={legal.legal_register ?? ''}
+                                />
+                            </Field>
+                            <Field
+                                label="Signs for the label"
+                                error={
+                                    errors.signatories ??
+                                    errors.self_dealing_exempt
+                                }
+                                hint="Only admins can sign for the label. Tick only people who are entitled to represent it: an admin account alone is not authority to sign."
+                            >
+                                <div className="grid gap-3">
+                                    {admins.map((admin) => (
+                                        <div key={admin.id}>
+                                            <CheckField
+                                                name="signatories[]"
+                                                value={admin.id}
+                                                label={admin.name}
+                                                checked={signing.includes(
+                                                    admin.id,
+                                                )}
+                                                onChange={(event) =>
+                                                    setSigning(
+                                                        event.target.checked
+                                                            ? [
+                                                                  ...signing,
+                                                                  admin.id,
+                                                              ]
+                                                            : signing.filter(
+                                                                  (id) =>
+                                                                      id !==
+                                                                      admin.id,
+                                                              ),
+                                                    )
+                                                }
+                                            />
+                                            {signing.includes(admin.id) && (
+                                                <CheckField
+                                                    className="mt-2 ml-6 border-l pl-4"
+                                                    name="self_dealing_exempt[]"
+                                                    value={admin.id}
+                                                    label="May also sign the other side"
+                                                    hint="Tick only when this person is exempt from the ban on self-dealing (§ 181 BGB), for example by the articles and the register entry. Without it they cannot sign an agreement both for the label and as its other party."
+                                                    defaultChecked={
+                                                        admin.self_dealing_exempt
+                                                    }
+                                                />
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </Field>
+                            <div>
+                                <Button disabled={processing}>Save</Button>
+                            </div>
+                        </div>
+                    </Panel>
                 )}
             </Form>
 

@@ -212,6 +212,22 @@ test('a payee is updated', function () {
         ->and($payee->notes)->toBe('Updated.');
 });
 
+test('a payee keeps who they are as a party to an agreement', function () {
+    $label = Label::factory()->create();
+    $payee = Payee::factory()->create(['label_id' => $label->id, 'name' => 'Example Artist']);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('payees.update', $payee->id), ['name' => 'Example Artist', 'legal_name' => 'Alex Example', 'address' => "Example Road 2\nLondon", 'country' => 'gb', 'vat_id' => ''])
+        ->assertSessionHasNoErrors();
+
+    expect($payee->refresh()->only(['legal_name', 'address', 'country', 'vat_id']))
+        ->toBe(['legal_name' => 'Alex Example', 'address' => "Example Road 2\nLondon", 'country' => 'GB', 'vat_id' => null]);
+
+    $this->actingAs(labelAdmin($label))
+        ->put(route('payees.update', $payee->id), ['name' => 'Example Artist', 'country' => 'GBR'])
+        ->assertSessionHasErrors('country');
+});
+
 test('a payee with payouts or statements is not deleted', function (string $model) {
     $label = Label::factory()->create();
     $payee = Payee::factory()->create(['label_id' => $label->id]);

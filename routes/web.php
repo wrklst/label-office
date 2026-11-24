@@ -109,6 +109,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('settings/label', [LabelSettingsController::class, 'edit'])->name('label-settings.edit');
             Route::put('settings/label', [LabelSettingsController::class, 'update'])->name('label-settings.update');
+            Route::put('settings/label/legal', [LabelSettingsController::class, 'updateLegal'])->name('label-settings.legal');
             Route::post('settings/territories', [LabelSettingsController::class, 'storeTerritory'])->name('territories.store');
             Route::delete('settings/territories/{territory}', [LabelSettingsController::class, 'destroyTerritory'])->name('territories.destroy');
 

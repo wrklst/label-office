@@ -1,6 +1,6 @@
 # Label settings
 
-What a label decides for itself about its name, images, accounting and territories is under **Settings → Label**, open to admins of the label. Nothing here needs access to the server. This page goes through the sections of that screen in the order the page has them: **Logo and signet**, **Details**, **Accounting features** and **Territories**. The services the label works with, their options and the logins of outside services are on their own page: **Settings → Connections**, see [Connections](42-connections.md).
+What a label decides for itself about its name, images, accounting and territories is under **Settings → Label**, open to admins of the label. Nothing here needs access to the server. This page goes through the sections of that screen in the order the page has them: **Logo and signet**, **Details**, **Accounting features**, **Legal entity and signatories** and **Territories**. The services the label works with, their options and the logins of outside services are on their own page: **Settings → Connections**, see [Connections](42-connections.md).
 
 ## Logo and signet
 
@@ -34,6 +34,23 @@ Three optional tools. Each one adds an entry under **Accounting** in the sidebar
 **Ignore negative units** is shown once Mechanicals or PPD is ticked and applies to both: by default returns reduce the units they are calculated on.
 
 The tools are explained in [Mechanicals, PPD and reserves](34-mechanicals-ppd-and-reserves.md).
+
+## Legal entity and signatories
+
+Who the label is when it is a party to an agreement, and whose signatures it needs. The section saves with its own **Save** button.
+
+| Field              | Meaning                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------- |
+| **Legal name**     | The name as registered, for example `Example Records GmbH`.                                       |
+| **Legal form**     | **GmbH**, **GbR** or **Other**.                                                                   |
+| **Address**        | The address of the company.                                                                       |
+| **Register entry** | Court and number, for example `Amtsgericht Charlottenburg, HRB 123456`. Empty when there is none. |
+
+Under **Signs for the label**, tick every admin whose signature the label needs. All of them are needed, not any one of them: a GmbH with one managing director ticks that one person, a GbR whose partners only sign together ticks every partner. Only admins are listed, and someone who stops being an admin stops signing.
+
+An admin account is not authority to sign. Tick only people who are entitled to represent the label: the managing directors of a GmbH as registered, the partners of a GbR as its partnership agreement says.
+
+**May also sign the other side** appears for each person who signs. Tick it only when that person is exempt from the ban on self-dealing (§ 181 of the German Civil Code), for example by the articles of the company and its register entry. Without it, the same person cannot sign one agreement both for the label and as the other party to it.
 
 ## Territories
 

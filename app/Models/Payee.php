@@ -17,10 +17,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $email
  * @property list<string>|null $tags
  * @property string|null $notes
+ * @property string|null $legal_name The name the payee signs agreements under, when it is not the name above.
+ * @property string|null $address
+ * @property string|null $country Where the payee is resident for tax, as an ISO code.
+ * @property string|null $vat_id
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
-#[Fillable(['label_id', 'name', 'email', 'tags', 'notes'])]
+#[Fillable(['label_id', 'name', 'email', 'tags', 'notes', 'legal_name', 'address', 'country', 'vat_id'])]
 class Payee extends Model
 {
     /** @use HasFactory<PayeeFactory> */

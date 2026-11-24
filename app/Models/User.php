@@ -35,7 +35,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property bool $installation_admin May change settings of the whole installation, such as the file storage.
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read Pivot&object{role: string, payee_id: int|null} $pivot Membership of the label when loaded through Label::users().
+ * @property-read Pivot&object{role: string, payee_id: int|null, signs_for_label: bool|int, self_dealing_exempt: bool|int} $pivot Membership of the label when loaded through Label::users().
  */
 #[Fillable(['name', 'email', 'password', 'current_label_id'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]

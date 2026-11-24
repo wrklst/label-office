@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\LabelRole;
 use App\Support\Services;
 use Carbon\CarbonImmutable;
 use Database\Factories\LabelFactory;
@@ -20,6 +21,10 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property string|null $contact_email
  * @property string|null $logo_path The label's logo as "disk:path".
  * @property string|null $signet_path The label's small mark as "disk:path".
+ * @property string|null $legal_name The name the label signs agreements under, e.g. "Example Records GmbH".
+ * @property string|null $legal_form One of LEGAL_FORMS.
+ * @property string|null $legal_address
+ * @property string|null $legal_register Court and number of the register entry, when there is one.
  * @property bool $accounts_mechanicals
  * @property bool $accounts_ppd
  * @property bool $accounts_reserves
@@ -38,12 +43,15 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property CarbonImmutable|null $updated_at
  * @property-read Pivot&object{role: string, payee_id: int|null} $pivot Membership of the user when loaded through User::labels().
  */
-#[Fillable(['name', 'slug', 'currency', 'contact_email', 'logo_path', 'signet_path', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves', 'importer_settings', 'royalty_tool_settings', 'airplay_markets', 'delivery_settings', 'dataforseo_login', 'dataforseo_password', 'ai_provider', 'ai_key', 'ai_endpoint', 'ai_model', 'ai_trial'])]
+#[Fillable(['name', 'slug', 'currency', 'contact_email', 'logo_path', 'signet_path', 'legal_name', 'legal_form', 'legal_address', 'legal_register', 'accounts_mechanicals', 'accounts_ppd', 'accounts_reserves', 'importer_settings', 'royalty_tool_settings', 'airplay_markets', 'delivery_settings', 'dataforseo_login', 'dataforseo_password', 'ai_provider', 'ai_key', 'ai_endpoint', 'ai_model', 'ai_trial'])]
 #[Hidden(['dataforseo_login', 'dataforseo_password', 'ai_key'])]
 class Label extends Model
 {
     /** @use HasFactory<LabelFactory> */
     use HasFactory;
+
+    /** @var list<string> What the label can be as a party to an agreement. */
+    public const array LEGAL_FORMS = ['gmbh', 'gbr', 'other'];
 
     /**
      * @return array<string, string>
@@ -70,7 +78,18 @@ class Label extends Model
      */
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class)->withPivot(['role', 'payee_id'])->withTimestamps();
+        return $this->belongsToMany(User::class)->withPivot(['role', 'payee_id', 'signs_for_label', 'self_dealing_exempt'])->withTimestamps();
+    }
+
+    /**
+     * Everyone whose signature the label needs on an agreement: all of
+     * them, as for a partnership whose partners only sign together.
+     *
+     * @return BelongsToMany<User, $this>
+     */
+    public function signatories(): BelongsToMany
+    {
+        return $this->users()->wherePivot('role', LabelRole::Admin->value)->wherePivot('signs_for_label', true);
     }
 
     /**

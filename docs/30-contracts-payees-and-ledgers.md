@@ -17,7 +17,7 @@ A payee earns nothing by existing. They earn through splits on contracts, and a 
 ## Payees
 
 1. Open **Deals → Payees** and choose **New payee**.
-2. Enter a **Name**. **Email**, **Tags** (separated by commas) and **Notes** are optional and only for your reference.
+2. Enter a **Name**. **Email**, **Tags** (separated by commas) and **Notes** are optional and only for your reference. **Legal name**, **Address**, **Country** (the two-letter code of the tax residence) and **VAT ID** say who the payee is as a party to an agreement; they are optional too.
 3. Choose **Create payee**.
 
 The list searches name, email and tags (**Search payees…**) and shows **Name** (with its tags), **Email**, **Splits**, **Statements** and **Payouts**; every one of them sorts, and the list pages 50 at a time. A payee on no contract shows a **no splits** badge. The pencil at the end of a row opens **Edit {payee name}**.

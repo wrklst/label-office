@@ -32,6 +32,10 @@ export type Payee = {
     email: string | null;
     tags: string[] | null;
     notes: string | null;
+    legal_name: string | null;
+    address: string | null;
+    country: string | null;
+    vat_id: string | null;
     splits_count?: number;
     payouts_count?: number;
     statements_count?: number;
@@ -88,6 +92,50 @@ export function PayeeFields({
                     placeholder="Bank details, invoicing notes…"
                 />
             </Field>
+            <Field
+                label="Legal name"
+                htmlFor="legal_name"
+                error={errors.legal_name}
+                hint="The person or company that signs agreements, when it is not the name above."
+            >
+                <Input
+                    id="legal_name"
+                    name="legal_name"
+                    defaultValue={payee?.legal_name ?? ''}
+                />
+            </Field>
+            <Field label="Address" htmlFor="address" error={errors.address}>
+                <Textarea
+                    id="address"
+                    name="address"
+                    rows={3}
+                    defaultValue={payee?.address ?? ''}
+                />
+            </Field>
+            <div className="grid grid-cols-2 gap-4">
+                <Field
+                    label="Country"
+                    htmlFor="country"
+                    error={errors.country}
+                    hint="Two-letter code of the tax residence."
+                >
+                    <Input
+                        id="country"
+                        name="country"
+                        maxLength={2}
+                        className="w-20 uppercase"
+                        defaultValue={payee?.country ?? ''}
+                        placeholder="DE"
+                    />
+                </Field>
+                <Field label="VAT ID" htmlFor="vat_id" error={errors.vat_id}>
+                    <Input
+                        id="vat_id"
+                        name="vat_id"
+                        defaultValue={payee?.vat_id ?? ''}
+                    />
+                </Field>
+            </div>
         </>
     );
 }

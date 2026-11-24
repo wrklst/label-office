@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Enums\LabelRole;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\LabelLegalRequest;
 use App\Http\Requests\LabelSettingsRequest;
 use App\Http\Requests\TerritoryRequest;
 use App\Models\Territory;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Services\Royalties\Tools\MechanicalsTool;
 use App\Services\Royalties\Tools\ToolSettings;
 use App\Support\CurrentLabel;
@@ -31,6 +34,13 @@ class LabelSettingsController extends Controller
                 'mechanicals_include_physical' => $tools->includePhysical,
                 'ignore_negative_quantities' => $tools->ignoreNegativeQuantities,
             ],
+            'legal' => $label->only(['legal_name', 'legal_form', 'legal_address', 'legal_register']),
+            'admins' => $label->users()->wherePivot('role', LabelRole::Admin->value)->orderBy('name')->get()->map(fn (User $user): array => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'signs_for_label' => (bool) $user->pivot->signs_for_label,
+                'self_dealing_exempt' => (bool) $user->pivot->self_dealing_exempt,
+            ]),
             'territories' => Territory::query()->orderBy('name')->get()->map(fn (Territory $territory): array => [...$territory->only(['id', 'name', 'countries']), 'delete_block' => $territory->deleteBlock()]),
         ]);
     }
@@ -57,6 +67,29 @@ class LabelSettingsController extends Controller
         ]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Label settings saved.')]);
+
+        return back();
+    }
+
+    /**
+     * Who the label is on an agreement and whose signatures it needs.
+     * Only admins sign for the label; anyone not ticked stops signing.
+     */
+    public function updateLegal(LabelLegalRequest $request, CurrentLabel $currentLabel): RedirectResponse
+    {
+        $label = $currentLabel->get();
+        $signatories = $request->validated('signatories', []);
+
+        $label->update($request->safe()->only(['legal_name', 'legal_form', 'legal_address', 'legal_register']));
+
+        foreach ($label->users()->pluck('users.id') as $userId) {
+            $label->users()->updateExistingPivot($userId, [
+                'signs_for_label' => in_array($userId, $signatories),
+                'self_dealing_exempt' => in_array($userId, $signatories) && in_array($userId, $request->validated('self_dealing_exempt', [])),
+            ]);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Legal details saved.')]);
 
         return back();
     }

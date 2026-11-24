@@ -40,7 +40,7 @@ class PayeeController extends Controller
             ->tap($sorting)
             ->paginate(PageSize::MAIN)
             ->withQueryString()
-            ->through(fn (Payee $payee): array => $payee->only(['id', 'name', 'email', 'tags', 'notes', 'splits_count', 'payouts_count', 'statements_count']));
+            ->through(fn (Payee $payee): array => $payee->only(['id', 'name', 'email', 'tags', 'notes', 'legal_name', 'address', 'country', 'vat_id', 'splits_count', 'payouts_count', 'statements_count']));
 
         return Inertia::render('payees/index', [
             'payees' => $payees,
@@ -74,7 +74,7 @@ class PayeeController extends Controller
         $summary = $latestPeriod ? ($calculator->forPeriod($latestPeriod, $payee->id)['payees'][0] ?? null) : null;
 
         return Inertia::render('payees/show', [
-            'payee' => [...$payee->only(['id', 'name', 'email', 'tags', 'notes']), 'delete_block' => $payee->deleteBlock()],
+            'payee' => [...$payee->only(['id', 'name', 'email', 'tags', 'notes', 'legal_name', 'address', 'country', 'vat_id']), 'delete_block' => $payee->deleteBlock()],
             'period' => $latestPeriod?->only(['id', 'name']),
             'summary' => $summary ? ['totals' => $summary['totals'], 'ledgers' => collect($summary['ledgers'])->map(fn (array $ledger): array => collect($ledger)->except('releases')->all())->all()] : null,
             'splits' => ContractSplit::query()
