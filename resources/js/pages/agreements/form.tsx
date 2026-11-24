@@ -61,7 +61,7 @@ const TERMS: {
     {
         key: 'deliverables',
         label: 'Deliverables',
-        hint: 'What has to be delivered, for example: the master as WAV, 24 bit, 44.1 kHz, not limited; artwork 3000 × 3000 px; a short biography.',
+        hint: 'One item per line, for example: Master as WAV, 24 bit, 44.1 kHz, not limited. Each line becomes an item the payee hands a file in for, and needs a release chosen above to be filed with.',
         type: 'long',
     },
     { key: 'delivery_date', label: 'Delivery due', type: 'date' },

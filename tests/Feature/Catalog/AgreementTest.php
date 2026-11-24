@@ -1,20 +1,26 @@
 <?php
 
 use App\Enums\LabelRole;
+use App\Enums\ReleaseFileKind;
 use App\Models\Agreement;
 use App\Models\AgreementTemplate;
 use App\Models\Contract;
 use App\Models\Label;
 use App\Models\LoginCode;
 use App\Models\Payee;
+use App\Models\Release;
+use App\Models\ReleaseFile;
 use App\Models\Statement;
 use App\Models\Track;
 use App\Models\User;
 use App\Notifications\AgreementSigned;
 use App\Notifications\AgreementSigningCode;
 use App\Notifications\AgreementToSign;
+use App\Notifications\DeliverableReturned;
 use App\Support\PayeeAccess;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /**
@@ -399,4 +405,159 @@ test('a sent agreement is downloaded as a PDF by its parties and admins, and mai
 
     expect($attachments->pluck('name')->all())->toBe(["agreement-{$agreement->id}.pdf", "agreement-{$agreement->id}.txt"])
         ->and($attachments[0]['data'])->toStartWith('%PDF-');
+});
+
+/**
+ * A signed agreement with two things to deliver, filed with a release.
+ *
+ * @return array{label: Label, signatory: User, payee: Payee, payeeUser: User, agreement: Agreement, release: Release}
+ */
+function signedAgreementWithDeliverables(): array
+{
+    $setup = agreementBetweenLabelAndPayee();
+    $release = Release::factory()->create(['label_id' => $setup['label']->id]);
+    $setup['agreement']->update(['release_id' => $release->id, 'terms' => [...$setup['agreement']->terms, 'deliverables' => "- Master as WAV\n\n2. Artwork 3000 px"]]);
+    $setup['agreement']->send();
+    signAgreement($setup['agreement'], $setup['payeeUser'], 'payee');
+    signAgreement($setup['agreement'], $setup['signatory'], 'label');
+
+    return [...$setup, 'agreement' => $setup['agreement']->refresh(), 'release' => $release];
+}
+
+test('what is to be delivered needs a release, and sending makes one item of every line', function () {
+    ['label' => $label, 'signatory' => $admin, 'agreement' => $agreement] = agreementBetweenLabelAndPayee();
+    $agreement->update(['terms' => [...$agreement->terms, 'deliverables' => "- Master as WAV\n\n2. Artwork 3000 px"]]);
+
+    expect($agreement->sendBlock())->toBe('Choose the release this agreement belongs to: what is delivered is filed with it.');
+
+    $agreement->update(['release_id' => Release::factory()->create(['label_id' => $label->id])->id]);
+    $this->actingAs($admin)->post(route('agreements.send', $agreement->id))->assertSessionHasNoErrors();
+
+    expect($agreement->deliverables()->pluck('status', 'title')->all())->toBe(['Master as WAV' => 'open', 'Artwork 3000 px' => 'open']);
+});
+
+test('the payee delivers a file for an item once everyone has signed, and it is filed with the release', function () {
+    ['label' => $label, 'signatory' => $admin, 'payeeUser' => $payeeUser, 'agreement' => $agreement, 'release' => $release] = signedAgreementWithDeliverables();
+    $item = $agreement->deliverables()->where('title', 'Artwork 3000 px')->sole();
+    $cover = ReleaseFile::factory()->create(['label_id' => $label->id, 'release_id' => $release->id, 'kind' => ReleaseFileKind::Cover]);
+
+    $this->actingAs($payeeUser)
+        ->post(route('my-agreements.deliver', [$agreement->id, $item->id]), ['file' => UploadedFile::fake()->image('artwork.png', 100, 100)])
+        ->assertSessionHasNoErrors();
+
+    $file = $item->refresh()->file;
+
+    expect($item->status)->toBe('delivered')
+        ->and($file->only(['label_id', 'release_id', 'user_id', 'original_name']))->toBe(['label_id' => $label->id, 'release_id' => $release->id, 'user_id' => $payeeUser->id, 'original_name' => 'artwork.png'])
+        ->and($file->kind)->toBe(ReleaseFileKind::Artwork)
+        ->and($cover->refresh()->kind)->toBe(ReleaseFileKind::Cover);
+    Storage::disk($file->disk)->assertExists($file->path);
+
+    $this->actingAs($payeeUser)
+        ->get(route('my-agreements.show', $agreement->id))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('agreement.can_deliver', true)
+            ->where('agreement.deliverables.1.status', 'delivered')
+            ->where('agreement.deliverables.1.file', 'artwork.png'));
+    $this->actingAs($admin)
+        ->get(route('agreements.show', $agreement->id))
+        ->assertInertia(fn (Assert $page) => $page->where('agreement.deliverables.1.file_id', $file->id));
+});
+
+test('nobody but the payee delivers, nothing is delivered before all have signed, and a program is refused', function () {
+    ['signatory' => $admin, 'payeeUser' => $payeeUser, 'agreement' => $agreement] = signedAgreementWithDeliverables();
+    ['payeeUser' => $stranger] = agreementBetweenLabelAndPayee();
+    $item = $agreement->deliverables()->firstOrFail();
+    $file = ['file' => UploadedFile::fake()->create('master.wav', 10, 'audio/wav')];
+
+    $this->actingAs($admin)->post(route('my-agreements.deliver', [$agreement->id, $item->id]), $file)->assertForbidden();
+    $this->actingAs($stranger)->post(route('my-agreements.deliver', [$agreement->id, $item->id]), $file)->assertNotFound();
+    $this->actingAs($payeeUser)->post(route('my-agreements.deliver', [$agreement->id, $item->id]), ['file' => UploadedFile::fake()->create('run.php', 1)])->assertSessionHasErrors('file');
+    $this->actingAs($admin)->postJson(route('my-agreements.uploads.sign', $agreement->id), ['name' => 'master.wav'])->assertForbidden();
+    $this->actingAs($payeeUser)->postJson(route('my-agreements.uploads.sign', $agreement->id), ['name' => 'master.wav'])->assertOk()->assertExactJson(['url' => null]);
+
+    // An item of another agreement is not reached through this one.
+    ['agreement' => $other] = signedAgreementWithDeliverables();
+    $this->actingAs($payeeUser)->post(route('my-agreements.deliver', [$agreement->id, $other->deliverables()->firstOrFail()->id]), $file)->assertNotFound();
+
+    ['label' => $label, 'payeeUser' => $early, 'agreement' => $unsigned] = agreementBetweenLabelAndPayee();
+    $unsigned->update(['release_id' => Release::factory()->create(['label_id' => $label->id])->id, 'terms' => [...$unsigned->terms, 'deliverables' => 'Master']]);
+    $unsigned->send();
+    $this->actingAs($early)->post(route('my-agreements.deliver', [$unsigned->id, $unsigned->deliverables()->firstOrFail()->id]), $file)->assertForbidden();
+
+    expect(ReleaseFile::query()->withoutGlobalScope('label')->count())->toBe(0);
+});
+
+test('the label accepts what was delivered or hands it back with a note, and the payee delivers again', function () {
+    Notification::fake();
+    ['signatory' => $admin, 'payeeUser' => $payeeUser, 'agreement' => $agreement] = signedAgreementWithDeliverables();
+    $item = $agreement->deliverables()->firstOrFail();
+    $deliver = fn (string $name) => $this->actingAs($payeeUser)->post(route('my-agreements.deliver', [$agreement->id, $item->id]), ['file' => UploadedFile::fake()->create($name, 10, 'audio/wav')]);
+
+    $this->actingAs($admin)->post(route('agreements.deliverables.accept', [$agreement->id, $item->id]))->assertStatus(409);
+
+    $deliver('first.wav')->assertSessionHasNoErrors();
+    $first = $item->refresh()->release_file_id;
+
+    $this->actingAs($admin)->post(route('agreements.deliverables.return', [$agreement->id, $item->id]), ['returned_note' => ''])->assertSessionHasErrors('returned_note');
+    $this->actingAs($admin)->post(route('agreements.deliverables.return', [$agreement->id, $item->id]), ['returned_note' => 'Clipping at 2:10.'])->assertSessionHasNoErrors();
+
+    expect($item->refresh()->only(['status', 'returned_note']))->toBe(['status' => 'returned', 'returned_note' => 'Clipping at 2:10.']);
+    Notification::assertSentTo($payeeUser, DeliverableReturned::class);
+    Notification::assertNotSentTo($admin, DeliverableReturned::class);
+
+    $deliver('second.wav')->assertSessionHasNoErrors();
+
+    // The earlier file stays with the release; the item points at the new one.
+    expect($item->refresh()->only(['status', 'returned_note']))->toBe(['status' => 'delivered', 'returned_note' => null])
+        ->and($item->release_file_id)->not->toBe($first)
+        ->and(ReleaseFile::query()->withoutGlobalScope('label')->whereKey($first)->exists())->toBeTrue();
+
+    $this->actingAs($admin)->post(route('agreements.deliverables.accept', [$agreement->id, $item->id]))->assertSessionHasNoErrors();
+
+    expect($item->refresh()->status)->toBe('accepted');
+    $deliver('third.wav')->assertStatus(409);
+});
+
+test('an agreement signed on paper is filed with its copy, which its payee and the label can download', function () {
+    ['label' => $label, 'signatory' => $admin, 'payee' => $payee, 'payeeUser' => $payeeUser] = agreementBetweenLabelAndPayee();
+    ['payeeUser' => $stranger] = agreementBetweenLabelAndPayee();
+    $input = ['name' => 'Old remix deal', 'payee_id' => $payee->id, 'signed_on' => '2023-11-07', 'file' => UploadedFile::fake()->create('signed.pdf', 100, 'application/pdf')];
+
+    $this->actingAs($admin)->post(route('agreements.filed'), [...$input, 'file' => UploadedFile::fake()->create('signed.exe', 10)])->assertSessionHasErrors('file');
+    $this->actingAs($admin)->post(route('agreements.filed'), [...$input, 'payee_id' => Payee::factory()->create()->id])->assertSessionHasErrors('payee_id');
+    $this->actingAs($admin)->post(route('agreements.filed'), $input)->assertSessionHasNoErrors();
+
+    $agreement = Agreement::query()->where('name', 'Old remix deal')->sole();
+    [$disk, $path] = explode(':', $agreement->signed_copy_path, 2);
+
+    expect($agreement->only(['status', 'label_id', 'body', 'signed_copy_name']))->toBe(['status' => 'signed', 'label_id' => $label->id, 'body' => null, 'signed_copy_name' => 'signed.pdf'])
+        ->and($agreement->signed_at->toDateString())->toBe('2023-11-07')
+        ->and($path)->toStartWith("agreements/{$label->id}/");
+    Storage::disk($disk)->assertExists($path);
+
+    $this->actingAs($admin)->get(route('agreements.signed-copy', $agreement->id))->assertOk()->assertDownload('signed.pdf');
+    $this->actingAs($payeeUser)->get(route('my-agreements.signed-copy', $agreement->id))->assertOk()->assertDownload('signed.pdf');
+    $this->actingAs($stranger)->get(route('my-agreements.signed-copy', $agreement->id))->assertNotFound();
+    $this->actingAs($admin)->get(route('agreements.pdf', $agreement->id))->assertNotFound();
+    $this->actingAs($admin)->get(route('agreements.show', $agreement->id))
+        ->assertInertia(fn (Assert $page) => $page->where('agreement.has_text', false)->where('agreement.lines', [])->where('agreement.signed_copy', 'signed.pdf'));
+});
+
+test('a copy signed elsewhere closes an agreement that is out for signature', function () {
+    ['signatory' => $admin, 'payeeUser' => $payeeUser, 'agreement' => $agreement] = agreementBetweenLabelAndPayee();
+    $copy = fn () => UploadedFile::fake()->create('scan.pdf', 100, 'application/pdf');
+
+    $this->actingAs($admin)->post(route('agreements.signed-copy.store', $agreement->id), ['file' => $copy(), 'confirmed' => '1'])->assertStatus(409);
+
+    $agreement->send();
+    signAgreement($agreement, $admin, 'label');
+
+    $this->actingAs($admin)->post(route('agreements.signed-copy.store', $agreement->id), ['file' => $copy()])->assertSessionHasErrors('confirmed');
+    $this->actingAs($admin)->post(route('agreements.signed-copy.store', $agreement->id), ['file' => $copy(), 'confirmed' => '1'])->assertSessionHasNoErrors();
+
+    expect($agreement->refresh()->status)->toBe(Agreement::SIGNED)
+        // Who signed here is shown; who signed on the copy is not listed as missing.
+        ->and(array_column($agreement->shownLines(), 'capacity'))->toBe(['label']);
+    signAgreement($agreement, $payeeUser, 'payee')->assertSessionHasErrors('capacity');
 });

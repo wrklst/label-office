@@ -4,24 +4,32 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\AgreementRequest;
 use App\Models\Agreement;
+use App\Models\AgreementDeliverable;
 use App\Models\AgreementTemplate;
 use App\Models\Contract;
 use App\Models\Release;
 use App\Models\Track;
 use App\Notifications\AgreementToSign;
+use App\Notifications\DeliverableReturned;
 use App\Support\AgreementExamples;
 use App\Support\CurrentLabel;
 use App\Support\Options;
 use App\Support\PageSize;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AgreementController extends Controller
 {
+    /** What a signed copy may be: a document or a scan, small enough to post. */
+    private const array SIGNED_COPY = ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:20480'];
+
     public function index(): Response
     {
         return Inertia::render('agreements/index', [
@@ -33,6 +41,7 @@ class AgreementController extends Controller
                     'signed_at' => $agreement->signed_at?->toDateString(),
                 ]),
             'hasTemplates' => AgreementTemplate::query()->exists(),
+            'payeeOptions' => Options::payees(),
             'disclaimer' => AgreementExamples::DISCLAIMER,
         ]);
     }
@@ -51,9 +60,9 @@ class AgreementController extends Controller
         return to_route('agreements.show', $agreement->id);
     }
 
-    public function show(Agreement $agreement): Response
+    public function show(Request $request, Agreement $agreement): Response
     {
-        $agreement->load(['template', 'signatures', 'payee:id,name']);
+        $agreement->load(['template', 'signatures', 'payee:id,name', 'deliverables.file']);
         $parties = $agreement->parties ?? $agreement->currentParties();
 
         return Inertia::render('agreements/show', [
@@ -71,6 +80,11 @@ class AgreementController extends Controller
                 'signing_rule' => $parties['rule'] ?? 'all',
                 'disclaimer' => AgreementExamples::DISCLAIMER,
                 'lines' => $this->lines($agreement),
+                'deliverables' => $agreement->deliverables->map->toRow()->all(),
+                'planned_deliverables' => $agreement->status === Agreement::DRAFT ? $agreement->deliverableLines() : [],
+                'signed_copy' => $agreement->signed_copy_name,
+                'has_text' => $agreement->body !== null || $agreement->status === Agreement::DRAFT,
+                'can_sign' => $agreement->status === Agreement::SENT && $agreement->capacitiesOf($request->user()) !== [],
                 'people' => $agreement->status === Agreement::DRAFT ? [] : $agreement->people()->pluck('name')->all(),
             ],
         ]);
@@ -120,11 +134,91 @@ class AgreementController extends Controller
     }
 
     /**
+     * File an agreement that was signed outside the application, such
+     * as an older one on paper: the uploaded copy is the agreement.
+     */
+    public function storeFiled(Request $request): RedirectResponse
+    {
+        $input = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'payee_id' => ['required', 'integer', Rule::exists('payees', 'id')->where('label_id', app(CurrentLabel::class)->id())],
+            'signed_on' => ['required', 'date', 'before_or_equal:today'],
+            'file' => self::SIGNED_COPY,
+        ]);
+
+        $agreement = DB::transaction(function () use ($input, $request): Agreement {
+            $agreement = Agreement::query()->create(['name' => $input['name'], 'payee_id' => $input['payee_id'], 'licensor' => 'label']);
+            $agreement->forceFill(['status' => Agreement::SIGNED, 'signed_at' => $input['signed_on'], 'parties' => [...$agreement->currentParties(), 'signatories' => []]])->save();
+            $agreement->keepSignedCopy($request->file('file'));
+
+            return $agreement;
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Agreement filed.')]);
+
+        return to_route('agreements.show', $agreement->id);
+    }
+
+    /**
+     * Close an agreement that is out for signature with a copy the
+     * parties signed elsewhere, on paper or with another service.
+     */
+    public function signedCopy(Request $request, Agreement $agreement): RedirectResponse
+    {
+        abort_unless($agreement->status === Agreement::SENT, 409, 'A signed copy closes an agreement that is out for signature.');
+
+        $request->validate(['file' => self::SIGNED_COPY, 'confirmed' => ['accepted']], ['confirmed.accepted' => 'Confirm that every party has signed this copy.']);
+
+        DB::transaction(function () use ($agreement, $request): void {
+            $agreement->keepSignedCopy($request->file('file'));
+            $agreement->forceFill(['status' => Agreement::SIGNED, 'signed_at' => now()])->save();
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Signed copy kept. The agreement counts as signed by everyone.')]);
+
+        return back();
+    }
+
+    public function downloadSignedCopy(Agreement $agreement): StreamedResponse
+    {
+        return $agreement->signedCopyResponse();
+    }
+
+    /**
+     * Take what was delivered, or hand it back with a reason.
+     */
+    public function accept(Agreement $agreement, AgreementDeliverable $deliverable): RedirectResponse
+    {
+        abort_unless($deliverable->agreement_id === $agreement->id && $deliverable->status === AgreementDeliverable::DELIVERED, 409, 'Only something that was delivered can be accepted.');
+
+        $deliverable->update(['status' => AgreementDeliverable::ACCEPTED, 'accepted_at' => now(), 'returned_note' => null]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Accepted.')]);
+
+        return back();
+    }
+
+    public function return(Request $request, Agreement $agreement, AgreementDeliverable $deliverable): RedirectResponse
+    {
+        abort_unless($deliverable->agreement_id === $agreement->id && in_array($deliverable->status, [AgreementDeliverable::DELIVERED, AgreementDeliverable::ACCEPTED]), 409, 'Only something that was delivered can be handed back.');
+
+        $input = $request->validate(['returned_note' => ['required', 'string', 'max:2000']]);
+
+        $deliverable->update(['status' => AgreementDeliverable::RETURNED, 'accepted_at' => null, ...$input]);
+
+        Notification::send($agreement->people()->filter(fn ($user): bool => in_array('payee', $agreement->capacitiesOf($user))), new DeliverableReturned($agreement, $deliverable->title, $input['returned_note']));
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Handed back. The payee is told why and can deliver again.')]);
+
+        return back();
+    }
+
+    /**
      * The agreement as a PDF, once it was sent.
      */
     public function pdf(Agreement $agreement): HttpResponse
     {
-        abort_if($agreement->status === Agreement::DRAFT, 404);
+        abort_if($agreement->status === Agreement::DRAFT || $agreement->body === null, 404);
 
         return $agreement->load('signatures')->pdfResponse();
     }
@@ -209,7 +303,7 @@ class AgreementController extends Controller
             'name' => $line['name'],
             'signed_by' => $line['signature']?->name,
             'signed_at' => $line['signature']?->signed_at->toIso8601String(),
-        ], $agreement->parties === null ? [] : $agreement->signatureLines());
+        ], $agreement->parties === null ? [] : $agreement->shownLines());
     }
 
     /**

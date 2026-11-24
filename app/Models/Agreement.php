@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\LabelRole;
 use App\Models\Concerns\BelongsToLabel;
+use App\Support\WorkingCopy;
 use Carbon\CarbonImmutable;
 use Database\Factories\AgreementFactory;
 use Dompdf\Dompdf;
@@ -16,8 +17,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Response;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * A written agreement between the label and a payee, made from a
@@ -36,6 +41,8 @@ use Illuminate\Support\Str;
  * @property int|null $release_id
  * @property int|null $track_id
  * @property int|null $contract_id The contract made from the signed terms.
+ * @property string|null $signed_copy_path A copy signed outside the application, as "disk:path".
+ * @property string|null $signed_copy_name
  * @property array<string, string|null>|null $terms What the deal fills in, by the keys of TERMS.
  * @property string|null $body
  * @property string|null $body_hash
@@ -59,6 +66,13 @@ class Agreement extends Model
     public const string SIGNED = 'signed';
 
     public const string VOID = 'void';
+
+    /**
+     * A new agreement is a draft before it is stored, too.
+     *
+     * @var array<string, string>
+     */
+    protected $attributes = ['status' => self::DRAFT];
 
     /** @var list<string> The sides a person can sign for. */
     public const array CAPACITIES = ['label', 'payee', 'artist'];
@@ -126,6 +140,27 @@ class Agreement extends Model
     public function signatures(): HasMany
     {
         return $this->hasMany(AgreementSignature::class);
+    }
+
+    /**
+     * @return HasMany<AgreementDeliverable, $this>
+     */
+    public function deliverables(): HasMany
+    {
+        return $this->hasMany(AgreementDeliverable::class);
+    }
+
+    /**
+     * What is to be delivered, one item per line of the term.
+     *
+     * @return list<string>
+     */
+    public function deliverableLines(): array
+    {
+        return array_values(array_filter(array_map(
+            fn (string $line): string => Str::limit(trim((string) preg_replace('/^\s*(?:[-*•]|\d+[.)])\s*/u', '', $line)), 990, ''),
+            preg_split('/\R/', (string) ($this->terms['deliverables'] ?? '')) ?: [],
+        )));
     }
 
     /**
@@ -258,6 +293,7 @@ class Agreement extends Model
             $this->template === null => 'The template of this agreement was deleted. Choose another one.',
             $this->currentParties()['signatories'] === [] => 'Nobody signs for the label yet. Choose who does under Settings → Label.',
             $this->missingFields() !== [] => 'These fields are still empty: '.implode(', ', $this->missingFields()).'.',
+            $this->deliverableLines() !== [] && $this->release_id === null => 'Choose the release this agreement belongs to: what is delivered is filed with it.',
             default => null,
         };
     }
@@ -277,6 +313,11 @@ class Agreement extends Model
             'status' => self::SENT,
             'sent_at' => now(),
         ])->save();
+
+        // What the text says is to be delivered becomes the list the payee hands files in against.
+        foreach ($this->deliverableLines() as $title) {
+            $this->deliverables()->create(['title' => $title]);
+        }
     }
 
     /**
@@ -373,6 +414,18 @@ class Agreement extends Model
     }
 
     /**
+     * The signature lines to show. An agreement closed with a copy that
+     * was signed elsewhere shows only who signed here: the others are
+     * on the copy, not missing.
+     *
+     * @return list<array{capacity: string, name: string, user_id: int|null, signature: AgreementSignature|null}>
+     */
+    public function shownLines(): array
+    {
+        return array_values(array_filter($this->signatureLines(), fn (array $line): bool => $this->signed_copy_path === null || $line['signature'] !== null));
+    }
+
+    /**
      * Record a signature and close the agreement once it has them all.
      */
     public function sign(User $user, string $capacity, string $name, ?string $ip, ?string $userAgent): AgreementSignature
@@ -403,7 +456,7 @@ class Agreement extends Model
      */
     public function record(): string
     {
-        $lines = collect($this->signatureLines())->map(fn (array $line): string => $line['signature'] === null
+        $lines = collect($this->shownLines())->map(fn (array $line): string => $line['signature'] === null
             ? "- {$line['name']} ({$line['capacity']}): not signed"
             : "- {$line['signature']->name} ({$line['capacity']}), {$line['signature']->email}, signed {$line['signature']->signed_at->utc()->format('Y-m-d H:i:s')} UTC from {$line['signature']->ip}");
 
@@ -420,7 +473,7 @@ class Agreement extends Model
      */
     public function pdf(): string
     {
-        $signatures = collect($this->signatureLines())->map(fn (array $line): string => '<tr><td>'.e($line['signature']->name ?? $line['name']).'<br><small>'.e($line['capacity'] === 'label' ? 'for the label' : $line['capacity']).'</small></td><td>'
+        $signatures = collect($this->shownLines())->map(fn (array $line): string => '<tr><td>'.e($line['signature']->name ?? $line['name']).'<br><small>'.e($line['capacity'] === 'label' ? 'for the label' : $line['capacity']).'</small></td><td>'
             .($line['signature'] === null ? 'Not signed' : e($line['signature']->email).'<br>'.$line['signature']->signed_at->utc()->format('Y-m-d H:i:s').' UTC<br>from '.e((string) $line['signature']->ip))
             .'</td></tr>')->implode('');
 
@@ -436,9 +489,9 @@ class Agreement extends Model
             .hash { font-family: "DejaVu Sans Mono", monospace; font-size: 7.5pt; word-wrap: break-word; }
         </style></head><body>'
             .'<div class="text">'.e($this->text()).'</div>'
-            .'<div class="record"><h2>'.($this->status === self::SIGNED ? 'Signed electronically by every party' : 'Signatures').'</h2>'
+            .'<div class="record"><h2>'.($this->status === self::SIGNED && $this->signed_copy_path === null ? 'Signed electronically by every party' : 'Signatures').'</h2>'
             .'<table>'.$signatures.'</table>'
-            .'<p>Each signature was given with a typed name, a confirmation and a one-time code sent to the email address shown.</p>'
+            .($this->signed_copy_path === null ? '<p>Each signature was given with a typed name, a confirmation and a one-time code sent to the email address shown.</p>' : '<p>This agreement was closed with a copy signed outside the application, which is kept with it.</p>')
             .'<p class="hash">SHA-256 of the text of the agreement: '.e((string) $this->body_hash).'</p></div>'
             .'</body></html>';
 
@@ -457,6 +510,37 @@ class Agreement extends Model
         $pdf->getCanvas()->page_text(62, 800, "Agreement {$this->id} · page {PAGE_NUM} of {PAGE_COUNT}", $pdf->getFontMetrics()->getFont('DejaVu Serif'), 7.5, [0.4, 0.4, 0.4]);
 
         return (string) $pdf->output();
+    }
+
+    /**
+     * Keep a copy that was signed outside the application.
+     */
+    public function keepSignedCopy(UploadedFile $file): void
+    {
+        $disk = WorkingCopy::disk();
+        $extension = strtolower($file->getClientOriginalExtension());
+        $path = $file->storeAs("agreements/{$this->label_id}", Str::uuid()->toString().".{$extension}", $disk);
+
+        if ($path === false) {
+            throw ValidationException::withMessages(['file' => 'The file could not be stored.']);
+        }
+
+        $this->forceFill([
+            'signed_copy_path' => "{$disk}:{$path}",
+            'signed_copy_name' => Str::limit(basename($file->getClientOriginalName()), 250, ''),
+        ])->save();
+    }
+
+    /**
+     * The copy signed outside the application, as a download.
+     */
+    public function signedCopyResponse(): StreamedResponse
+    {
+        abort_if($this->signed_copy_path === null, 404);
+
+        [$disk, $path] = explode(':', $this->signed_copy_path, 2);
+
+        return Storage::disk($disk)->download($path, (string) $this->signed_copy_name);
     }
 
     /**

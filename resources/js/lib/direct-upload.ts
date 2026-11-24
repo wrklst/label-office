@@ -16,8 +16,10 @@ export async function sendToBucket(
     file: File,
     onProgress: (loaded: number, total: number) => void,
     signal?: AbortSignal,
+    /** Where to ask for the address, when it is not the label's own upload page. */
+    signUrl: string = UploadController.sign.url(),
 ): Promise<string | null> {
-    const response = await fetch(UploadController.sign.url(), {
+    const response = await fetch(signUrl, {
         method: 'POST',
         headers: {
             'X-XSRF-TOKEN': xsrfToken(),

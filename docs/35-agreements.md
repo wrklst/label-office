@@ -1,6 +1,6 @@
 # Agreements
 
-This page covers written agreements with payees: drafting one from a template, sending it for signature, how it is signed online, and what is kept as proof.
+This page covers written agreements with payees: drafting one from a template, sending it for signature, how it is signed online, what the payee delivers afterwards, agreements signed outside the application, and what is kept as proof.
 
 **No legal guarantee.** This application gives no legal advice and guarantees no legal compliance: not for the tool, not for signing electronically, and not for any text, example or template in it. Whether an agreement signed here is valid and enforceable depends on the law that applies to you. Electronic signatures are not accepted for every kind of agreement or in every country. Clear the use of this tool and of your texts with your legal adviser before you rely on them.
 
@@ -27,7 +27,7 @@ Open **Deals → Agreements** and choose **New agreement**.
 | **Who grants the rights** | **The label**, or **An artist of the label, as a third party**. For a remix: who commissions it and holds the rights in the original recording. |
 | **Artist**                | Only for the second case: the payee who grants the rights. They sign too.                                                                       |
 | **Payee**                 | The other party: the remixer, or the artist of a release.                                                                                       |
-| **Release**, **Track**    | Optional links to the catalog, for your own reference.                                                                                          |
+| **Release**, **Track**    | What the agreement is about. A release is needed when the agreement names deliverables: their files are filed with it.                          |
 | **Terms**                 | What the chosen template leaves open, such as the share, the titles and the deliverables. Only the fields the template uses are asked.          |
 
 The label is a party to every agreement, also when an artist grants the rights: it releases the music and pays the share. Choose a template that is written for the case you pick.
@@ -71,6 +71,34 @@ Choosing **Sign** records the signature. Once every party has signed, the agreem
 
 **PDF**, at the top of a sent agreement, downloads the text with the signatures given so far. Admins find the same button under **Deals → Agreements**.
 
+## Deliverables
+
+What the payee has to hand in is entered under **Deliverables** in the terms, one item per line, for example:
+
+```
+Master as WAV, 24 bit, 44.1 kHz, not limited
+Artwork, 3000 × 3000 px
+Short biography
+```
+
+The lines are part of the text of the agreement where the template has the field `{{ deliverables }}`. The page of a draft lists them under **To be delivered**. An agreement with deliverables needs a **Release**: it is not sent without one.
+
+Sending makes one item of every line. Once everyone has signed:
+
+1. The payee opens the agreement under **My agreements** and drops one file on each item under **What you deliver**. Large files such as masters go straight to the file storage where the label uses a bucket, see [Files, audio and delivery](22-files-audio-and-delivery.md).
+2. The file is filed with the release at once, where you find it among the other files of the release. An audio file is attached to the track of the agreement. A picture is filed as artwork: it never replaces the cover.
+3. On the agreement, under **Deliverables**, the item reads **Delivered** with a link to the file. **Accept** says it is what was agreed. **Hand back** asks for it again with a note: the payee is emailed the note and can deliver once more.
+
+A file that was handed back stays with the release; delete it there if you do not want it. An accepted item can no longer be replaced by the payee. To reopen it, hand it back.
+
+## Agreements signed outside the application
+
+**File a signed agreement**, on **Deals → Agreements**, is for an agreement that was signed elsewhere, such as an older one on paper. Enter a **Name**, the **Payee**, the day it was **Signed on** and upload the **Signed copy** (PDF, JPEG or PNG, up to 20 MB). The copy is the agreement: there is no text, no hash and nothing is sent to anyone. The payee finds it under **My agreements** and can download it.
+
+**Signed elsewhere**, on an agreement that is out for signature, closes it with a copy the parties signed on paper or with another service, after you confirm that every party has signed it. The agreement then counts as signed by everyone and can no longer be signed here. Signatures already given here stay listed. Use this where an agreement needs more than a simple electronic signature.
+
+The application does not check a copy: that it is complete, genuine and signed by the right people is for you to make sure.
+
 ## The royalty contract
 
 On an agreement that everyone has signed, **Create the contract** under **Royalty contract** makes a contract named after the agreement with one split: the payee at the agreed share. It is set on the linked track, or else on the linked release.
@@ -89,6 +117,7 @@ This is a simple electronic signature. It is not a qualified electronic signatur
 
 ## Good to know
 
+- The page where a payee signs says that the text is the label's and that the application guarantees nothing about its validity where they live.
 - An agreement is only sent to people who have an account. A payee without access under **Settings → Team** cannot sign.
 - Asking for a signing code replaces an unused sign-in code of the same account.
 - A payee who is linked to payees of several labels sees the agreements of all of them under **My agreements**.

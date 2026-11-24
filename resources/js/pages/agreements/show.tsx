@@ -6,12 +6,19 @@ import {
     AgreementStatus,
 } from '@/components/agreement-document';
 import type { AgreementLine } from '@/components/agreement-document';
+import { DeliverableList } from '@/components/agreement-deliverables';
+import type { Deliverable } from '@/components/agreement-deliverables';
 import { DeleteButton } from '@/components/delete-button';
+import { CheckField, Field } from '@/components/field';
+import { FormDialog } from '@/components/form-dialog';
 import { Page, Panel } from '@/components/page';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { edit, index } from '@/routes/agreements';
 import { show as showContract } from '@/routes/contracts';
 import { show as sign } from '@/routes/my-agreements';
+import { show as showFile } from '@/routes/release-files';
 
 type Agreement = {
     id: number;
@@ -30,6 +37,11 @@ type Agreement = {
     signatories: string[];
     signing_rule: string;
     disclaimer: string;
+    deliverables: Deliverable[];
+    planned_deliverables: string[];
+    signed_copy: string | null;
+    has_text: boolean;
+    can_sign: boolean;
     lines: AgreementLine[];
     people: string[];
 };
@@ -43,7 +55,9 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
             description={
                 draft
                     ? `A draft from the template ${agreement.template ?? '(deleted)'}. Its text follows the template, the payee and the label's legal details until it is sent.`
-                    : 'The text is frozen as it was sent. Every signature refers to it by the hash below.'
+                    : agreement.has_text
+                      ? 'The text is frozen as it was sent. Every signature refers to it by the hash below.'
+                      : 'Signed outside the application and filed here.'
             }
             actions={
                 <>
@@ -66,7 +80,19 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
                             />
                         </>
                     )}
-                    {!draft && (
+                    {agreement.signed_copy && (
+                        <Button variant="outline" asChild>
+                            <a
+                                href={AgreementController.downloadSignedCopy.url(
+                                    agreement.id,
+                                )}
+                            >
+                                <Download />
+                                Signed copy
+                            </a>
+                        </Button>
+                    )}
+                    {!draft && agreement.has_text && (
                         <Button variant="outline" asChild>
                             <a href={AgreementController.pdf.url(agreement.id)}>
                                 <Download />
@@ -76,12 +102,58 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
                     )}
                     {agreement.status === 'sent' && (
                         <>
-                            <Button asChild>
-                                <Link href={sign(agreement.id)}>
-                                    <PenLine />
-                                    Read and sign
-                                </Link>
-                            </Button>
+                            {agreement.can_sign && (
+                                <Button asChild>
+                                    <Link href={sign(agreement.id)}>
+                                        <PenLine />
+                                        Read and sign
+                                    </Link>
+                                </Button>
+                            )}
+                            <FormDialog
+                                title="Keep a copy signed elsewhere"
+                                description="For an agreement the parties signed on paper or with another service. The copy closes the agreement: it then counts as signed by everyone and can no longer be signed here."
+                                form={AgreementController.signedCopy.form(
+                                    agreement.id,
+                                )}
+                                submitLabel="Keep the copy and close"
+                                trigger={
+                                    <Button variant="outline">
+                                        Signed elsewhere
+                                    </Button>
+                                }
+                            >
+                                {(errors) => (
+                                    <>
+                                        <Field
+                                            label="Signed copy"
+                                            htmlFor="signed-copy"
+                                            error={errors.file}
+                                            required
+                                            hint="PDF, JPEG or PNG, up to 20 MB."
+                                        >
+                                            <Input
+                                                id="signed-copy"
+                                                name="file"
+                                                type="file"
+                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                required
+                                            />
+                                        </Field>
+                                        <CheckField
+                                            name="confirmed"
+                                            value="1"
+                                            label="Every party has signed this copy"
+                                            required
+                                        />
+                                        {errors.confirmed && (
+                                            <p className="text-sm text-red-600">
+                                                {errors.confirmed}
+                                            </p>
+                                        )}
+                                    </>
+                                )}
+                            </FormDialog>
                             <Form
                                 {...AgreementController.void.form(agreement.id)}
                             >
@@ -183,7 +255,98 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
                 </Panel>
             )}
 
-            {!draft && (
+            {draft && agreement.planned_deliverables.length > 0 && (
+                <Panel
+                    title="To be delivered"
+                    description="Each line of the deliverables becomes an item the payee hands a file in for, once everyone has signed. The files are filed with the release."
+                >
+                    <ul className="list-disc pl-5 text-sm">
+                        {agreement.planned_deliverables.map((title) => (
+                            <li key={title}>{title}</li>
+                        ))}
+                    </ul>
+                </Panel>
+            )}
+
+            {agreement.deliverables.length > 0 && (
+                <Panel
+                    title="Deliverables"
+                    description={
+                        agreement.status === 'signed'
+                            ? 'What the payee hands in under My agreements. A file is filed with the release as soon as it arrives; accepting it says it is what was agreed.'
+                            : 'The payee can deliver once everyone has signed.'
+                    }
+                >
+                    <DeliverableList
+                        deliverables={agreement.deliverables}
+                        file={(deliverable) => (
+                            <a
+                                className="underline"
+                                href={`${showFile.url(deliverable.file_id ?? 0)}?download=1`}
+                            >
+                                {deliverable.file}
+                            </a>
+                        )}
+                    >
+                        {(deliverable) =>
+                            (deliverable.status === 'delivered' ||
+                                deliverable.status === 'accepted') && (
+                                <div className="flex gap-2">
+                                    {deliverable.status === 'delivered' && (
+                                        <Form
+                                            {...AgreementController.accept.form(
+                                                [agreement.id, deliverable.id],
+                                            )}
+                                            options={{ preserveScroll: true }}
+                                        >
+                                            {({ processing }) => (
+                                                <Button
+                                                    size="sm"
+                                                    disabled={processing}
+                                                >
+                                                    Accept
+                                                </Button>
+                                            )}
+                                        </Form>
+                                    )}
+                                    <FormDialog
+                                        title={`Hand back: ${deliverable.title}`}
+                                        description="The payee is emailed your note and can deliver again."
+                                        form={AgreementController.return.form([
+                                            agreement.id,
+                                            deliverable.id,
+                                        ])}
+                                        submitLabel="Hand back"
+                                        trigger={
+                                            <Button variant="outline" size="sm">
+                                                Hand back
+                                            </Button>
+                                        }
+                                    >
+                                        {(errors) => (
+                                            <Field
+                                                label="What is wrong with it"
+                                                htmlFor={`note-${deliverable.id}`}
+                                                error={errors.returned_note}
+                                                required
+                                            >
+                                                <Textarea
+                                                    id={`note-${deliverable.id}`}
+                                                    name="returned_note"
+                                                    rows={4}
+                                                    required
+                                                />
+                                            </Field>
+                                        )}
+                                    </FormDialog>
+                                </div>
+                            )
+                        }
+                    </DeliverableList>
+                </Panel>
+            )}
+
+            {agreement.status === 'sent' && (
                 <p className="text-sm text-muted-foreground">
                     {agreement.people.length > 0
                         ? `Can sign through their account: ${agreement.people.join(', ')}.`
@@ -191,11 +354,18 @@ export default function AgreementShow({ agreement }: { agreement: Agreement }) {
                 </p>
             )}
 
-            <AgreementDocument
-                text={agreement.text}
-                hash={agreement.body_hash}
-                lines={agreement.lines}
-            />
+            {agreement.has_text ? (
+                <AgreementDocument
+                    text={agreement.text}
+                    hash={agreement.body_hash}
+                    lines={agreement.lines}
+                />
+            ) : (
+                <p className="text-sm text-muted-foreground">
+                    This agreement was signed outside the application. The
+                    signed copy is the agreement: download it above.
+                </p>
+            )}
         </Page>
     );
 }

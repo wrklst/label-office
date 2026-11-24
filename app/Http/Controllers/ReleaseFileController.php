@@ -31,7 +31,7 @@ use Symfony\Component\HttpFoundation\Response;
 class ReleaseFileController extends Controller
 {
     /** Never stored: they could be mistaken for something to run. */
-    private const array REFUSED_EXTENSIONS = ['php', 'phtml', 'phar', 'html', 'htm', 'js', 'mjs', 'exe', 'sh', 'bat', 'cmd', 'svg'];
+    public const array REFUSED_EXTENSIONS = ['php', 'phtml', 'phar', 'html', 'htm', 'js', 'mjs', 'exe', 'sh', 'bat', 'cmd', 'svg'];
 
     /** How long a browser may show a resized image before asking again, in seconds. */
     private const int VARIANT_MAX_AGE = 86400;

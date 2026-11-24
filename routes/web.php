@@ -53,6 +53,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('my-agreements', [MyAgreementController::class, 'index'])->name('my-agreements.index');
         Route::get('my-agreements/{agreement}', [MyAgreementController::class, 'show'])->name('my-agreements.show')->whereNumber('agreement');
         Route::get('my-agreements/{agreement}/pdf', [MyAgreementController::class, 'pdf'])->name('my-agreements.pdf')->whereNumber('agreement');
+        Route::get('my-agreements/{agreement}/signed-copy', [MyAgreementController::class, 'signedCopy'])->name('my-agreements.signed-copy')->whereNumber('agreement');
+        Route::post('my-agreements/{agreement}/uploads/sign', [MyAgreementController::class, 'signUpload'])->name('my-agreements.uploads.sign')->whereNumber('agreement');
+        Route::post('my-agreements/{agreement}/deliverables/{deliverable}', [MyAgreementController::class, 'deliver'])->name('my-agreements.deliver')->whereNumber(['agreement', 'deliverable']);
         Route::post('my-agreements/{agreement}/code', [MyAgreementController::class, 'code'])->middleware('throttle:5,1')->name('my-agreements.code')->whereNumber('agreement');
         Route::post('my-agreements/{agreement}/sign', [MyAgreementController::class, 'sign'])->middleware('throttle:10,1')->name('my-agreements.sign')->whereNumber('agreement');
 
@@ -85,7 +88,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::resource('contracts', ContractController::class);
             Route::resource('payees', PayeeController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
             Route::resource('ledgers', LedgerController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::post('agreements/filed', [AgreementController::class, 'storeFiled'])->name('agreements.filed');
             Route::resource('agreements', AgreementController::class);
+            Route::post('agreements/{agreement}/signed-copy', [AgreementController::class, 'signedCopy'])->name('agreements.signed-copy.store');
+            Route::get('agreements/{agreement}/signed-copy', [AgreementController::class, 'downloadSignedCopy'])->name('agreements.signed-copy');
+            Route::post('agreements/{agreement}/deliverables/{deliverable}/accept', [AgreementController::class, 'accept'])->name('agreements.deliverables.accept');
+            Route::post('agreements/{agreement}/deliverables/{deliverable}/return', [AgreementController::class, 'return'])->name('agreements.deliverables.return');
             Route::get('agreements/{agreement}/pdf', [AgreementController::class, 'pdf'])->name('agreements.pdf');
             Route::post('agreements/{agreement}/send', [AgreementController::class, 'send'])->name('agreements.send');
             Route::post('agreements/{agreement}/void', [AgreementController::class, 'void'])->name('agreements.void');

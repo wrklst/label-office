@@ -2,20 +2,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ReleaseFileKind;
 use App\Models\Agreement;
+use App\Models\AgreementDeliverable;
 use App\Models\Label;
 use App\Models\LoginCode;
+use App\Models\Release;
 use App\Notifications\AgreementSigned;
 use App\Notifications\AgreementSigningCode;
+use App\Services\Releases\ReleaseFileStore;
+use App\Support\DirectUploads;
+use App\Support\IncomingFile;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Where an agreement is read and signed, by a payee or by someone who
@@ -55,12 +64,17 @@ class MyAgreementController extends Controller
                     'name' => $line['name'],
                     'signed_by' => $line['signature']?->name,
                     'signed_at' => $line['signature']?->signed_at->toIso8601String(),
-                ], $agreement->signatureLines()),
+                ], $agreement->shownLines()),
                 'capacities' => $this->open($agreement, $request),
                 'blocked' => collect($agreement->capacitiesOf($request->user()))
                     ->map(fn (string $capacity): ?string => $agreement->status === Agreement::SENT ? $agreement->signBlock($request->user(), $capacity) : null)
                     ->filter()->unique()->values()->all(),
                 'is_admin' => $agreement->isRunBy($request->user()),
+                'has_text' => $agreement->body !== null,
+                'signed_copy' => $agreement->signed_copy_name,
+                'deliverables' => $agreement->deliverables()->with('file')->get()->map->toRow()->all(),
+                'can_deliver' => $this->canDeliver($agreement, $request),
+                'max_megabytes' => (int) round(config('royalties.uploads.max_kilobytes') / 1024),
             ],
         ]);
     }
@@ -70,7 +84,77 @@ class MyAgreementController extends Controller
      */
     public function pdf(Request $request, int $agreement): HttpResponse
     {
-        return $this->find($request, $agreement)->pdfResponse();
+        $agreement = $this->find($request, $agreement);
+
+        abort_if($agreement->body === null, 404);
+
+        return $agreement->pdfResponse();
+    }
+
+    public function signedCopy(Request $request, int $agreement): StreamedResponse
+    {
+        return $this->find($request, $agreement)->signedCopyResponse();
+    }
+
+    /**
+     * Tell the browser where to send a deliverable itself, as the
+     * label's own upload page does, for the label of the agreement.
+     */
+    public function signUpload(Request $request, int $agreement): JsonResponse
+    {
+        $agreement = $this->find($request, $agreement);
+
+        abort_unless($this->canDeliver($agreement, $request), 403);
+
+        $validated = $request->validate(['name' => ['required', 'string', 'max:255']]);
+        $origin = $request->getSchemeAndHttpHost();
+
+        if (! Cache::remember(DirectUploads::cacheKey($origin), 600, fn (): bool => DirectUploads::allowed($origin) !== false)) {
+            return response()->json(['url' => null]);
+        }
+
+        return response()->json(DirectUploads::sign($agreement->label_id, $validated['name']) ?? ['url' => null]);
+    }
+
+    /**
+     * Hand in the file for one deliverable. It is filed with the
+     * release of the agreement, where the label finds it with its
+     * other files; a file handed in earlier stays there.
+     */
+    public function deliver(Request $request, int $agreement, int $deliverable, ReleaseFileStore $files): RedirectResponse
+    {
+        $agreement = $this->find($request, $agreement);
+
+        abort_unless($this->canDeliver($agreement, $request), 403);
+
+        $deliverable = $agreement->deliverables()->findOrFail($deliverable);
+
+        abort_if($deliverable->status === AgreementDeliverable::ACCEPTED, 409, 'This was accepted and cannot be replaced.');
+
+        $max = (int) config('royalties.uploads.max_kilobytes');
+        $request->validate([
+            'file' => ['required_without:upload', 'file', "max:{$max}"],
+            ...IncomingFile::RULES,
+        ], ['file.uploaded' => 'The upload did not arrive completely. The file may be larger than the server accepts.']);
+
+        $upload = IncomingFile::from($request, $agreement->label_id, $max);
+
+        if (in_array(strtolower(pathinfo($upload->name, PATHINFO_EXTENSION)), ReleaseFileController::REFUSED_EXTENSIONS, true)) {
+            $upload->discard();
+
+            throw ValidationException::withMessages(['file' => 'Files of this type cannot be stored here.']);
+        }
+
+        $release = Release::query()->withoutGlobalScope('label')->where('label_id', $agreement->label_id)->findOrFail($agreement->release_id);
+        // A payee's picture is never made the cover of the release: that is the label's choice.
+        $kind = ReleaseFileKind::guess($upload->mimeType, $upload->extension());
+        $file = $files->store($release, $upload, $kind === ReleaseFileKind::Cover ? ReleaseFileKind::Artwork : $kind, $agreement->track_id, $request->user());
+
+        $deliverable->update(['status' => AgreementDeliverable::DELIVERED, 'release_file_id' => $file->id, 'delivered_at' => now(), 'returned_note' => null]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __(':name delivered.', ['name' => $file->original_name])]);
+
+        return back();
     }
 
     /**
@@ -154,6 +238,17 @@ class MyAgreementController extends Controller
         abort_if($agreement->capacitiesOf($request->user()) === [], 404);
 
         return $agreement;
+    }
+
+    /**
+     * Whether the user hands in what the agreement asks for: the payee,
+     * once everyone has signed and there is a release to file it with.
+     */
+    private function canDeliver(Agreement $agreement, Request $request): bool
+    {
+        return $agreement->status === Agreement::SIGNED
+            && $agreement->release_id !== null
+            && in_array('payee', $agreement->capacitiesOf($request->user()));
     }
 
     /**

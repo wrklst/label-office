@@ -26,6 +26,8 @@ export function FileDrop({
     accept,
     maxMegabytes,
     label,
+    signUrl,
+    multiple = true,
 }: {
     url: string;
     /** Sent along with every file. */
@@ -34,6 +36,9 @@ export function FileDrop({
     accept?: string[];
     maxMegabytes: number;
     label: string;
+    /** Where the address for a direct upload is asked for, when not the label's own. */
+    signUrl?: string;
+    multiple?: boolean;
 }) {
     const pond = useRef<FilePond | null>(null);
     // The upload of a file added earlier must send what is chosen now.
@@ -45,7 +50,7 @@ export function FileDrop({
             ref={pond}
             name="file"
             credits={false}
-            allowMultiple
+            allowMultiple={multiple}
             maxParallelUploads={3}
             acceptedFileTypes={accept}
             labelFileTypeNotAllowed="This type of file is not accepted"
@@ -71,6 +76,7 @@ export function FileDrop({
                         file,
                         (loaded, total) => progress(true, loaded, total),
                         stop.signal,
+                        signUrl,
                     ).then(
                         (key) => {
                             reporting = reporting.then(

@@ -7,7 +7,10 @@ import {
     capacityName,
 } from '@/components/agreement-document';
 import type { AgreementLine } from '@/components/agreement-document';
+import { DeliverableList } from '@/components/agreement-deliverables';
+import type { Deliverable } from '@/components/agreement-deliverables';
 import { CheckField, Field, SelectInput } from '@/components/field';
+import { FileDrop } from '@/components/file-drop';
 import { Page, Panel } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +29,11 @@ type Agreement = {
     capacities: string[];
     blocked: string[];
     is_admin: boolean;
+    has_text: boolean;
+    signed_copy: string | null;
+    deliverables: Deliverable[];
+    can_deliver: boolean;
+    max_megabytes: number;
 };
 
 export default function MyAgreement({ agreement }: { agreement: Agreement }) {
@@ -38,20 +46,84 @@ export default function MyAgreement({ agreement }: { agreement: Agreement }) {
             actions={
                 <>
                     <AgreementStatus status={agreement.status} />
-                    <Button variant="outline" asChild>
-                        <a href={MyAgreementController.pdf.url(agreement.id)}>
-                            <Download />
-                            PDF
-                        </a>
-                    </Button>
+                    {agreement.signed_copy && (
+                        <Button variant="outline" asChild>
+                            <a
+                                href={MyAgreementController.signedCopy.url(
+                                    agreement.id,
+                                )}
+                            >
+                                <Download />
+                                Signed copy
+                            </a>
+                        </Button>
+                    )}
+                    {agreement.has_text && (
+                        <Button variant="outline" asChild>
+                            <a
+                                href={MyAgreementController.pdf.url(
+                                    agreement.id,
+                                )}
+                            >
+                                <Download />
+                                PDF
+                            </a>
+                        </Button>
+                    )}
                 </>
             }
         >
-            <AgreementDocument
-                text={agreement.text}
-                hash={agreement.body_hash}
-                lines={agreement.lines}
-            />
+            {agreement.has_text ? (
+                <AgreementDocument
+                    text={agreement.text}
+                    hash={agreement.body_hash}
+                    lines={agreement.lines}
+                />
+            ) : (
+                <p className="text-sm text-muted-foreground">
+                    This agreement was signed outside the application. The
+                    signed copy is the agreement: download it above.
+                </p>
+            )}
+
+            {agreement.deliverables.length > 0 && (
+                <div className="print:hidden">
+                    <Panel
+                        title="What you deliver"
+                        description={
+                            agreement.can_deliver
+                                ? 'Hand in one file for each item. The label looks at it and accepts it or hands it back with a note.'
+                                : agreement.status === 'signed'
+                                  ? 'What this agreement asks to be delivered.'
+                                  : 'You can deliver once every party has signed.'
+                        }
+                    >
+                        <DeliverableList deliverables={agreement.deliverables}>
+                            {(deliverable) =>
+                                agreement.can_deliver &&
+                                deliverable.status !== 'accepted' && (
+                                    <FileDrop
+                                        url={MyAgreementController.deliver.url([
+                                            agreement.id,
+                                            deliverable.id,
+                                        ])}
+                                        signUrl={MyAgreementController.signUpload.url(
+                                            agreement.id,
+                                        )}
+                                        multiple={false}
+                                        maxMegabytes={agreement.max_megabytes}
+                                        label={
+                                            deliverable.file
+                                                ? 'Drop a file to replace it'
+                                                : 'Drop the file'
+                                        }
+                                    />
+                                )
+                            }
+                        </DeliverableList>
+                    </Panel>
+                </div>
+            )}
 
             {agreement.blocked.map((reason) => (
                 <p key={reason} className="text-sm text-muted-foreground">
@@ -63,7 +135,7 @@ export default function MyAgreement({ agreement }: { agreement: Agreement }) {
                 <div className="print:hidden">
                     <Panel
                         title="Sign"
-                        description="Your typed name, your confirmation and the code we email you are together your signature. It is recorded with the time and your internet address."
+                        description="Your typed name, your confirmation and the code we email you are together your signature. It is recorded with the time and your internet address. The text is the label's; this application gives no legal advice and does not guarantee that the agreement or signing it electronically is valid where you live. If you are unsure, get advice before you sign."
                     >
                         <Form
                             {...MyAgreementController.sign.form(agreement.id)}
